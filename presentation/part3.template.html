@@ -75,7 +75,8 @@ function drawCoasean(container) {
 
 /* ───────────────────────────── benchmark 2 ───────────────────────────── */
 function drawDrift(container) {
-  const W = 560, H = 250, L = 44, R = 70, T = 16, B = 32;
+  const phone = matchMedia('(max-width: 560px)').matches; // the stylesheet enlarges this chart's labels at that width, so the margins make room for them
+  const W = 560, H = 250, L = phone ? 50 : 44, R = phone ? 100 : 90, T = 16, B = 32;
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Confidence over twenty generations: uncalibrated falls to 56.4 percent; with an oracle every five generations it returns to 100 percent' }, container);
   const x = g => L + ((g - 1) / 19) * (W - L - R);
   const y = v => T + (1 - (v - 0.5) / 0.5) * (H - T - B);
@@ -92,7 +93,8 @@ function drawDrift(container) {
   svgEl('circle', { cx: x(20), cy: y(0.5636), r: 6.5, fill: C.surface }, svg); svgEl('circle', { cx: x(20), cy: y(0.5636), r: 4.5, fill: C.gold }, svg);
   txt(svg, x(20) + 12, y(0.5636) + 4, '56.4%', { class: 'label' });
   txt(svg, x(20) + 12, y(1) + 4, '100%', { class: 'label' });
-  txt(svg, x(20) + 12, y(1) + 17, '60 cr of oracles', { class: 'label small' });
+  if (phone) { txt(svg, x(20) + 12, y(1) + 21, '60 cr of', { class: 'label small' }); txt(svg, x(20) + 12, y(1) + 38, 'oracles', { class: 'label small' }); }
+  else txt(svg, x(20) + 12, y(1) + 17, '60 cr of oracles', { class: 'label small' });
   // crosshair
   const cross = svgEl('g', { visibility: 'hidden' }, svg);
   const vline = svgEl('line', { y1: T, y2: H - B, stroke: 'var(--line-2)', 'stroke-width': 1 }, cross);
@@ -134,6 +136,12 @@ CODE.draftcontext = `/// **The Golden Invariant, as a type.**
 /// burn another purse, cannot calibrate its own truth for free,
 /// and cannot forge a signature, because none of those are
 /// things the type lets it say.
+///
+/// What remains a matter of trust: seats are host-installed
+/// Rust code in the engine's own process. A seat that smuggles
+/// a channel into its own struct (an Arc<Mutex<_>> shared with
+/// another seat) is outside what the type system can forbid;
+/// the host that installs it vouches for it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DraftContext {
     node_id: NodeId,
@@ -188,7 +196,7 @@ pub async fn tick(&mut self) -> TickReport {
     // ── Phase 2: COLLECT. Reconcile burns, mint envelopes, tax, courier rule. ──
     for ctx in results { self.collect(ctx, tick, &mut report); }
 
-    // ── Phase 3: VERIFY. The gates; court slash and rollback. ──
+    // ── Phase 3: VERIFY. The gates; slashes land, the court may roll back. ──
     self.verify(tick, &mut report);
 
     // ── Phase 4: COMMIT. Settle and deliver into the graph. ──
@@ -203,10 +211,11 @@ pub async fn tick(&mut self) -> TickReport {
 CODE.strategy = `pub trait VerificationStrategy: Send + Sync {
     fn stage(&self) -> Stage;
     fn verify(&mut self, env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Verdict;
-    /// Batch hook. Stage 3 overrides it with netting.
+    /// Batch hook. Default: one by one. Stages 2 and 3 override it.
     fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {
         envs.iter().map(|e| self.verify(e, view)).collect()
     }
+    fn describe(&self) -> String;
 }
 
 pub enum Verdict {
@@ -327,9 +336,9 @@ const FILES = [
   ['tests/golden_invariant.rs', 'the four laws, as tests'],
 ];
 const PROOFS = [
-  ['law_1_drafts_are_isolated_by_type', 'a seat can reach only copies it owns; the proof is a compile-time const'],
+  ['law_1_drafts_are_isolated_by_type', 'a draft context holds no borrow of the engine, another node or the graph; the proof is a compile-time const. Seats themselves are trusted host code (ledger #26)'],
   ['law_2_oak_table_is_local', 'another node\'s table changes only when an approved envelope is delivered'],
-  ['law_3_graph_moves_only_through_a_gate', 'the sovereign root is unchanged until a verdict is Approved'],
+  ['law_3_graph_moves_only_through_a_gate', 'the sovereign root does not move until a gate hands down a verdict: unchanged with the door unanswered, changed when a swap settles through the Letter Slot'],
   ['law_4_the_door_holds_at_zero_burn', 'benchmark 3 inside the engine: 100 ticks at the door, 0.0 credits; Φ decays by doc 02\'s rule, which the kernel did not apply'],
   ['rejection_is_sunk_cost', 'no refund, no send fee, the envelope destroyed'],
   ['exhaustion_leaves_a_note_and_keeps_the_papers', 'the note is on the table; a top-up continues the week'],
@@ -344,7 +353,7 @@ const PROOFS = [
 const STACK = {
   backend: [
     ['Language', '<strong>Rust 1.85+</strong>, edition 2021. Ownership makes law 1 a compile error rather than a code review. Determinism is a law: seeded ids, no clock, no libm in the replayed path.'],
-    ['Async', '<strong>Tokio</strong> for the Draft fan-out, a <code>JoinSet</code> per tick. Draft is embarrassingly parallel (owned contexts, no shared state), Verify batches per gate, Commit is single-writer. The throughput proposal adds a second, Rayon lane for purely statistical households at 100k nodes.'],
+    ['Async', '<strong>Tokio</strong> for the Draft fan-out, a <code>JoinSet</code> per tick. Draft is embarrassingly parallel (owned contexts, no shared state), Verify batches per gate, Commit runs on the engine\'s one thread. The throughput proposal adds a second, Rayon lane for purely statistical households at 100k nodes.'],
     ['Hosts', 'One crate, two hosts. Native under Tokio, and the same crate as a <strong>wasm32</strong> cdylib with a raw C ABI: <span class="num">__WASM_KB__</span> KB, zero imports, no bindgen. That is what is running on this page.'],
     ['Next', 'An append-only input journal, so a run is a fold of its inputs. A persistent map with structural sharing for the Sovereign Graph once cities are large. A canonical byte encoding for hashing and the wire. A <code>VaultBackend</code> implementing <code>InferenceBackend</code> over the estate route.'],
     ['Dissent', 'The velocity-first proposal calls the persistent map and canonical encoding premature before Stage 3 has players; the invariant-first proposal wants integer money now, because f64 will eventually break replay across compilers. The crate uses f64 with platform-independent arithmetic, which is enough for the laboratory and the video.'],
@@ -610,6 +619,7 @@ function fillStatic() {
   if (hr && hh) hr.textContent = `On ${fmt1(hh.compute_allocated)} cr and ${hh.tasks_total} tasks, seed 7, with the person saying yes after three ticks at the door, the recorded run sends ${hh.tasks_done} of ${hh.tasks_total} and ends after ${hf.tick} ticks with ${fmt1(hh.compute)} cr in the purse, Φ ${(hh.confidence * 100).toFixed(1)}%, ${fmt1(hf.state.totals.tax_paid)} cr paid in crossing tax${hh.status === 'halted' ? ', halted with the note on the table' : ''}.`;
   drawCoasean($('[data-chart="coasean"]'));
   drawDrift($('[data-chart="drift"]'));
+  matchMedia('(max-width: 560px)').addEventListener('change', () => { const c = $('[data-chart="drift"]'); c.replaceChildren(); hideTip(); drawDrift(c); }); // the phone layout has its own margins
 }
 
 async function boot() {

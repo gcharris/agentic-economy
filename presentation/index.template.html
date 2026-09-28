@@ -34,6 +34,7 @@
     --rail: 0px;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .fog-canvas, .sweep::after { animation: none !important; } }
   body {
@@ -177,6 +178,7 @@
   figure.diagram svg { width: 100%; max-width: 1040px; height: auto; color: var(--ink-2); display: block; }
   .diagram-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   @media (max-width: 560px) { .diagram-scroll svg { min-width: 780px; } }
+  @media (max-width: 560px) { .fig-wrap[data-chart="drift"] svg text, .fig-wrap[data-chart="drift"] svg .label { font-size: 17px; } .fig-wrap[data-chart="drift"] svg .axis text, .fig-wrap[data-chart="drift"] svg .label.small { font-size: 16px; } }
   figure.diagram svg text { font-family: var(--body); font-size: 12.5px; fill: currentColor; }
   figure.diagram svg .t { fill: var(--ink); font-weight: 600; font-size: 13.5px; }
   figure.diagram svg .m { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); }
@@ -291,6 +293,7 @@
   .gate-lines { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-3); display: grid; gap: 3px; }
   .street-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   @media (max-width: 560px) { .street-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  #street-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .house-tile { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--ground); display: grid; gap: 6px; position: relative; overflow: hidden; }
   .house-tile .hn { font-weight: 600; font-size: 0.88rem; display: flex; justify-content: space-between; align-items: center; }
   .house-tile .track { height: 5px; border-radius: 999px; background: #2b2118; overflow: hidden; }

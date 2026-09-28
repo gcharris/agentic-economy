@@ -3,7 +3,13 @@
 import base64, json, pathlib, sys
 here = pathlib.Path(__file__).parent
 dist = here.parent / "engine/dist/context_engine.wasm"
-wasm = dist if dist.exists() else here.parent / "engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm"
+target = here.parent / "engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm"
+wasm = dist if dist.exists() else target
+if wasm == dist:  # the tracked artefact; say so if the crate has moved since it was built (an mtime check, so a fresh checkout may warn spuriously)
+    crate = list((here.parent / "engine/src").rglob("*.rs")) + [here.parent / "engine/Cargo.toml"]
+    newer = [p for p in crate + ([target] if target.exists() else []) if p.stat().st_mtime > dist.stat().st_mtime]
+    if newer:
+        print(f"warning: engine/dist/context_engine.wasm is older than {len(newer)} file(s) it should be built from (e.g. {newer[0].relative_to(here.parent)}); run `sh engine/build-wasm.sh` first or the page embeds a stale engine", file=sys.stderr)
 template = "".join((here / f).read_text() for f in ["index.template.html", "part2.template.html", "part3.template.html"])
 b64 = base64.b64encode(wasm.read_bytes()).decode()
 trace = (here / "trace.json").read_text() if (here / "trace.json").exists() else "null"

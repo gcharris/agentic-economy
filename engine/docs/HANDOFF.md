@@ -8,7 +8,7 @@
 
 A Rust crate (`context-engine`, lib `context_engine`) that is the backend of the game *The Agentic Economy*: an **Asynchronous Agentic State Machine**, not an ECS. One `SovereignNode` struct at five scales (house, street, city, country, world). A tick is a block with four phases: Draft (parallel, isolated) → Collect → Verify (five gates, strategy pattern) → Commit (the only writer of the Sovereign Graph). The Golden Invariant is stated in `src/lib.rs` and tested in `tests/golden_invariant.rs` and `tests/law_1_forgery.rs`.
 
-The same crate builds natively (Tokio multi-core executor) and to `wasm32-unknown-unknown` (354 KB, zero imports, raw C ABI in `src/wasm_abi.rs`). The Director's directive, verbatim intent: build the invisible context engine first; do not skip to rendering.
+The same crate builds natively (Tokio multi-core executor) and to `wasm32-unknown-unknown` (341 KB, zero imports, raw C ABI in `src/wasm_abi.rs`). The Director's directive, verbatim intent: build the invisible context engine first; do not skip to rendering.
 
 ## 2. State at handoff (verified 2026-09-29; §5 applied since)
 
@@ -22,7 +22,7 @@ cargo test --no-fail-fast
   tests/stage3_clearinghouse  9 passed
   tests/stage4_high_court.rs  8 passed
   tests/stage5_recursive_stark 8 passed
-cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown   OK, 354,339 bytes
+cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown   OK, 349,035 bytes (engine/dist holds this build)
 cargo clippy --all-targets   one pre-existing note: too_many_arguments (8/7) on the private builder `populate`, src/scenarios/high_court.rs
 cargo fmt --check            clean (default rustfmt, no rustfmt.toml; the crate was authored wide and the first `cargo fmt` reflowed it once, whitespace only)
 ~10,630 lines of Rust (src + tests; ~7,960 before the reflow)
@@ -100,8 +100,8 @@ Line numbers are current (after `cargo fmt`).
 `../presentation/index.html` is a built single page: thesis, the three objects, three benchmark charts drawn from the raw record, the tick diagram, the five gates, a **live console running the wasm engine** with a recorded-run fallback, stack, code, colophon. It is **STALE**: built against the pre-audit wasm and trace. To refresh:
 
 ```
-cd engine && cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown
-cd ../presentation && node record_trace.mjs ../engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm trace.json && python3 build.py
+cd engine && sh build-wasm.sh          # builds, then copies the artefact to engine/dist, which is tracked and is what build.py embeds
+cd ../presentation && node record_trace.mjs ../engine/dist/context_engine.wasm trace.json && python3 build.py
 ```
 
 Copy that must change before publishing (edit `index.template.html` / `part2.template.html`):
@@ -115,7 +115,7 @@ Then publish as an Artifact (the previous operator had not published; there is n
 
 ## 7. Open work, in priority order
 
-1. Adapt the six tests (§5): done. 2. Refresh and publish the presentation (§6). 3. Hand `docs/FRONTEND-DESIGNER-BRIEF.md` to the frontend agent (the Director does this). 4. Open items in `docs/AUDIT-LEDGER.md` marked *open* (policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; #33, `serve` answering 404 for unheld envelopes, is done). 5. A real `InferenceBackend` over the estate Vault route (read `context-engine-studio/knowledge/reference/dev-docs/calling-vault-models-from-an-agent.md` first; never print a key). 6. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
+1. Adapt the six tests (§5): done. 2. Refresh and publish the presentation (§6). 3. Hand `docs/FRONTEND-DESIGNER-BRIEF.md` to the frontend agent (the Director does this). 4. Open items in `docs/AUDIT-LEDGER.md` marked *open* (policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; Stage 5 settlement writing no ledger line to Oak Tables, #32; #33, `serve` answering 404 for unheld envelopes, is done). 5. A real `InferenceBackend` over the estate Vault route (read `context-engine-studio/knowledge/reference/dev-docs/calling-vault-models-from-an-agent.md` first; never print a key). 6. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
 
 ## 8. Provenance you will be asked about
 
