@@ -97,25 +97,18 @@ Line numbers are current (after `cargo fmt`).
 
 ## 6. The presentation (for the YouTube video)
 
-`../presentation/index.html` is a built single page: thesis, the three objects, three benchmark charts drawn from the raw record, the tick diagram, the five gates, a **live console running the wasm engine** with a recorded-run fallback, stack, code, colophon. It is **STALE**: built against the pre-audit wasm and trace. To refresh:
+`../presentation/index.html` is a built single page: thesis, the three objects, three benchmark charts drawn from the raw record, the tick diagram, the five gates, a **live console running the wasm engine** with a recorded-run fallback, stack, code, colophon. It was refreshed on 2026-09-29 against the audited engine and published as a private Artifact: **https://claude.ai/artifact/8FdLqpXtN7UVJ4h8uTuujv** (republish to the same URL by passing it as `url`; sharing is set from the page's Share menu). To refresh:
 
 ```
 cd engine && sh build-wasm.sh          # builds, then copies the artefact to engine/dist, which is tracked and is what build.py embeds
 cd ../presentation && node record_trace.mjs ../engine/dist/context_engine.wasm trace.json && python3 build.py
 ```
 
-Copy that must change before publishing (edit `index.template.html` / `part2.template.html`):
-- "Truth, though, keeps decaying while you decide" → attribute to doc 02's rule; the kernel held Φ constant.
-- Gates section: "Zoom out from a house and its Door becomes the street's Letter Slot" → add "for envelopes the person has not yet been asked about".
-- Benchmark 1 caption and the provenance box: add the correction that the 19.99% was never deducted from the runway in the kernel.
-- The console's camera control no longer bypasses the Door; keep it, explain it in the log line.
-- Send fee 25 → 10 in any copy; the house now finishes more of the 15 tasks on 800 cr.
-- `part3.template.html` STACK object: replace with the decision in `docs/TECH-STACK-DECISION.md`.
-Then publish as an Artifact (the previous operator had not published; there is no artifact URL to preserve). Palette for charts was validated on the dark ground: gold `#b98626`, cyan `#2aa5b8`.
+The six copy corrections listed at the 2026-09-29 handoff (decay attribution, the Letter Slot caveat, the coordination-tax correction, the camera log line, send fee 25 → 10, the STACK object) are applied; three review rounds also fixed the measured lede, the tick lede, the house-staff comparison, the colophon's open list and the drift chart's phone labels. Palette for charts was validated on the dark ground: gold `#b98626`, cyan `#2aa5b8`.
 
 ## 7. Open work, in priority order
 
-1. Adapt the six tests (§5): done. 2. Refresh and publish the presentation (§6). 3. Hand `docs/FRONTEND-DESIGNER-BRIEF.md` to the frontend agent (the Director does this). 4. Open items in `docs/AUDIT-LEDGER.md` marked *open* (policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; Stage 5 settlement writing no ledger line to Oak Tables, #32; #33, `serve` answering 404 for unheld envelopes, is done). 5. A real `InferenceBackend` over the estate Vault route (read `context-engine-studio/knowledge/reference/dev-docs/calling-vault-models-from-an-agent.md` first; never print a key). 6. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
+1. Adapt the six tests (§5): done. 2. Refresh and publish the presentation (§6): done, URL above. 3. Hand `docs/FRONTEND-DESIGNER-BRIEF.md` to the frontend agent (the Director does this). 4. Open items in `docs/AUDIT-LEDGER.md` marked *open* (policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; Stage 5 settlement writing no ledger line to Oak Tables, #32; #33, `serve` answering 404 for unheld envelopes, is done). 5. A real `InferenceBackend` over the estate Vault route (read `context-engine-studio/knowledge/reference/dev-docs/calling-vault-models-from-an-agent.md` first; never print a key). 6. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
 
 ## 8. Provenance you will be asked about
 
