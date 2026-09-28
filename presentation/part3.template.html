@@ -47,7 +47,7 @@ function drawCoasean(container) {
   container.classList.add('multi');
   const panels = [
     { title: 'Tasks completed · of 15', key: 'tasks', max: 15, label: d => d.tasks + ' / 15' },
-    { title: 'Budget spent on coordination', key: 'coordPct', max: 25, label: d => d.coordPct.toFixed(d.coordPct ? 2 : 1) + '%' },
+    { title: 'Coordination recorded · a side ledger, never deducted', key: 'coordPct', max: 25, label: d => d.coordPct.toFixed(d.coordPct ? 2 : 1) + '%' },
   ];
   for (const p of panels) {
     const wrap = document.createElement('div');
@@ -65,7 +65,7 @@ function drawCoasean(container) {
       }
       txt(svg, x0 + w + 8, y + 13, p.label(d), { class: 'label' });
       const hit = svgEl('rect', { x: 0, y: y - 6, width: W, height: rowH, class: 'hit', tabindex: 0 }, svg);
-      const html = `<b>${d.name}</b><br>${d.tasks} of 15 tasks · ${fmt1(d.burned)} cr burned<br>coordination ${fmt1(d.coord)} cr (${d.coordPct}%) · final Φ ${d.phi}%${d.halted ? '<br><small>halted at task 6</small>' : ''}`;
+      const html = `<b>${d.name}</b><br>${d.tasks} of 15 tasks · ${fmt1(d.burned)} cr burned<br>coordination ${fmt1(d.coord)} cr (${d.coordPct}%) · final Φ ${d.phi}%${d.halted ? '<br><small>halted at task 6 on cache misses; the 19.99% was never deducted from the runway</small>' : ''}`;
       const at = () => { const r = pagePos(hit); showTip(html, r.x + r.w / 2, r.y); };
       hit.addEventListener('mouseenter', at); hit.addEventListener('focus', at); hit.addEventListener('mouseleave', hideTip); hit.addEventListener('blur', hideTip);
     });
@@ -120,36 +120,51 @@ function drawDrift(container) {
 const CODE = {};
 CODE.draftcontext = `/// **The Golden Invariant, as a type.**
 ///
-/// A draft runs against this and nothing else. It is owned, Send, and
-/// 'static: it cannot hold a reference to the engine, another node, or the
-/// Sovereign Graph, because there is no lifetime parameter through which
-/// such a reference could enter. A seat can burn the purse copy, read the
-/// Oak Table copy, leave papers, and propose envelopes. That is all.
+/// A draft runs against this and nothing else. It is owned,
+/// Send, and 'static: it cannot hold a reference to the engine,
+/// another node, or the Sovereign Graph, because there is no
+/// lifetime parameter through which such a reference could enter.
+///
+/// Its fields are private. Identity and inputs are read through
+/// getters and cannot be changed; outputs are produced only
+/// through methods that record what happened (burn,
+/// record_handover, leave_paper, propose). The engine reconciles
+/// from that record, keyed by the job it issued, never from a
+/// field a seat could set. A seat cannot rename itself, cannot
+/// burn another purse, cannot calibrate its own truth for free,
+/// and cannot forge a signature, because none of those are
+/// things the type lets it say.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DraftContext {
-    pub node_id: NodeId,
-    pub stage: Stage,
-    pub tick: u64,
-    /// A copy of the purse. Reconciled against the real one in Collect.
-    pub purse: Purse,
-    /// A copy of the table, frozen at this tick.
-    pub oak: OakSnapshot,
-    pub epistemics: Epistemics,
-    pub task: Option<Task>,
-    pub rng: Rng,
-    pub cost_visible: bool,
-    // outputs
-    pub papers: Vec<Paper>,
-    pub burned: f64,
-    pub proposals: Vec<ProposalDraft>,
-    pub halted_doing: Option<String>,
+    node_id: NodeId,
+    node_name: String,
+    stage: Stage,
+    tick: u64,
+    parent: Option<NodeId>,
+    known_peers: Vec<NodeId>,
+    children: Vec<NodeId>,
+    purse: Purse,           // a copy, reconciled in Collect
+    oak: OakSnapshot,       // a copy, frozen at this tick
+    epistemics: Epistemics,
+    task: Option<Task>,
+    rng: Rng,
+    cost_visible: bool,
+    scratch: BTreeMap<String, String>,
+    papers: Vec<Paper>,     // outputs: recording methods only
+    proposals: Vec<ProposalDraft>,
+    thoughts: Vec<Thought>,
+    receipts: Vec<SeatReceipt>,
+    handovers: Vec<Handover>,
+    cushion: f64,
+    halted_doing: Option<String>,
 }
 
 fn assert_send_static<T: Send + 'static>() {}
-/// Compile-time proof of law 1.
+/// Compile-time proof of law 1: a draft context can be moved to
+/// any thread and outlive any borrow, because it holds none.
 pub const GOLDEN_INVARIANT_LAW_1: fn() = assert_send_static::<DraftContext>;
 
-/// A seat at the oak table. Receives the context by value, returns it by value.
+/// A seat at the oak table. Context in by value, out by value.
 pub trait Agent: Send + Sync {
     fn seat(&self) -> &str;
     fn tier(&self) -> ModelTier;
@@ -173,10 +188,10 @@ pub async fn tick(&mut self) -> TickReport {
     // ── Phase 2: COLLECT. Reconcile burns, mint envelopes, tax, courier rule. ──
     for ctx in results { self.collect(ctx, tick, &mut report); }
 
-    // ── Phase 3: VERIFY. The gates. ──
+    // ── Phase 3: VERIFY. The gates; court slash and rollback. ──
     self.verify(tick, &mut report);
 
-    // ── Phase 4: COMMIT. The one write path into the Sovereign Graph. ──
+    // ── Phase 4: COMMIT. Settle and deliver into the graph. ──
     self.commit(tick, &mut report);
 
     self.decay_idle(&drafted);                    // the world moved; idle caches did not
@@ -262,7 +277,7 @@ impl SovereignNode {
     pub fn top_up(&mut self, credits: f64) { /* … */ }
 }`;
 CODE.run = `cd engine
-cargo test                                             # __TESTS__ tests, all green
+cargo test   # __TESTS__ passed, __IGNORED__ ignored on purpose
 cargo run --release --bin house -- --door interactive  # you, at the door
 cargo run --release --bin house -- --hidden-cost --budget 300 --tasks 10
 cargo run --release --bin house -- --scenario street --ticks 30
@@ -278,11 +293,11 @@ function hl(src, lang) {
     let code = line, comment = '';
     const ci = line.indexOf('//');
     if (ci >= 0 && !/["']/.test(line.slice(0, ci))) { code = line.slice(0, ci); comment = `<span class="c">${line.slice(ci)}</span>`; }
-    code = code.replace(/(#\[[^\]]*\])/g, '<span class="a">$1</span>')
-      .replace(/("[^"]*")/g, '<span class="s">$1</span>')
+    code = code.replace(/("[^"]*")/g, '<span class="s">$1</span>')
       .replace(KW, '<span class="k">$1</span>')
       .replace(/\b([A-Z][A-Za-z0-9_]*)\b/g, '<span class="t">$1</span>')
-      .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="n">$1</span>');
+      .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="n">$1</span>')
+      .replace(/(#\[[^\]]*\])/g, '<span class="a">$1</span>'); // attributes last: the spans above must not be re-matched
     return code + comment;
   }).join('\n');
 }
@@ -305,7 +320,7 @@ const FILES = [
   ['src/receipt.rs', 'the note and the receipts'],
   ['src/events.rs', 'what the frontend is allowed to see'],
   ['src/agents/statistical.rs', 'Scout · Scribble · Inspector · Penny · Porter'],
-  ['src/agents/llm.rs', 'the LLM seat: same trait, a network call inside'],
+  ['src/agents/llm.rs', 'the LLM seat: same trait, a backend\'s future inside; mock only today'],
   ['src/scenarios/', 'house · street · city · world'],
   ['src/wasm_abi.rs', 'raw C ABI for the browser'],
   ['src/bin/house.rs', 'a week with a helper, in the terminal'],
@@ -315,7 +330,7 @@ const PROOFS = [
   ['law_1_drafts_are_isolated_by_type', 'a seat can reach only copies it owns; the proof is a compile-time const'],
   ['law_2_oak_table_is_local', 'another node\'s table changes only when an approved envelope is delivered'],
   ['law_3_graph_moves_only_through_a_gate', 'the sovereign root is unchanged until a verdict is Approved'],
-  ['law_4_the_door_holds_at_zero_burn', 'benchmark 3 inside the engine: 100 ticks at the door, 0.0 credits, truth still decaying'],
+  ['law_4_the_door_holds_at_zero_burn', 'benchmark 3 inside the engine: 100 ticks at the door, 0.0 credits; Φ decays by doc 02\'s rule, which the kernel did not apply'],
   ['rejection_is_sunk_cost', 'no refund, no send fee, the envelope destroyed'],
   ['exhaustion_leaves_a_note_and_keeps_the_papers', 'the note is on the table; a top-up continues the week'],
   ['crossings_pay_the_coordination_tax', 'a same-parent crossing pays 1.25×, exactly'],
@@ -328,20 +343,19 @@ const PROOFS = [
 ];
 const STACK = {
   backend: [
-    ['Language', '<strong>Rust 1.85+</strong>, edition 2021. Ownership makes law 1 a compile error rather than a code review.'],
-    ['Async', '<strong>Tokio</strong> multi-thread runtime for the Draft fan-out; a runtime-free <code>block_on</code> for the browser. The executor is a trait, and a test proves the results do not depend on it.'],
-    ['State', 'In-memory <strong>Sovereign Graph</strong> with SHA-256 Merkle roots and a ring buffer of snapshots for O(1) rollback; an append-only tick journal for persistence.'],
-    ['Transport', 'Per-tick delta stream: <strong>SSE</strong> from the dependency-free <code>serve</code> binary now, WebSocket when the frontend needs a back channel richer than POST. JSON today, CBOR when the city has 10k houses.'],
-    ['Agents', 'One <code>Agent</code> trait. Statistical seats priced by the laboratory kernel; an <code>LlmSeat</code> adapter over an <code>InferenceBackend</code> for real model calls, concurrent under Tokio, each burn accounted.'],
-    ['Browser', 'The same crate as a <strong>wasm32</strong> cdylib with a raw C ABI: <span class="num">__WASM_KB__</span> KB, zero imports, no bindgen. That is what is running on this page.'],
+    ['Language', '<strong>Rust 1.85+</strong>, edition 2021. Ownership makes law 1 a compile error rather than a code review. Determinism is a law: seeded ids, no clock, no libm in the replayed path.'],
+    ['Async', '<strong>Tokio</strong> for the Draft fan-out, a <code>JoinSet</code> per tick. Draft is embarrassingly parallel (owned contexts, no shared state), Verify batches per gate, Commit is single-writer. The throughput proposal adds a second, Rayon lane for purely statistical households at 100k nodes.'],
+    ['Hosts', 'One crate, two hosts. Native under Tokio, and the same crate as a <strong>wasm32</strong> cdylib with a raw C ABI: <span class="num">__WASM_KB__</span> KB, zero imports, no bindgen. That is what is running on this page.'],
+    ['Next', 'An append-only input journal, so a run is a fold of its inputs. A persistent map with structural sharing for the Sovereign Graph once cities are large. A canonical byte encoding for hashing and the wire. A <code>VaultBackend</code> implementing <code>InferenceBackend</code> over the estate route.'],
+    ['Dissent', 'The velocity-first proposal calls the persistent map and canonical encoding premature before Stage 3 has players; the invariant-first proposal wants integer money now, because f64 will eventually break replay across compilers. The crate uses f64 with platform-independent arithmetic, which is enough for the laboratory and the video.'],
   ],
   frontend: [
-    ['Language', '<strong>TypeScript</strong> with Vite. One language for the client, testable without a GPU through the engine\'s JSON state.'],
-    ['Renderer', '<strong>Three.js</strong> on WebGL2, with the WebGPU renderer as an opt-in. InstancedMesh for the hex city: one draw call, per-instance attributes for Φ, burn and status.'],
-    ['Camera', 'One orthographic isometric rig for Stages 1–4 with a tweened zoom that fires the engine\'s pack and unpack; a perspective orbital camera for the planetary view at Stage 5.'],
-    ['Fog of war', 'A GLSL value-noise material driven by <code>1 − Φ</code> per tile; a cascading light sweep on <code>StateSync</code>; radar pulses on gate verdicts.'],
-    ['State', 'Renders only the Sovereign Graph and the event stream. Never reaches into a node. Offline from the wasm ABI, online from SSE.'],
-    ['Recording', 'Deterministic seeds make every take reproducible: the same seed produces the same city, so a shot can be re-run frame for frame.'],
+    ['Language', '<strong>TypeScript</strong>. The client renders only <code>StateView</code> and <code>EngineEvent</code>; it never reaches into a node, and the frame contract is testable without a GPU.'],
+    ['Renderer', '<strong>Three.js</strong> on WebGL2, with WebGPU behind a flag. Instanced hex tiles fed by a per-node truth buffer: one draw call for the city, per-instance Φ, burn and status, axial coordinates laid out deterministically from the graph.'],
+    ['Camera', 'One altitude scalar drives the camera from a room cutaway to an orbital view: five LOD bands, a cross-dissolve at each band edge, and the engine\'s pack and unpack as the source of truth for what exists at each band.'],
+    ['Source', 'One <code>EngineSource</code> interface, three implementations: the wasm build in a worker, SSE from the <code>serve</code> binary, and a recorded trace like the one this page falls back to.'],
+    ['Fog of war', 'Fog = <code>1 − Φ</code> into a noise shader; a light sweep on <code>StateSync</code>. The LOD transition is animated only when <code>Packed</code> or <code>Unpacked</code> arrive.'],
+    ['Provenance', 'Three frontend proposals (Truth Buffer, Altitude, One Quad Five Scales) converged on this contract. The record takes Truth Buffer\'s data path, Altitude\'s camera, and One Quad\'s <code>EngineSource</code> and no-GPU tests. The brief for the specialist frontend agent is <code>engine/docs/FRONTEND-DESIGNER-BRIEF.md</code>.'],
   ],
 };
 
@@ -475,14 +489,14 @@ function render(frame) {
   for (const d of frame.decisions || []) { if (d.decision === 'approve') el.thoughts.insertAdjacentHTML('afterbegin', `<div class="thought"><b>you</b><span>said yes at the door: ${d.description}.</span></div>`); if (d.decision === 'truth_changed') el.thoughts.insertAdjacentHTML('afterbegin', `<div class="thought"><b>world</b><span>The truth moved: ${d.description}.</span></div>`); }
   // the door
   const held = st.held;
-  if (held.length && (!streetMode || UI.cfg.camera === 1 || held[0].reason === 'awaiting_finality')) {
+  if (held.length) { // an envelope the person was asked about stays at the Door whatever the camera does
     const h = held[0]; const node = st.nodes.find(n => n.id === h.node);
     if (!UI.hold || UI.hold.envelope !== h.envelope) UI.hold = { envelope: h.envelope, compute: node ? node.compute : 0, phi: node ? node.confidence : 1, since: h.created_tick };
     const waited = tick - h.created_tick;
     el.door.hidden = false; el.door.classList.toggle('replay', !Eng.live());
     el.doorTitle.textContent = h.reason === 'awaiting_finality' ? 'Awaiting the planetary proof' : `The Porter is at the door${held.length > 1 ? ` (and ${held.length - 1} more)` : ''}`;
     el.doorDesc.textContent = `${h.node_name}: ${h.description}. Sending costs ${fmt1(h.cost)} cr. Nothing burns while you decide.`;
-    el.doorProof.textContent = `held ${waited} tick${waited === 1 ? '' : 's'} · purse ${fmt1(node ? node.compute : 0)} cr${node && Math.abs(node.compute - UI.hold.compute) < 1e-9 ? ', unchanged' : ''} · Φ ${(UI.hold.phi * 100).toFixed(1)}% → ${node ? (node.confidence * 100).toFixed(1) : '—'}%`;
+    el.doorProof.textContent = `held ${waited} tick${waited === 1 ? '' : 's'} · purse ${fmt1(node ? node.compute : 0)} cr${node && Math.abs(node.compute - UI.hold.compute) < 1e-9 ? ', unchanged' : ''} · Φ ${(UI.hold.phi * 100).toFixed(1)}% → ${node ? (node.confidence * 100).toFixed(1) : '—'}%${h.reason === 'awaiting_human_signature' && UI.cfg.camera > 1 ? ` · asked at the Door; the camera at scale ${UI.cfg.camera} does not move it` : ''}`;
     el.doorReplay.textContent = Eng.live() ? '' : 'recorded run: the person says yes after 3 ticks';
     el.doorYes.dataset.env = h.envelope; el.doorNo.dataset.env = h.envelope;
   } else { el.door.hidden = true; UI.hold = null; }
@@ -552,7 +566,7 @@ function reset() {
 
 function wireConsole() {
   $$('#scenario button').forEach(b => b.addEventListener('click', () => { $$('#scenario button').forEach(x => x.classList.remove('on')); b.classList.add('on'); UI.cfg.scenario = b.dataset.s; if (Eng.live()) { el.budget.value = UI.cfg.scenario === 'street' ? 1600 : 800; el.tasks.value = UI.cfg.scenario === 'street' ? 40 : 15; } reset(); }));
-  $$('#camera button').forEach(b => b.addEventListener('click', () => { if (!Eng.live()) return; $$('#camera button').forEach(x => x.classList.remove('on')); b.classList.add('on'); UI.cfg.camera = Number(b.dataset.z); Eng.zoom(UI.cfg.camera); logLine(UI.frame ? UI.frame.tick : 0, 'CAMERA', 'sync', `active scale ${UI.cfg.camera}: the gate is now ${Object.values(GATE)[Math.max(UI.cfg.camera, 1) - 1]} or higher`); if (!UI.running) stepOnce(); }));
+  $$('#camera button').forEach(b => b.addEventListener('click', () => { if (!Eng.live()) return; $$('#camera button').forEach(x => x.classList.remove('on')); b.classList.add('on'); UI.cfg.camera = Number(b.dataset.z); Eng.zoom(UI.cfg.camera); const atDoor = UI.frame ? UI.frame.state.held.filter(h => h.reason === 'awaiting_human_signature').length : 0; logLine(UI.frame ? UI.frame.tick : 0, 'CAMERA', 'sync', `camera at scale ${UI.cfg.camera}: new envelopes are verified at ${Object.values(GATE)[Math.max(UI.cfg.camera, 1) - 1]} or higher; ${atDoor ? `the ${atDoor} envelope${atDoor === 1 ? '' : 's'} already at the Door stay${atDoor === 1 ? 's' : ''} there until you answer` : 'an envelope already at the Door stays there until you answer'}`); if (!UI.running) stepOnce(); }));
   el.reset.addEventListener('click', reset);
   el.step.addEventListener('click', () => { stop(); stepOnce(); });
   el.run.addEventListener('click', () => UI.running ? stop() : start());
@@ -591,6 +605,9 @@ function fillStatic() {
   $('#file-tree').innerHTML = FILES.map(([f, d]) => `<div><b>${f}</b> <i>· ${d}</i></div>`).join('');
   $('#proof-list').innerHTML = PROOFS.map(([t, d]) => `<div><span class="ok">✓</span><span><code>${t}</code> · ${d}</span></div>`).join('');
   for (const side of ['backend', 'frontend']) $(`[data-stack="${side}-layers"]`).innerHTML = STACK[side].map(([l, s]) => `<div class="layer"><b>${l}</b><span>${s}</span></div>`).join('');
+  // the house-run sentence follows the recorded trace, so a re-recorded run cannot leave the copy stale
+  const hr = $('[data-fact="house-run"]'); const hf = TRACE && TRACE.house && TRACE.house.length ? TRACE.house[TRACE.house.length - 1] : null; const hh = hf ? hf.state.nodes.find(n => n.stage === 'House') : null;
+  if (hr && hh) hr.textContent = `On ${fmt1(hh.compute_allocated)} cr and ${hh.tasks_total} tasks, seed 7, with the person saying yes after three ticks at the door, the recorded run sends ${hh.tasks_done} of ${hh.tasks_total} and ends after ${hf.tick} ticks with ${fmt1(hh.compute)} cr in the purse, Φ ${(hh.confidence * 100).toFixed(1)}%, ${fmt1(hf.state.totals.tax_paid)} cr paid in crossing tax${hh.status === 'halted' ? ', halted with the note on the table' : ''}.`;
   drawCoasean($('[data-chart="coasean"]'));
   drawDrift($('[data-chart="drift"]'));
 }

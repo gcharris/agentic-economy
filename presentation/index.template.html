@@ -119,7 +119,7 @@
 
   /* The three objects */
   .object { display: grid; gap: 14px; align-content: start; }
-  .object svg { width: 100%; max-width: 220px; height: auto; color: var(--ink-2); }
+  .object svg { width: 100%; max-width: 260px; height: auto; color: var(--ink-2); }
   .object blockquote { margin: 0; padding-left: 14px; border-left: 2px solid var(--gold); color: var(--ink-2); font-family: var(--display); font-variation-settings: "opsz" 18, "SOFT" 60; font-size: 1.08rem; line-height: 1.5; }
   .object p { color: var(--ink-2); font-size: 0.98rem; }
 
@@ -157,7 +157,7 @@
   .tile .value { font-family: var(--body); font-weight: 600; font-size: 2.1rem; line-height: 1.05; letter-spacing: -0.01em; }
   .tile .value.good { color: var(--sage-2); } .tile .value.bad { color: var(--ember-2); }
   .tile .delta { color: var(--ink-2); font-size: 0.86rem; }
-  .tile .src { color: var(--ink-3); font-size: 0.74rem; font-family: var(--mono); }
+  .tile .src { color: var(--ink-3); font-size: 0.74rem; font-family: var(--mono); overflow-wrap: anywhere; }
   .status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 600; letter-spacing: 0.04em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--ink-2); background: var(--raised); }
   .status.good { color: var(--sage-2); border-color: rgba(106,154,110,0.5); }
   .status.warn { color: var(--gold); border-color: rgba(212,167,85,0.5); }
@@ -175,6 +175,8 @@
 
   /* Diagram */
   figure.diagram svg { width: 100%; max-width: 1040px; height: auto; color: var(--ink-2); display: block; }
+  .diagram-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 560px) { .diagram-scroll svg { min-width: 780px; } }
   figure.diagram svg text { font-family: var(--body); font-size: 12.5px; fill: currentColor; }
   figure.diagram svg .t { fill: var(--ink); font-weight: 600; font-size: 13.5px; }
   figure.diagram svg .m { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); }
@@ -308,15 +310,15 @@
   .stack { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; background: var(--panel); display: grid; gap: 12px; align-content: start; }
   .stack h3 { font-size: 1.3rem; }
   .stack .layers { display: grid; gap: 8px; }
-  .stack .layer { display: grid; grid-template-columns: 118px 1fr; gap: 12px; font-size: 0.9rem; border-top: 1px solid var(--line); padding-top: 8px; }
+  .stack .layer { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 12px; font-size: 0.9rem; border-top: 1px solid var(--line); padding-top: 8px; }
   .stack .layer:first-child { border-top: 0; padding-top: 0; }
   .stack .layer b { color: var(--ink-3); font-weight: 600; font-size: 0.76rem; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 3px; }
   .stack .layer span { color: var(--ink-2); }
   .stack .layer span strong { color: var(--ink); }
   .proof-list { display: grid; gap: 8px; font-size: 0.92rem; color: var(--ink-2); }
-  .proof-list div { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+  .proof-list div { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; }
   .proof-list .ok { color: var(--sage-2); font-weight: 600; }
-  .proof-list code { font-size: 0.78rem; }
+  .proof-list code { font-size: 0.78rem; overflow-wrap: anywhere; }
 
   /* Presentation mode */
   .present-hint { position: fixed; right: 16px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); font-family: var(--mono); font-size: 0.7rem; color: var(--ink-3); background: rgba(22,17,12,0.85); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; z-index: 6; backdrop-filter: blur(6px); }
@@ -357,7 +359,7 @@
   </div>
   <div class="hero-meta">
     <span><i class="dot"></i>Written in Rust. One crate, <span class="num" data-fact="loc">__LOC__</span> lines.</span>
-    <span><span class="num" data-fact="tests">__TESTS__</span> invariant tests, all green.</span>
+    <span><span class="num" data-fact="tests">__TESTS__</span> invariant tests, all green; <span class="num" data-fact="ignored">__IGNORED__</span> more, written against the Letter Slot's lock phase, are ignored on purpose.</span>
     <span>Runs on ten cores under Tokio and as <span class="num" data-fact="wasm-kb">__WASM_KB__</span> KB of WebAssembly inside this page. Same roots, tick for tick.</span>
   </div>
   <div class="btn-row">
@@ -376,38 +378,38 @@
   </div>
   <div class="cols cols-3">
     <div class="object">
-      <svg viewBox="0 0 220 120" role="img" aria-label="The purse: a fixed amount that thinking draws down">
-        <rect x="30" y="34" width="160" height="62" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <path d="M30 52 H190" stroke="currentColor" stroke-width="1"/>
-        <rect x="42" y="64" width="98" height="18" rx="4" fill="#b98626"/>
-        <rect x="140" y="64" width="38" height="18" rx="4" fill="none" stroke="#b98626" stroke-width="1" stroke-dasharray="3 3"/>
-        <text x="42" y="26" font-size="11" fill="currentColor" font-family="JetBrains Mono, monospace">runway · burns on thinking</text>
+      <svg viewBox="0 0 260 120" role="img" aria-label="The purse: a fixed amount that thinking draws down">
+        <rect x="50" y="34" width="160" height="62" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M50 52 H210" stroke="currentColor" stroke-width="1"/>
+        <rect x="62" y="64" width="98" height="18" rx="4" fill="#b98626"/>
+        <rect x="160" y="64" width="38" height="18" rx="4" fill="none" stroke="#b98626" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="62" y="26" font-size="11" fill="currentColor" font-family="JetBrains Mono, monospace">runway · burns on thinking</text>
       </svg>
       <h3>The purse</h3>
       <blockquote>“It is not a theory of money. It is the amount you are willing to let them burn, this week, on thinking.”</blockquote>
       <p>Compute reserves are local truth. Every lookup, draft and audit is priced in the laboratory's units: one credit is ten tokens is a twentieth of a joule. When the purse is empty, the run stops. It does not throw the work away.</p>
     </div>
     <div class="object">
-      <svg viewBox="0 0 220 120" role="img" aria-label="The note: what it was doing, what it spent, why it stopped">
-        <rect x="52" y="14" width="116" height="94" rx="3" fill="#f0e6d2"/>
-        <path d="M66 36 H154 M66 50 H140 M66 64 H150 M66 78 H120" stroke="#6b5636" stroke-width="2" stroke-linecap="round"/>
-        <text x="66" y="100" font-size="9.5" fill="#6b5636" font-family="JetBrains Mono, monospace">[HALTED] top up or close</text>
+      <svg viewBox="0 0 260 120" role="img" aria-label="The note: what it was doing, what it spent, why it stopped">
+        <rect x="50" y="14" width="160" height="94" rx="3" fill="#f0e6d2"/>
+        <path d="M64 36 H196 M64 50 H176 M64 64 H190 M64 78 H150" stroke="#6b5636" stroke-width="2" stroke-linecap="round"/>
+        <text x="64" y="100" font-size="9.5" fill="#6b5636" font-family="JetBrains Mono, monospace">[HALTED] top up or close</text>
       </svg>
       <h3>The note</h3>
       <blockquote>“The note says what they were in the middle of, what they spent, and that they stopped because the purse was empty.”</blockquote>
       <p>Exhaustion is a pause, not a death. The engine writes a structured note onto the oak table, keeps every paper, and waits. A top-up continues the week. Nothing is ever deleted for going broke.</p>
     </div>
     <div class="object">
-      <svg viewBox="0 0 220 120" role="img" aria-label="The door: irreversible acts wait for a hand on the latch">
-        <rect x="80" y="12" width="60" height="98" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <rect x="86" y="18" width="48" height="86" rx="2" fill="none" stroke="currentColor" stroke-width="0.8"/>
-        <circle cx="126" cy="64" r="3.5" fill="#d4a755"/>
-        <path d="M150 64 H200" stroke="#d4a755" stroke-width="1.5" stroke-dasharray="4 4"/>
-        <text x="150" y="54" font-size="10" fill="#d4a755" font-family="JetBrains Mono, monospace">0.0 cr while waiting</text>
+      <svg viewBox="0 0 260 120" role="img" aria-label="The door: irreversible acts wait for a hand on the latch">
+        <rect x="60" y="12" width="60" height="98" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="66" y="18" width="48" height="86" rx="2" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <circle cx="106" cy="64" r="3.5" fill="#d4a755"/>
+        <path d="M130 64 H240" stroke="#d4a755" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="130" y="54" font-size="10" fill="#d4a755" font-family="JetBrains Mono, monospace">0.0 cr while waiting</text>
       </svg>
       <h3>The door</h3>
       <blockquote>“The helper comes to the door and stands there. The purse does not drain while they stand there.”</blockquote>
-      <p>Looking and drafting never ask. Sending, paying a stranger, signing, deleting the only copy: those wait. In the engine, waiting at the door burns exactly zero credits. Truth, though, keeps decaying while you decide.</p>
+      <p>Looking and drafting never ask. Sending, paying a stranger, signing, deleting the only copy: those wait. In the engine, waiting at the door burns exactly zero credits. Truth keeps decaying while you decide; that is doc 02's rule, not something the battery measured.</p>
     </div>
   </div>
 </section>
