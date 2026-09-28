@@ -498,9 +498,14 @@ fn a_house_that_pays_the_oracle_settles_again_while_its_neighbours_still_revert(
         .all(|(_, _, reason, _)| reason.contains("hash mismatch")));
 }
 
-/// The other way to force it: mark one house overdue (generation ≥ 5) and
-/// the real Scout asks the oracle on its own. One tick later that house
-/// settles; the other two, at generation 2, still revert.
+/// The other way to force it: mark one house overdue and the real Scout
+/// asks the oracle on its own. One tick later that house settles; the other
+/// two still revert. Post-audit the Scout asks when the *next* draft would
+/// cross the line (`generation + 2 >= MAX_UNCALIBRATED_HANDOVERS`, so from
+/// generation 3), and a house draft adds two handovers: the neighbours, at
+/// generation 4 after tick 2, would ask the oracle themselves on tick 3.
+/// The test resets them to generation 0 before that tick so that only A's
+/// repair is under observation: truth is local, and so is its fix.
 #[test]
 fn an_overdue_house_asks_the_oracle_itself_and_settles_next_tick() {
     let mut e = street(cfg(35), 3, 1500.0, 12);
@@ -518,6 +523,11 @@ fn an_overdue_house_asks_the_oracle_itself_and_settles_next_tick() {
     assert!(events.iter().any(|ev| matches!(ev, EngineEvent::Thought { node, seat, text, .. } if *node == a && seat == "Scout" && text.contains("Asking the oracle"))));
     assert_eq!(rejected(&events).len(), 3);
 
+    // The neighbours are at generation 4 now: overdue under the post-audit
+    // trigger (4 + 2 >= MAX_UNCALIBRATED_HANDOVERS). Keep them stale.
+    for h in &hs[1..] {
+        e.node_mut(*h).unwrap().epistemics.generation = 0;
+    }
     let (r, events) = step(&mut e);
     let swaps = settled(&events);
     assert_eq!(
@@ -583,7 +593,10 @@ fn the_courier_drops_a_liquidity_payload_with_zero_allocation_before_verificatio
 
 /// The Letter Slot's history is the 2-phase-commit ledger: one record per
 /// swap, `Settled` when the believed hash met the truth, `Reverted` when it
-/// did not, each bound to its envelope and its locked amounts.
+/// did not, each bound to its envelope and its locked amounts: the
+/// requested liquidity and, post-audit, the compute the swap actually sank
+/// (`env.tax_paid`, the crossing tax), not the whole send weight. The lane
+/// itself flagged the 4× overstatement.
 #[test]
 fn the_letter_slot_history_records_settled_and_reverted_phases() {
     let mut e = street_of(37, 2, || Hirer);
@@ -613,7 +626,8 @@ fn the_letter_slot_history_records_settled_and_reverted_phases() {
     let truth = SovereignGraph::hash_price("courier", MOVED_PRICE);
     for (i, d) in slot.history.iter().enumerate() {
         assert!((d.locked_liquidity - STALE_PRICE).abs() < 1e-9);
-        assert!((d.locked_compute - HIRE_WEIGHT).abs() < 1e-9);
+        // `AtomicDvP.locked_compute` records `tax_paid`: 1.25× on a weight of 2.0 → 0.5 cr.
+        assert!((d.locked_compute - HIRE_WEIGHT * 0.25).abs() < 1e-9);
         if i < 2 {
             assert_eq!(d.phase, DvpPhase::Settled);
             assert!(approved.contains(&d.envelope));
@@ -657,14 +671,19 @@ fn replay_under_drift_is_exact() {
 
 // ═══════════════════ the court watches the street too ════════════════════
 
-/// Five stale houses, five reverts, zero deliveries: the Stage 4 circuit
-/// breaker reads a 100 % rejection rate as systemic hallucination, rolls
-/// the graph back one tick and slashes a quarter of every offender's
-/// reserves, with the camera still at the street. Recorded here because
-/// it changes what "no liquidity moves" means on a wide stale street (see
-/// the lane report: the reverts already sank compute; the slash is on top).
+/// Five stale houses, five reverts, zero deliveries, and the Stage 4
+/// circuit breaker stays quiet. The lane wrote this test expecting a
+/// rollback and a 25 % slash on top of the reverts, and flagged that as a
+/// flaw; the audit fixed it (ledger #6): the court counts only liquidity
+/// failures at algorithmic gates (`Verdict::is_liquidity_failure`: a failed
+/// lock, an unbacked spend, a failed proof, a seizure). A hash mismatch is
+/// a stale table, not a crisis, so five of them are a sample of five with
+/// zero failures: no rollback, no injunction, and the truth balances stand
+/// exactly where tick 1 left them. The lane named this test
+/// `a_street_wide_stale_price_trips_the_high_court` (see
+/// `docs/workflow/lane-stage2-drift.md`); it now says what it asserts.
 #[test]
-fn a_street_wide_stale_price_trips_the_high_court() {
+fn a_street_wide_stale_price_does_not_trip_the_high_court() {
     let mut e = street_of(39, 5, || Hirer);
     let (r, _) = step(&mut e);
     assert_eq!(r.approved, 5);
@@ -674,25 +693,26 @@ fn a_street_wide_stale_price_trips_the_high_court() {
     let (r, events) = step(&mut e);
     assert_eq!(r.rejected, 5);
     assert!(
-        r.rolled_back,
-        "5 of 5 rejected clears the court's min_sample and threshold"
+        rejected(&events)
+            .iter()
+            .all(|(_, _, reason, _)| reason.contains("hash mismatch")),
+        "every revert is a stale price, not a liquidity failure"
     );
-    assert!(events.iter().any(|ev| matches!(
+    assert!(!r.rolled_back, "5 of 5 reverted, but a hash mismatch is not a liquidity failure: the court saw 0 of 5 fail");
+    assert!(!events.iter().any(|ev| matches!(
         ev,
-        EngineEvent::RolledBack {
-            to_tick: 1,
-            slashed: 5,
-            ..
-        }
+        EngineEvent::RolledBack { .. } | EngineEvent::Slashed { .. }
     )));
-    assert_eq!(e.court.rollbacks, 1);
-    for h in houses(&e) {
-        assert!(
-            (e.graph.liquidity_of(h) - end_of_tick_1[&h] * 0.75).abs() < 1e-9,
-            "a quarter of the reserves seized for a stale table"
-        );
-        assert!(e.court.injunctions.contains(&h));
-    }
+    assert_eq!((e.court.rollbacks, r.slashed), (0, 0));
+    assert!(
+        e.court.injunctions.is_empty(),
+        "no injunction for a stale table"
+    );
+    assert_eq!(
+        balances(&e),
+        end_of_tick_1,
+        "truth unchanged: nothing settled, nothing seized"
+    );
 }
 
 // ══════════════ the Scribble's hallucination path, characterised ═════════

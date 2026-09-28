@@ -330,19 +330,27 @@ fn netting_clears_what_gross_settlement_could_not() {
 
 /// (3) A net debtor whose truth cannot back its position is slashed at
 /// `slash_rate` 0.10 of the unbacked envelope and its truth balance drops.
+///
+/// Post-audit the Clearinghouse price-checks (`dvp_binding`) before it
+/// nets, so the lane's hallucinated 500 would be rejected as a hash
+/// mismatch and never enter the netting. To be unbacked a house must owe
+/// more than its truth *at the true price*: A hires B at the true 10 with a
+/// truth of 3, and B does not hire A back (a mutual pair nets to 0, which
+/// any truth backs; see `netting_clears_what_gross_settlement_could_not`).
+/// A's purse still believes it holds 200: the delusion is in the balance,
+/// not in the price.
 #[test]
 fn unbacked_net_position_is_slashed_at_ten_percent() {
     let mut e = small_city(4);
     let (a, b) = mutual_pair(&mut e);
-    // A's table says the courier costs 500 (a hallucinated price the
-    // Clearinghouse does not price-check); A's truth is 200.
-    let believed = 500.0;
-    e.node_mut(a)
-        .unwrap()
-        .oak_table
-        .put("price/courier", format!("{believed}"));
-    let truth_before = e.graph.liquidity_of(a);
-    assert_eq!(truth_before, CITY_HOUSE_LIQUIDITY);
+    e.node_mut(b).unwrap().known_peers.clear();
+    let truth_before = 3.0;
+    e.graph.set_liquidity(a, truth_before);
+    assert_eq!(
+        e.node(a).unwrap().purse.liquidity,
+        CITY_HOUSE_LIQUIDITY,
+        "A still believes it is rich"
+    );
     let policy = BoundaryPolicy::for_stage(Stage::City);
     assert!(policy.slash_unbacked);
     assert_eq!(policy.slash_rate, 0.10);
@@ -366,26 +374,25 @@ fn unbacked_net_position_is_slashed_at_ten_percent() {
     let (who, amount, reason) = &slashes[0];
     assert_eq!(*who, a);
     assert!(
-        (amount - believed * 0.10).abs() < 1e-9,
-        "slash = requested × 0.10, got {amount}"
+        (amount - CITY_COURIER_PRICE * 0.10).abs() < 1e-9,
+        "slash = requested 10 × 0.10 = 1.0, got {amount}"
     );
     assert!(reason.contains("unbacked in netting"), "{reason}");
     assert!(
         reason.contains(&format!(
-            "net position {:.1}",
-            believed - CITY_COURIER_PRICE
+            "net position {CITY_COURIER_PRICE:.1} > truth {truth_before:.1}"
         )),
-        "A owed 500, was owed 10: {reason}"
+        "A owed 10, was owed nothing, had 3: {reason}"
     );
     let truth_after = e.graph.liquidity_of(a);
     assert!(
         truth_after < truth_before,
         "truth dropped: {truth_before} → {truth_after}"
     );
-    // Seized 50 at the gate; then B's backed hire of A cleared at commit and paid A 10.
+    // Seized 1.0 at the gate; nobody paid A, so that is the whole movement.
     assert!(
-        (truth_after - (truth_before - amount + CITY_COURIER_PRICE)).abs() < 1e-9,
-        "truth {truth_before} − slash {amount} + B's 10 = {truth_after}"
+        (truth_after - (truth_before - amount)).abs() < 1e-9,
+        "truth {truth_before} − slash {amount} = {truth_after}"
     );
     assert!((e.graph.total_slashed - amount).abs() < 1e-9);
     assert!(
@@ -401,24 +408,111 @@ fn unbacked_net_position_is_slashed_at_ten_percent() {
         0,
         "the unbacked hire never became a contract"
     );
-    // B's hire of A was backed and cleared: after the unwind B is a plain net debtor of 10.
+    // B hired nobody: gross is A's 10, and the approved set moves no liquidity.
     let (gross, net, _) = netted_events(&e, r.tick)[0];
-    assert!((gross - (believed + CITY_COURIER_PRICE)).abs() < 1e-9);
-    assert!(
-        (net - CITY_COURIER_PRICE).abs() < 1e-9,
-        "net over the approved set: B pays 10"
-    );
-    assert!((r.settled_liquidity - CITY_COURIER_PRICE).abs() < 1e-9);
+    assert!((gross - CITY_COURIER_PRICE).abs() < 1e-9);
+    assert!(net.abs() < 1e-9, "net over the approved set: nothing");
+    assert!(r.settled_liquidity.abs() < 1e-9);
     assert_eq!(
         e.graph.liquidity_of(b),
-        CITY_HOUSE_LIQUIDITY - CITY_COURIER_PRICE
+        CITY_HOUSE_LIQUIDITY,
+        "B paid nobody and was paid by nobody"
     );
     // Slashing is a rejection too: sunk cost, no refund.
     assert!(e.events().iter().any(|ev| matches!(ev, EngineEvent::Rejected { gate: Stage::City, reason, .. } if reason.contains("unbacked in netting"))));
     assert!(
         !r.rolled_back,
-        "one offender out of eight envelopes does not trip the High Court"
+        "one liquidity verdict is below the court's min_sample of 5"
     );
+}
+
+/// (3, the lane's original scenario, post-audit) A hallucinated price is a
+/// hash mismatch at the City gate, not an unbacked position: ledger #4 put
+/// `dvp_binding` in front of the netting, so A's believed 500 is rejected
+/// before it can enter the net positions and nobody is slashed. B's honest
+/// hire of A is unaffected and clears.
+#[test]
+fn a_hallucinated_price_is_a_hash_mismatch_at_the_clearinghouse_not_a_slash() {
+    let mut e = small_city(4);
+    let (a, b) = mutual_pair(&mut e);
+    let believed = 500.0;
+    e.node_mut(a)
+        .unwrap()
+        .oak_table
+        .put("price/courier", format!("{believed}"));
+    let r = block_on(e.tick());
+    assert_eq!(
+        r.slashed, 0,
+        "a hallucinated price is rejected, not slashed"
+    );
+    assert_eq!(r.rejected, 1, "A's hire alone is rejected");
+    assert!(!e
+        .events()
+        .iter()
+        .any(|ev| matches!(ev, EngineEvent::Slashed { .. })));
+    assert!(e.graph.total_slashed.abs() < 1e-9);
+    let rejections: Vec<String> = e
+        .events()
+        .iter()
+        .filter_map(|ev| match ev {
+            EngineEvent::Rejected { gate, reason, .. } => {
+                assert_eq!(*gate, Stage::City);
+                Some(reason.clone())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(rejections.len(), 1);
+    assert!(rejections[0].contains("hash mismatch"), "{}", rejections[0]);
+    assert!(
+        rejections[0].contains(&format!("{believed:.2}")),
+        "the reason names the claimed price: {}",
+        rejections[0]
+    );
+    // A's hire never became a contract; B's honest hire of A did.
+    assert_eq!(
+        e.graph
+            .contracts
+            .iter()
+            .filter(|c| c.initiator == a && c.kind == "hire_service")
+            .count(),
+        0,
+        "the mismatched hire never became a contract"
+    );
+    assert_eq!(
+        e.graph
+            .contracts
+            .iter()
+            .filter(|c| c.initiator == b && c.target == a && c.kind == "hire_service")
+            .count(),
+        1
+    );
+    // The event's gross is what the batch asked for (510, the 500 included, as
+    // for a slashed envelope); its net is over the approved set alone, and only
+    // B's 10 was approved: B pays A.
+    let (gross, net, envelopes) = netted_events(&e, r.tick)[0];
+    assert!(
+        (gross - (believed + CITY_COURIER_PRICE)).abs() < 1e-9,
+        "gross is the asked-for total: {gross}"
+    );
+    assert!(
+        (net - CITY_COURIER_PRICE).abs() < 1e-9,
+        "the rejected 500 never entered the net positions: net {net}"
+    );
+    assert_eq!(
+        envelopes, r.envelopes_minted,
+        "the run still counts every envelope the gate saw"
+    );
+    assert!((r.settled_liquidity - CITY_COURIER_PRICE).abs() < 1e-9);
+    assert_eq!(
+        e.graph.liquidity_of(a),
+        CITY_HOUSE_LIQUIDITY + CITY_COURIER_PRICE
+    );
+    assert_eq!(
+        e.graph.liquidity_of(b),
+        CITY_HOUSE_LIQUIDITY - CITY_COURIER_PRICE
+    );
+    assert!(!r.rolled_back, "a hash mismatch is not a liquidity failure");
 }
 
 /// (4) The coordination tax on the envelope itself: cross-street hires pay
@@ -470,9 +564,11 @@ fn cross_street_pays_1_40_and_same_street_pays_1_25() {
             x.tax_paid,
             x.compute_weight
         );
+        // The send fee is 10 cr (what the kernel charged: 100 tokens), not the
+        // battery's unused `spend_amount = 25`; a quarter of it is the same-street tax.
         assert_eq!(
-            x.tax_paid, 6.25,
-            "the door fee is 25 cr; a quarter of it is the same-street tax"
+            x.tax_paid, 2.5,
+            "the send fee is 10 cr; a quarter of it is the same-street tax"
         );
     }
     let expected: f64 = envs.iter().map(|x| x.tax_paid).sum();

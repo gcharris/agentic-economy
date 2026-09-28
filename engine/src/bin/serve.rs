@@ -17,14 +17,16 @@
 //! |---|---|---|
 //! | `GET` | `/state` | `application/json`: the engine's `state_json()` (a `StateView`) |
 //! | `GET` | `/events` | `text/event-stream`: `event: hello` (engine version text) on connect, then one `event: tick` per engine tick with `data: {"report": TickReport, "events": [EngineEvent…]}` |
-//! | `POST` | `/authorize/<envelope_id>` | `{"ok":true}` — the click at the Door (`envelope_id` is the decimal `u64` from `state.held[].envelope`) |
-//! | `POST` | `/reject/<envelope_id>` | `{"ok":true}` — the envelope is destroyed, its compute sunk |
+//! | `POST` | `/authorize/<envelope_id>` | `{"ok":true}` — the click at the Door (`envelope_id` is the decimal `u64` from `state.held[].envelope`); `404` if no Door holds that envelope |
+//! | `POST` | `/reject/<envelope_id>` | `{"ok":true}` — the envelope is destroyed, its compute sunk; `404` if no Door holds that envelope |
 //! | `POST` | `/top-up/<node_id>/<credits>` | `{"ok":true}` — money in the purse (`node_id` decimal `u64`, credits `f64`) |
 //! | `POST` | `/zoom/<1-5>` | `{"ok":true}` — the camera: House=1 … World=5; packs/unpacks accordingly |
 //! | `POST` | `/pause`, `/resume` | `{"ok":true}` — stop/restart the tick interval (state and commands still answer) |
 //! | `OPTIONS` | any | `204` with CORS preflight headers |
 //!
-//! Unknown paths answer `404 {"ok":false,"error":…}`; malformed ids answer `400`.
+//! Unknown paths answer `404 {"ok":false,"error":…}`; malformed ids answer `400`; a
+//! decision on an envelope nobody holds answers `404 {"ok":false,"error":"no envelope held with that id"}`
+//! (audit ledger #33: `Engine::authorize` / `Engine::reject` return whether the id was held).
 //! Request bodies are ignored; only the request line and headers are read.
 
 use context_engine::prelude::*;
@@ -103,17 +105,26 @@ struct Hub {
 }
 
 const OK: &str = r#"{"ok":true}"#;
+/// Ledger #33: a Door decision on an id no Door holds. `handle` turns any
+/// non-`ok` body into a `404`.
+const NO_ENVELOPE: &str = r#"{"ok":false,"error":"no envelope held with that id"}"#;
 
 fn apply(engine: &mut Engine, cmd: Cmd, paused: &mut bool) -> String {
     match cmd {
         Cmd::State => engine.state_json(),
         Cmd::Authorize(id) => {
-            engine.authorize(id);
-            OK.into()
+            if engine.authorize(id) {
+                OK.into()
+            } else {
+                NO_ENVELOPE.into()
+            }
         }
         Cmd::Reject(id) => {
-            engine.reject(id);
-            OK.into()
+            if engine.reject(id) {
+                OK.into()
+            } else {
+                NO_ENVELOPE.into()
+            }
         }
         Cmd::TopUp(node, credits) => {
             if engine.node(node).is_none() {

@@ -166,6 +166,15 @@ async fn serve_speaks_state_events_and_commands() {
         serde_json::from_str::<serde_json::Value>(&body).unwrap()["ok"],
         false
     );
+    // Ledger #33: a Door decision on an envelope nobody holds is a 404, not an ok.
+    let (head, body) = call(port, "POST", "/authorize/424242").await;
+    assert!(head.starts_with("HTTP/1.1 404"), "{head}");
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&body).unwrap()["ok"],
+        false
+    );
+    let (head, _) = call(port, "POST", "/reject/424242").await;
+    assert!(head.starts_with("HTTP/1.1 404"), "{head}");
     let (head, _) = call(port, "GET", "/nope").await;
     assert!(head.starts_with("HTTP/1.1 404"), "{head}");
 

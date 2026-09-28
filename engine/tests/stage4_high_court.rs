@@ -132,8 +132,10 @@ fn a_systemic_failure_trips_the_circuit_breaker() {
     let (to_tick, reason, slashed) = rolled_back(&e, 2).expect("a RolledBack event");
     assert_eq!(to_tick, 1);
     assert_eq!(slashed, 5);
+    // The court's sample is liquidity verdicts at algorithmic gates only
+    // (ledger #6): 5 failed locks + 2 honest payments = 7, of which 5 failed = 71 %.
     assert!(
-        reason.contains("71%") && reason.contains("7 envelopes"),
+        reason.contains("71%") && reason.contains("7 liquidity verdicts"),
         "reason: {reason}"
     );
     assert_eq!(e.court.rollbacks, 1);

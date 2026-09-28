@@ -36,4 +36,4 @@ Source: the adversarial audit of 2026-09-28 (5 lenses, 33 findings, 81 refutatio
 | 30 | Stage 3 LOD tension: camera at City packs the houses the clearinghouse needs | policy | **open** (lane 3 report) |
 | 31 | Receiver never verifies in DvP; `AwaitingCounterparty` never produced | policy | **open** (lane 2 report) |
 | 32 | Stage 5: settlement writes no ledger line to Oak Tables, so country roots are static | policy | **open** (lane 5 report; the Chancellor seat compensates) |
-| 33 | `serve`: `POST /authorize/<unheld>` answers ok | low | **enabled**: `Engine::authorize` now returns bool; wire the 404 in `src/bin/serve.rs` |
+| 33 | `serve`: `POST /authorize/<unheld>` answers ok | low | **fixed**: `Engine::authorize`/`reject` return bool; `src/bin/serve.rs` answers `404 {"ok":false,"error":"no envelope held with that id"}`; `tests/serve_smoke.rs` |
