@@ -4,6 +4,7 @@
 //! cargo run --release --bin serve -- --scenario house --budget 800 --tasks 15 --seed 7 --interval-ms 700 --port 8787
 //! cargo run --release --bin serve -- --scenario street --port 0     # port 0: pick a free port, print it
 //! cargo run --release --bin serve -- --scenario city|country|world   # Stages 3, 4, 5 (fixed shapes; see wasm_abi.rs)
+//! PORT=8080 serve --bind 0.0.0.0                                       # a hosted run: the port from the environment, all interfaces (no TLS, no auth: put a front door in front)
 //! ```
 //!
 //! The engine lives in **one Tokio task** that owns `&mut Engine`. Nothing else
@@ -46,6 +47,7 @@ struct Args {
     seed: u64,
     interval_ms: u64,
     port: u16,
+    bind: String,
 }
 
 fn parse_args() -> Args {
@@ -55,7 +57,12 @@ fn parse_args() -> Args {
         tasks: 15,
         seed: 7,
         interval_ms: 700,
-        port: 8787,
+        // A hosted run (Cloud Run injects PORT) needs the port from the environment; local runs keep 8787.
+        port: std::env::var("PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8787),
+        bind: "127.0.0.1".into(),
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -71,6 +78,7 @@ fn parse_args() -> Args {
                     .unwrap_or(a.interval_ms)
             }
             "--port" => a.port = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.port),
+            "--bind" => a.bind = it.next().unwrap_or(a.bind),
             _ => {}
         }
     }
@@ -335,7 +343,7 @@ async fn main() {
         a.seed
     );
 
-    let listener = match TcpListener::bind(("127.0.0.1", a.port)).await {
+    let listener = match TcpListener::bind((a.bind.as_str(), a.port)).await {
         Ok(l) => l,
         Err(e) => {
             eprintln!("serve: cannot bind port {}: {e}", a.port);
