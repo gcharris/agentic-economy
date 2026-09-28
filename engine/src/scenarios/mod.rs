@@ -22,11 +22,22 @@ pub fn house(mut config: EngineConfig, budget: f64, tasks: usize) -> Engine {
     config.active_scale = Stage::House;
     let mut e = Engine::new(config);
     let street = e.add_node("Elm Street", Stage::Street, None, Purse::new(0.0, 0.0));
-    let house = e.add_node("The House", Stage::House, Some(street), Purse::new(budget, 100.0));
+    let house = e.add_node(
+        "The House",
+        Stage::House,
+        Some(street),
+        Purse::new(budget, 100.0),
+    );
     for i in 1..=tasks {
-        e.node_mut(house).unwrap().tasks.push(Task::synthesis(format!("doc_synthesis_{i:02}")));
+        e.node_mut(house)
+            .unwrap()
+            .tasks
+            .push(Task::synthesis(format!("doc_synthesis_{i:02}")));
     }
-    e.node_mut(house).unwrap().oak_table.put("price/courier", "10");
+    e.node_mut(house)
+        .unwrap()
+        .oak_table
+        .put("price/courier", "10");
     e.graph.service_prices.insert("courier".into(), 10.0);
     for seat in staff() {
         e.seat(house, seat);
@@ -37,16 +48,34 @@ pub fn house(mut config: EngineConfig, budget: f64, tasks: usize) -> Engine {
 /// Stage 2. A street of houses that hire each other's couriers through the
 /// Letter Slot. Zoomed to the street, no human is asked; the atomic swap
 /// verifies instead. Truth drifts on each table; stale prices revert.
-pub fn street(mut config: EngineConfig, houses: usize, budget_each: f64, tasks_each: usize) -> Engine {
+pub fn street(
+    mut config: EngineConfig,
+    houses: usize,
+    budget_each: f64,
+    tasks_each: usize,
+) -> Engine {
     config.active_scale = Stage::Street;
     let mut e = Engine::new(config);
     let city = e.add_node("The City", Stage::City, None, Purse::new(0.0, 0.0));
-    let street = e.add_node("Elm Street", Stage::Street, Some(city), Purse::new(0.0, 0.0));
+    let street = e.add_node(
+        "Elm Street",
+        Stage::Street,
+        Some(city),
+        Purse::new(0.0, 0.0),
+    );
     let mut ids = Vec::new();
     for i in 1..=houses {
-        let h = e.add_node(format!("House {i}"), Stage::House, Some(street), Purse::new(budget_each, 200.0));
+        let h = e.add_node(
+            format!("House {i}"),
+            Stage::House,
+            Some(street),
+            Purse::new(budget_each, 200.0),
+        );
         for t in 1..=tasks_each {
-            e.node_mut(h).unwrap().tasks.push(Task::synthesis(format!("h{i}_task_{t:02}")));
+            e.node_mut(h)
+                .unwrap()
+                .tasks
+                .push(Task::synthesis(format!("h{i}_task_{t:02}")));
         }
         e.node_mut(h).unwrap().oak_table.put("price/courier", "10");
         for seat in staff() {
@@ -63,5 +92,11 @@ pub fn street(mut config: EngineConfig, houses: usize, budget_each: f64, tasks_e
 }
 
 pub fn staff() -> Vec<Arc<dyn crate::node::Agent>> {
-    vec![Arc::new(Scout::default()), Arc::new(Scribble::default()), Arc::new(Inspector::default()), Arc::new(Steward), Arc::new(Porter)]
+    vec![
+        Arc::new(Scout::default()),
+        Arc::new(Scribble::default()),
+        Arc::new(Inspector::default()),
+        Arc::new(Steward),
+        Arc::new(Porter),
+    ]
 }

@@ -25,11 +25,19 @@ const HIRE_WEIGHT: f64 = 2.0;
 const HIRE_TAX: f64 = 0.5;
 
 fn cfg(seed: u64) -> EngineConfig {
-    EngineConfig { seed, cost_visible: true, ..Default::default() }
+    EngineConfig {
+        seed,
+        cost_visible: true,
+        ..Default::default()
+    }
 }
 
 fn houses(e: &Engine) -> Vec<NodeId> {
-    e.nodes.values().filter(|n| n.scale_level == Stage::House).map(|n| n.id).collect()
+    e.nodes
+        .values()
+        .filter(|n| n.scale_level == Stage::House)
+        .map(|n| n.id)
+        .collect()
 }
 
 fn balances(e: &Engine) -> BTreeMap<NodeId, f64> {
@@ -41,7 +49,11 @@ fn compute_of(e: &Engine, id: NodeId) -> f64 {
 }
 
 fn cached_price(e: &Engine, id: NodeId) -> Option<f64> {
-    e.node(id).unwrap().oak_table.get("price/courier").and_then(|s| s.parse().ok())
+    e.node(id)
+        .unwrap()
+        .oak_table
+        .get("price/courier")
+        .and_then(|s| s.parse().ok())
 }
 
 /// One block, and everything it emitted.
@@ -51,11 +63,31 @@ fn step(e: &mut Engine) -> (TickReport, Vec<EngineEvent>) {
 }
 
 fn settled(events: &[EngineEvent]) -> Vec<(NodeId, NodeId, f64)> {
-    events.iter().filter_map(|ev| match ev { EngineEvent::Settled { from, to, amount, .. } => Some((*from, *to, *amount)), _ => None }).collect()
+    events
+        .iter()
+        .filter_map(|ev| match ev {
+            EngineEvent::Settled {
+                from, to, amount, ..
+            } => Some((*from, *to, *amount)),
+            _ => None,
+        })
+        .collect()
 }
 
 fn rejected(events: &[EngineEvent]) -> Vec<(EnvelopeId, Stage, String, f64)> {
-    events.iter().filter_map(|ev| match ev { EngineEvent::Rejected { envelope, gate, reason, sunk_compute, .. } => Some((*envelope, *gate, reason.clone(), *sunk_compute)), _ => None }).collect()
+    events
+        .iter()
+        .filter_map(|ev| match ev {
+            EngineEvent::Rejected {
+                envelope,
+                gate,
+                reason,
+                sunk_compute,
+                ..
+            } => Some((*envelope, *gate, reason.clone(), *sunk_compute)),
+            _ => None,
+        })
+        .collect()
 }
 
 fn done(ctx: DraftContext) -> DraftFuture {
@@ -103,12 +135,23 @@ impl Agent for Hirer {
         ModelTier::FastQuantized
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(&peer) = ctx.known_peers().first() else { return done(ctx) };
+        let Some(&peer) = ctx.known_peers().first() else {
+            return done(ctx);
+        };
         let believed = ctx.oak().get_f64("price/courier").unwrap_or(STALE_PRICE);
-        ctx.think("Hirer", format!("My table says the courier costs {believed:.2}. Hiring next door at that price."));
+        ctx.think(
+            "Hirer",
+            format!(
+                "My table says the courier costs {believed:.2}. Hiring next door at that price."
+            ),
+        );
         ctx.propose(ProposalDraft {
             target: peer,
-            payload: Payload::HireService { service: "courier".into(), believed_price: believed, believed_price_hash: SovereignGraph::hash_price("courier", believed) },
+            payload: Payload::HireService {
+                service: "courier".into(),
+                believed_price: believed,
+                believed_price_hash: SovereignGraph::hash_price("courier", believed),
+            },
             requested_liquidity: believed,
             compute_weight: HIRE_WEIGHT,
         });
@@ -128,7 +171,12 @@ impl Agent for PayOracle {
         ModelTier::FastQuantized
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        ctx.propose(ProposalDraft { target: ctx.node_id(), payload: Payload::StateSync, requested_liquidity: 0.0, compute_weight: ORACLE_COST });
+        ctx.propose(ProposalDraft {
+            target: ctx.node_id(),
+            payload: Payload::StateSync,
+            requested_liquidity: 0.0,
+            compute_weight: ORACLE_COST,
+        });
         done(ctx)
     }
 }
@@ -144,10 +192,16 @@ impl Agent for Freeloader {
         ModelTier::FastQuantized
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(&peer) = ctx.known_peers().first() else { return done(ctx) };
+        let Some(&peer) = ctx.known_peers().first() else {
+            return done(ctx);
+        };
         ctx.propose(ProposalDraft {
             target: peer,
-            payload: Payload::HireService { service: "courier".into(), believed_price: STALE_PRICE, believed_price_hash: SovereignGraph::hash_price("courier", STALE_PRICE) },
+            payload: Payload::HireService {
+                service: "courier".into(),
+                believed_price: STALE_PRICE,
+                believed_price_hash: SovereignGraph::hash_price("courier", STALE_PRICE),
+            },
             requested_liquidity: 0.0,
             compute_weight: HIRE_WEIGHT,
         });
@@ -175,36 +229,70 @@ fn swaps_settle_through_the_letter_slot_and_move_the_graph_exactly() {
     let slot = install_slot(&mut e);
     assert_eq!(e.config.active_scale, Stage::Street);
     for h in houses(&e) {
-        assert_eq!(e.effective_gate(e.node(h).unwrap()), Stage::Street, "a house's Door becomes the street's Letter Slot under this camera");
+        assert_eq!(
+            e.effective_gate(e.node(h).unwrap()),
+            Stage::Street,
+            "a house's Door becomes the street's Letter Slot under this camera"
+        );
     }
     let before = balances(&e);
     let (r, events) = step(&mut e);
 
     let swaps = settled(&events);
     assert_eq!(swaps.len(), 3, "every house hired a courier this tick");
-    assert!(events.iter().all(|ev| !matches!(ev, EngineEvent::AwaitingHumanSignature { .. })), "nobody waited for a hand on the latch");
-    assert!((r.settled_liquidity - 30.0).abs() < 1e-9, "3 swaps × the true price of 10");
+    assert!(
+        events
+            .iter()
+            .all(|ev| !matches!(ev, EngineEvent::AwaitingHumanSignature { .. })),
+        "nobody waited for a hand on the latch"
+    );
+    assert!(
+        (r.settled_liquidity - 30.0).abs() < 1e-9,
+        "3 swaps × the true price of 10"
+    );
 
     // The graph moved by exactly the settled amounts.
     let mut expected = before.clone();
     for (from, to, amount) in &swaps {
-        assert!((amount - e.graph.service_prices["courier"]).abs() < 1e-9, "a settled swap pays the true price");
+        assert!(
+            (amount - e.graph.service_prices["courier"]).abs() < 1e-9,
+            "a settled swap pays the true price"
+        );
         *expected.get_mut(from).unwrap() -= amount;
         *expected.entry(*to).or_insert(0.0) += amount;
     }
     let after = balances(&e);
     for (id, want) in &expected {
-        assert!((after[id] - want).abs() < 1e-9, "{id}: truth {} vs expected {want}", after[id]);
+        assert!(
+            (after[id] - want).abs() < 1e-9,
+            "{id}: truth {} vs expected {want}",
+            after[id]
+        );
     }
-    assert!((before.values().sum::<f64>() - after.values().sum::<f64>()).abs() < 1e-9, "liquidity is conserved: a swap moves it, it never mints it");
+    assert!(
+        (before.values().sum::<f64>() - after.values().sum::<f64>()).abs() < 1e-9,
+        "liquidity is conserved: a swap moves it, it never mints it"
+    );
     for h in houses(&e) {
-        assert!((e.node(h).unwrap().purse.liquidity - e.graph.liquidity_of(h)).abs() < 1e-9, "after a settle the purse's belief equals the truth");
+        assert!(
+            (e.node(h).unwrap().purse.liquidity - e.graph.liquidity_of(h)).abs() < 1e-9,
+            "after a settle the purse's belief equals the truth"
+        );
     }
-    assert_eq!(e.graph.contracts.iter().filter(|c| c.kind == "hire_service").count(), 3);
+    assert_eq!(
+        e.graph
+            .contracts
+            .iter()
+            .filter(|c| c.kind == "hire_service")
+            .count(),
+        3
+    );
 
     let slot = slot.lock().unwrap();
     assert_eq!((slot.swaps, slot.reverts), (3, 0));
-    assert!(slot.history.iter().all(|d| d.phase == DvpPhase::Settled && d.expected_hash == d.actual_hash && (d.locked_liquidity - 10.0).abs() < 1e-9));
+    assert!(slot.history.iter().all(|d| d.phase == DvpPhase::Settled
+        && d.expected_hash == d.actual_hash
+        && (d.locked_liquidity - 10.0).abs() < 1e-9));
 }
 
 // ══════════════════════════ (2) drift reverts ════════════════════════════
@@ -220,12 +308,20 @@ fn a_moved_truth_reverts_every_stale_swap_and_sinks_only_the_tax() {
     let hs = houses(&e);
 
     let (r, events) = step(&mut e);
-    assert_eq!((r.approved, r.rejected), (3, 0), "sanity: with the tables true, everything settles");
+    assert_eq!(
+        (r.approved, r.rejected),
+        (3, 0),
+        "sanity: with the tables true, everything settles"
+    );
     assert_eq!(settled(&events).len(), 3);
 
     move_truth(&mut e, "courier", MOVED_PRICE);
     for h in &hs {
-        assert_eq!(cached_price(&e, *h), Some(STALE_PRICE), "no table heard the news");
+        assert_eq!(
+            cached_price(&e, *h),
+            Some(STALE_PRICE),
+            "no table heard the news"
+        );
     }
     let frozen = balances(&e);
     let settled_before = e.graph.total_settled;
@@ -235,16 +331,26 @@ fn a_moved_truth_reverts_every_stale_swap_and_sinks_only_the_tax() {
         let (r, events) = step(&mut e);
 
         assert_eq!(r.tick, tick);
-        assert_eq!((r.approved, r.rejected, r.slashed), (0, 3, 0), "tick {tick}");
+        assert_eq!(
+            (r.approved, r.rejected, r.slashed),
+            (0, 3, 0),
+            "tick {tick}"
+        );
         assert_eq!(r.settled_liquidity, 0.0);
-        assert!(settled(&events).is_empty(), "no liquidity moves on a stale belief");
+        assert!(
+            settled(&events).is_empty(),
+            "no liquidity moves on a stale belief"
+        );
 
         let rej = rejected(&events);
         assert_eq!(rej.len(), 3);
         for (_, gate, reason, sunk) in &rej {
             assert_eq!(*gate, Stage::Street);
             assert!(reason.contains("hash mismatch"), "tick {tick}: {reason}");
-            assert!((sunk - HIRE_TAX).abs() < 1e-9, "the sunk cost is the crossing tax, {sunk}");
+            assert!(
+                (sunk - HIRE_TAX).abs() < 1e-9,
+                "the sunk cost is the crossing tax, {sunk}"
+            );
         }
         for (i, h) in hs.iter().enumerate() {
             let paid = compute_before[i] - compute_of(&e, *h);
@@ -283,30 +389,56 @@ fn the_default_staff_reverts_under_drift_until_the_scout_pays_the_oracle() {
     for tick in 2..=8 {
         let (r, events) = step(&mut e);
         let rej = rejected(&events);
-        assert_eq!(rej.len(), 3, "tick {tick}: three stale swaps, three reverts");
-        assert!(rej.iter().all(|(_, _, reason, _)| reason.contains("hash mismatch")));
+        assert_eq!(
+            rej.len(),
+            3,
+            "tick {tick}: three stale swaps, three reverts"
+        );
+        assert!(rej
+            .iter()
+            .all(|(_, _, reason, _)| reason.contains("hash mismatch")));
         assert!(settled(&events).is_empty());
         assert_eq!(balances(&e), frozen);
-        assert!(!r.rolled_back, "three reverts against three deliveries is not a systemic failure");
+        assert!(
+            !r.rolled_back,
+            "three reverts against three deliveries is not a systemic failure"
+        );
         if r.synced > 0 {
-            assert_eq!(r.synced, 3, "the houses are in lockstep: all ask the oracle the same tick");
+            assert_eq!(
+                r.synced, 3,
+                "the houses are in lockstep: all ask the oracle the same tick"
+            );
             synced_at = Some(tick);
             break;
         }
     }
     let synced_at = synced_at.expect("the Scout asked the oracle within a few ticks");
-    assert!(synced_at <= 5, "generation 5 is reached on the third draft; the sync commits on the fourth");
+    assert!(
+        synced_at <= 5,
+        "generation 5 is reached on the third draft; the sync commits on the fourth"
+    );
     for h in &hs {
         let n = e.node(*h).unwrap();
-        assert_eq!(cached_price(&e, *h), Some(MOVED_PRICE), "the oracle copied the truth onto the table");
+        assert_eq!(
+            cached_price(&e, *h),
+            Some(MOVED_PRICE),
+            "the oracle copied the truth onto the table"
+        );
         assert_eq!(n.epistemics.confidence, 1.0);
         assert_eq!(n.epistemics.calibrations, 1);
     }
 
     let (r, events) = step(&mut e);
     let swaps = settled(&events);
-    assert_eq!(swaps.len(), 3, "the tick after the oracle, everything settles again");
-    assert!(swaps.iter().all(|(_, _, a)| (a - MOVED_PRICE).abs() < 1e-9), "at the new price");
+    assert_eq!(
+        swaps.len(),
+        3,
+        "the tick after the oracle, everything settles again"
+    );
+    assert!(
+        swaps.iter().all(|(_, _, a)| (a - MOVED_PRICE).abs() < 1e-9),
+        "at the new price"
+    );
     assert!((r.settled_liquidity - 36.0).abs() < 1e-9);
     assert!(rejected(&events).is_empty());
 }
@@ -332,8 +464,14 @@ fn a_house_that_pays_the_oracle_settles_again_while_its_neighbours_still_revert(
     let (r, events) = step(&mut e);
     assert_eq!(r.synced, 1);
     assert!(events.iter().any(|ev| matches!(ev, EngineEvent::StateSync { node, cost, .. } if *node == a && *cost == ORACLE_COST)));
-    assert_eq!(r.rejected, 3, "the swap drafted in the same block as the sync still carried the stale snapshot");
-    assert!((compute_before - compute_of(&e, a) - (ORACLE_COST + HIRE_TAX)).abs() < 1e-9, "the oracle costs compute, not liquidity");
+    assert_eq!(
+        r.rejected, 3,
+        "the swap drafted in the same block as the sync still carried the stale snapshot"
+    );
+    assert!(
+        (compute_before - compute_of(&e, a) - (ORACLE_COST + HIRE_TAX)).abs() < 1e-9,
+        "the oracle costs compute, not liquidity"
+    );
     assert_eq!(cached_price(&e, a), Some(MOVED_PRICE));
     assert_eq!(cached_price(&e, b), Some(STALE_PRICE));
     assert_eq!(cached_price(&e, c), Some(STALE_PRICE));
@@ -355,7 +493,9 @@ fn a_house_that_pays_the_oracle_settles_again_while_its_neighbours_still_revert(
     }
     let rej = rejected(&events);
     assert_eq!(rej.len(), 2);
-    assert!(rej.iter().all(|(_, _, reason, _)| reason.contains("hash mismatch")));
+    assert!(rej
+        .iter()
+        .all(|(_, _, reason, _)| reason.contains("hash mismatch")));
 }
 
 /// The other way to force it: mark one house overdue (generation ≥ 5) and
@@ -372,13 +512,19 @@ fn an_overdue_house_asks_the_oracle_itself_and_settles_next_tick() {
     e.node_mut(a).unwrap().epistemics.generation = MAX_UNCALIBRATED_HANDOVERS;
     let (r, events) = step(&mut e);
     assert_eq!(r.synced, 1);
-    assert!(events.iter().any(|ev| matches!(ev, EngineEvent::StateSync { node, .. } if *node == a)));
+    assert!(events
+        .iter()
+        .any(|ev| matches!(ev, EngineEvent::StateSync { node, .. } if *node == a)));
     assert!(events.iter().any(|ev| matches!(ev, EngineEvent::Thought { node, seat, text, .. } if *node == a && seat == "Scout" && text.contains("Asking the oracle"))));
     assert_eq!(rejected(&events).len(), 3);
 
     let (r, events) = step(&mut e);
     let swaps = settled(&events);
-    assert_eq!((r.approved - r.synced, r.rejected), (4, 2), "one swap and three deliveries approved; two stale swaps reverted");
+    assert_eq!(
+        (r.approved - r.synced, r.rejected),
+        (4, 2),
+        "one swap and three deliveries approved; two stale swaps reverted"
+    );
     assert_eq!(swaps.len(), 1);
     assert_eq!(swaps[0].0, a);
     assert!((swaps[0].2 - MOVED_PRICE).abs() < 1e-9);
@@ -407,13 +553,26 @@ fn the_courier_drops_a_liquidity_payload_with_zero_allocation_before_verificatio
     assert_eq!(r.drafted, 1);
     assert_eq!(r.dropped_by_courier, 1);
     assert_eq!(r.envelopes_minted, 0);
-    assert_eq!((r.approved, r.rejected, r.held), (0, 0, 0), "nothing reached a gate");
+    assert_eq!(
+        (r.approved, r.rejected, r.held),
+        (0, 0, 0),
+        "nothing reached a gate"
+    );
     assert!(events.iter().any(|ev| matches!(ev, EngineEvent::DroppedByCourier { from, to, reason, .. } if *from == a && *to == b && reason.contains("courier rule"))));
-    assert!(events.iter().all(|ev| !matches!(ev, EngineEvent::Proposed { .. } | EngineEvent::Approved { .. } | EngineEvent::Rejected { .. } | EngineEvent::Settled { .. })));
+    assert!(events.iter().all(|ev| !matches!(
+        ev,
+        EngineEvent::Proposed { .. }
+            | EngineEvent::Approved { .. }
+            | EngineEvent::Rejected { .. }
+            | EngineEvent::Settled { .. }
+    )));
     assert_eq!(e.mempool.dropped_total, 1);
     assert_eq!(e.mempool.accepted_total, 0);
     assert_eq!(balances(&e), before);
-    assert!(compute_of(&e, a) > compute_before - HIRE_WEIGHT, "the send fee was never charged: the envelope never reached commit");
+    assert!(
+        compute_of(&e, a) > compute_before - HIRE_WEIGHT,
+        "the send fee was never charged: the envelope never reached commit"
+    );
 
     let slot = slot.lock().unwrap();
     assert_eq!((slot.swaps, slot.reverts), (0, 0));
@@ -434,12 +593,21 @@ fn the_letter_slot_history_records_settled_and_reverted_phases() {
     move_truth(&mut e, "courier", MOVED_PRICE);
     let (_, ev2) = step(&mut e);
 
-    let approved: Vec<EnvelopeId> = ev1.iter().filter_map(|ev| match ev { EngineEvent::Approved { envelope, .. } => Some(*envelope), _ => None }).collect();
+    let approved: Vec<EnvelopeId> = ev1
+        .iter()
+        .filter_map(|ev| match ev {
+            EngineEvent::Approved { envelope, .. } => Some(*envelope),
+            _ => None,
+        })
+        .collect();
     let reverted: Vec<EnvelopeId> = rejected(&ev2).into_iter().map(|(id, ..)| id).collect();
     assert_eq!((approved.len(), reverted.len()), (2, 2));
 
     let slot = slot.lock().unwrap();
-    assert_eq!(slot.describe(), "The Letter Slot (atomic DvP): 2 settled, 2 reverted");
+    assert_eq!(
+        slot.describe(),
+        "The Letter Slot (atomic DvP): 2 settled, 2 reverted"
+    );
     assert_eq!(slot.history.len(), 4);
     let stale = SovereignGraph::hash_price("courier", STALE_PRICE);
     let truth = SovereignGraph::hash_price("courier", MOVED_PRICE);
@@ -457,7 +625,10 @@ fn the_letter_slot_history_records_settled_and_reverted_phases() {
         }
     }
     // The phases the engine never records: it enters the ledger at Verify.
-    assert!(slot.history.iter().all(|d| !matches!(d.phase, DvpPhase::Lock | DvpPhase::Transfer | DvpPhase::Verify)));
+    assert!(slot.history.iter().all(|d| !matches!(
+        d.phase,
+        DvpPhase::Lock | DvpPhase::Transfer | DvpPhase::Verify
+    )));
 }
 
 // ═══════════════════════════ determinism ═════════════════════════════════
@@ -474,8 +645,14 @@ fn replay_under_drift_is_exact() {
         assert_eq!(ra, rb);
         assert_eq!(ea, eb);
     }
-    assert!(a.reports.iter().map(|r| r.rejected).sum::<usize>() > 0, "the drift street did revert");
-    assert!(a.reports.iter().map(|r| r.synced).sum::<usize>() > 0, "and did pay the oracle");
+    assert!(
+        a.reports.iter().map(|r| r.rejected).sum::<usize>() > 0,
+        "the drift street did revert"
+    );
+    assert!(
+        a.reports.iter().map(|r| r.synced).sum::<usize>() > 0,
+        "and did pay the oracle"
+    );
 }
 
 // ═══════════════════ the court watches the street too ════════════════════
@@ -496,11 +673,24 @@ fn a_street_wide_stale_price_trips_the_high_court() {
 
     let (r, events) = step(&mut e);
     assert_eq!(r.rejected, 5);
-    assert!(r.rolled_back, "5 of 5 rejected clears the court's min_sample and threshold");
-    assert!(events.iter().any(|ev| matches!(ev, EngineEvent::RolledBack { to_tick: 1, slashed: 5, .. })));
+    assert!(
+        r.rolled_back,
+        "5 of 5 rejected clears the court's min_sample and threshold"
+    );
+    assert!(events.iter().any(|ev| matches!(
+        ev,
+        EngineEvent::RolledBack {
+            to_tick: 1,
+            slashed: 5,
+            ..
+        }
+    )));
     assert_eq!(e.court.rollbacks, 1);
     for h in houses(&e) {
-        assert!((e.graph.liquidity_of(h) - end_of_tick_1[&h] * 0.75).abs() < 1e-9, "a quarter of the reserves seized for a stale table");
+        assert!(
+            (e.graph.liquidity_of(h) - end_of_tick_1[&h] * 0.75).abs() < 1e-9,
+            "a quarter of the reserves seized for a stale table"
+        );
         assert!(e.court.injunctions.contains(&h));
     }
 }
@@ -519,9 +709,16 @@ fn scribble_hallucination_path_is_dormant_with_the_default_staff() {
     // Structural: Scribble (balanced, rigor 0.90) and Inspector (frontier, 0.98) alternate.
     let mut phi = 1.0;
     for gen in 1..=7 {
-        phi = if gen % 2 == 1 { handover(phi, ModelTier::BalancedStaff, 0.90) } else { handover(phi, ModelTier::FrontierDeep, 0.98) };
+        phi = if gen % 2 == 1 {
+            handover(phi, ModelTier::BalancedStaff, 0.90)
+        } else {
+            handover(phi, ModelTier::FrontierDeep, 0.98)
+        };
     }
-    assert!(phi > HALLUCINATION_THRESHOLD + 0.10, "Φ after seven handovers is {phi:.4}; the 0.75 cliff is never reached before the oracle");
+    assert!(
+        phi > HALLUCINATION_THRESHOLD + 0.10,
+        "Φ after seven handovers is {phi:.4}; the 0.75 cliff is never reached before the oracle"
+    );
 
     // Empirical: no hallucinated price, no mismatch, across seeds.
     for seed in 1..=12u64 {
@@ -531,8 +728,13 @@ fn scribble_hallucination_path_is_dormant_with_the_default_staff() {
             let (_, events) = step(&mut e);
             for ev in &events {
                 match ev {
-                    EngineEvent::Thought { seat, text, .. } if seat == "Scribble" => assert!(!text.starts_with("I'm fairly sure the courier costs"), "seed {seed}: {text}"),
-                    EngineEvent::Rejected { reason, .. } => assert!(!reason.contains("hash mismatch"), "seed {seed}: {reason}"),
+                    EngineEvent::Thought { seat, text, .. } if seat == "Scribble" => assert!(
+                        !text.starts_with("I'm fairly sure the courier costs"),
+                        "seed {seed}: {text}"
+                    ),
+                    EngineEvent::Rejected { reason, .. } => {
+                        assert!(!reason.contains("hash mismatch"), "seed {seed}: {reason}")
+                    }
                     _ => {}
                 }
             }
@@ -540,7 +742,10 @@ fn scribble_hallucination_path_is_dormant_with_the_default_staff() {
                 min_phi = min_phi.min(e.node(h).unwrap().epistemics.confidence);
             }
         }
-        assert!(min_phi > HALLUCINATION_THRESHOLD, "seed {seed}: Φ never fell below the threshold (min {min_phi:.4})");
+        assert!(
+            min_phi > HALLUCINATION_THRESHOLD,
+            "seed {seed}: Φ never fell below the threshold (min {min_phi:.4})"
+        );
     }
 }
 
@@ -558,10 +763,16 @@ impl Agent for Cheat {
         ModelTier::FastQuantized
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(&peer) = ctx.known_peers().first() else { return done(ctx) };
+        let Some(&peer) = ctx.known_peers().first() else {
+            return done(ctx);
+        };
         ctx.propose(ProposalDraft {
             target: peer,
-            payload: Payload::HireService { service: "courier".into(), believed_price: 1.0, believed_price_hash: SovereignGraph::hash_price("courier", STALE_PRICE) },
+            payload: Payload::HireService {
+                service: "courier".into(),
+                believed_price: 1.0,
+                believed_price_hash: SovereignGraph::hash_price("courier", STALE_PRICE),
+            },
             requested_liquidity: 1.0,
             compute_weight: HIRE_WEIGHT,
         });
@@ -581,7 +792,11 @@ fn dvp_binds_the_lock_amount_to_the_verified_price() {
     let slot = install_slot(&mut e);
     let before = balances(&e);
     let (r, events) = step(&mut e);
-    assert_eq!((r.approved, r.rejected), (0, 2), "a lock that does not match the verified price is a revert");
+    assert_eq!(
+        (r.approved, r.rejected),
+        (0, 2),
+        "a lock that does not match the verified price is a revert"
+    );
     assert!(settled(&events).is_empty());
     assert_eq!(balances(&e), before);
     assert_eq!(slot.lock().unwrap().reverts, 2);
@@ -598,11 +813,17 @@ impl Agent for DoubleHirer {
         ModelTier::FastQuantized
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(&peer) = ctx.known_peers().first() else { return done(ctx) };
+        let Some(&peer) = ctx.known_peers().first() else {
+            return done(ctx);
+        };
         for _ in 0..2 {
             ctx.propose(ProposalDraft {
                 target: peer,
-                payload: Payload::HireService { service: "courier".into(), believed_price: STALE_PRICE, believed_price_hash: SovereignGraph::hash_price("courier", STALE_PRICE) },
+                payload: Payload::HireService {
+                    service: "courier".into(),
+                    believed_price: STALE_PRICE,
+                    believed_price_hash: SovereignGraph::hash_price("courier", STALE_PRICE),
+                },
                 requested_liquidity: STALE_PRICE,
                 compute_weight: HIRE_WEIGHT,
             });
@@ -629,10 +850,20 @@ fn dvp_lock_reserves_liquidity_so_a_second_swap_cannot_pass_the_gate() {
     e.node_mut(a).unwrap().purse.liquidity = 15.0;
 
     let (r, events) = step(&mut e);
-    assert_eq!((r.approved, r.rejected), (1, 1), "the second lock fails at the gate, not in commit");
-    assert!(rejected(&events).iter().all(|(_, _, reason, _)| reason.contains("lock failed")));
+    assert_eq!(
+        (r.approved, r.rejected),
+        (1, 1),
+        "the second lock fails at the gate, not in commit"
+    );
+    assert!(rejected(&events)
+        .iter()
+        .all(|(_, _, reason, _)| reason.contains("lock failed")));
     assert_eq!(settled(&events).len(), 1);
     let slot = slot.lock().unwrap();
-    assert_eq!((slot.swaps, slot.reverts), (1, 1), "the ledger agrees with the graph");
+    assert_eq!(
+        (slot.swaps, slot.reverts),
+        (1, 1),
+        "the ledger agrees with the graph"
+    );
     assert!((e.graph.liquidity_of(a) - 5.0).abs() < 1e-9);
 }

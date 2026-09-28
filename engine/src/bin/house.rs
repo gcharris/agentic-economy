@@ -29,7 +29,16 @@ struct Args {
 }
 
 fn parse_args() -> Args {
-    let mut a = Args { ticks: 40, budget: 800.0, tasks: 15, seed: 7, door: DoorMode::Hold(3), cost_visible: true, json: false, scenario: "house".into() };
+    let mut a = Args {
+        ticks: 40,
+        budget: 800.0,
+        tasks: 15,
+        seed: 7,
+        door: DoorMode::Hold(3),
+        cost_visible: true,
+        json: false,
+        scenario: "house".into(),
+    };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
         match k.as_str() {
@@ -82,7 +91,11 @@ fn banner(a: &Args, executor: &str) {
 #[tokio::main]
 async fn main() {
     let a = parse_args();
-    let config = EngineConfig { seed: a.seed, cost_visible: a.cost_visible, ..Default::default() };
+    let config = EngineConfig {
+        seed: a.seed,
+        cost_visible: a.cost_visible,
+        ..Default::default()
+    };
     let mut engine = match a.scenario.as_str() {
         "street" => street(config, 6, a.budget, a.tasks),
         _ => house(config, a.budget, a.tasks),
@@ -99,13 +112,20 @@ async fn main() {
         let report = engine.tick().await;
         let events = engine.drain_events();
         if a.json {
-            println!("{}", serde_json::to_string(&serde_json::json!({"report": report, "events": events})).unwrap());
+            println!(
+                "{}",
+                serde_json::to_string(&serde_json::json!({"report": report, "events": events}))
+                    .unwrap()
+            );
         } else {
             print_tick(&engine, &report, &events);
         }
 
         // The person at the door.
-        let held: Vec<(EnvelopeId, NodeId, String, f64)> = engine.held_envelopes().map(|(n, e)| (e.id, n.id, e.payload.describe(), e.compute_weight)).collect();
+        let held: Vec<(EnvelopeId, NodeId, String, f64)> = engine
+            .held_envelopes()
+            .map(|(n, e)| (e.id, n.id, e.payload.describe(), e.compute_weight))
+            .collect();
         for (id, _node, desc, cost) in held {
             let since = *held_since.entry(id).or_insert(report.tick);
             match &a.door {
@@ -137,7 +157,14 @@ async fn main() {
             }
         }
 
-        if engine.nodes.values().all(|n| n.status == NodeStatus::Halted || (n.tasks.iter().all(|t| matches!(t.state, TaskState::Sent | TaskState::Rejected)) && n.held_at_door.is_empty())) {
+        if engine.nodes.values().all(|n| {
+            n.status == NodeStatus::Halted
+                || (n
+                    .tasks
+                    .iter()
+                    .all(|t| matches!(t.state, TaskState::Sent | TaskState::Rejected))
+                    && n.held_at_door.is_empty())
+        }) {
             break;
         }
     }
@@ -149,10 +176,23 @@ async fn main() {
 
 fn print_tick(engine: &Engine, r: &TickReport, events: &[EngineEvent]) {
     let t = format!("{DIM}t{:02}{RESET}", r.tick);
-    let burns: Vec<String> = events.iter().filter_map(|e| match e {
-        EngineEvent::Burn { seat, credits, tier, cache_hit, .. } => Some(format!("{seat} {credits:.1}cr{}{}", if *cache_hit { "·hit" } else { "" }, DIM.to_string() + &format!("[{}]", &tier[..4]) + RESET)),
-        _ => None,
-    }).collect();
+    let burns: Vec<String> = events
+        .iter()
+        .filter_map(|e| match e {
+            EngineEvent::Burn {
+                seat,
+                credits,
+                tier,
+                cache_hit,
+                ..
+            } => Some(format!(
+                "{seat} {credits:.1}cr{}{}",
+                if *cache_hit { "·hit" } else { "" },
+                DIM.to_string() + &format!("[{}]", &tier[..4]) + RESET
+            )),
+            _ => None,
+        })
+        .collect();
     if !burns.is_empty() {
         println!("{t}  {GOLD}    DRAFT{RESET}  {}", burns.join("  "));
     }
@@ -172,30 +212,58 @@ fn print_tick(engine: &Engine, r: &TickReport, events: &[EngineEvent]) {
             _ => {}
         }
     }
-    for n in engine.nodes.values().filter(|n| n.scale_level == Stage::House) {
+    for n in engine
+        .nodes
+        .values()
+        .filter(|n| n.scale_level == Stage::House)
+    {
         let status = match n.status {
             NodeStatus::Active => format!("{GREEN}active{RESET}"),
-            NodeStatus::WaitingAtDoor => format!("{GOLD}waiting at the door · 0.0 cr idle burn{RESET}"),
+            NodeStatus::WaitingAtDoor => {
+                format!("{GOLD}waiting at the door · 0.0 cr idle burn{RESET}")
+            }
             NodeStatus::Halted => format!("{RED}halted{RESET}"),
             NodeStatus::Packed => format!("{DIM}packed{RESET}"),
             NodeStatus::Partitioned => format!("{RED}partitioned{RESET}"),
         };
-        println!("{t}  {DIM}    PURSE{RESET}  {:.1} cr · Φ {:.1}% · {}/{} sent · {status}", n.purse.compute, n.epistemics.confidence * 100.0, n.tasks_done(), n.tasks.len());
+        println!(
+            "{t}  {DIM}    PURSE{RESET}  {:.1} cr · Φ {:.1}% · {}/{} sent · {status}",
+            n.purse.compute,
+            n.epistemics.confidence * 100.0,
+            n.tasks_done(),
+            n.tasks.len()
+        );
     }
 }
 
 fn print_receipt(engine: &mut Engine) {
     println!();
-    println!("{GOLD}{BOLD}── THE NOTE ON THE TABLE ─────────────────────────────────────────────{RESET}");
+    println!(
+        "{GOLD}{BOLD}── THE NOTE ON THE TABLE ─────────────────────────────────────────────{RESET}"
+    );
     let view = engine.state_view();
     for n in view.nodes.iter().filter(|n| n.stage == Stage::House) {
         println!("  {BOLD}{}{RESET}  ({})", n.name, n.id);
         println!("    purse allocated   {:>9.1} cr", n.compute_allocated);
-        println!("    burned on thought {:>9.1} cr  ({:.2} J)", n.compute_burned, n.joules_burned);
+        println!(
+            "    burned on thought {:>9.1} cr  ({:.2} J)",
+            n.compute_burned, n.joules_burned
+        );
         println!("    left in the purse {:>9.1} cr", n.compute);
-        println!("    cushion swept     {:>9.1} cr  (never yield)", n.compute_reclaimed);
-        println!("    tasks sent        {:>6}/{}", n.tasks_done, n.tasks_total);
-        println!("    truth Φ           {:>8.1}%  after {} handovers, {} oracle calls", n.confidence * 100.0, n.generation, n.calibrations);
+        println!(
+            "    cushion swept     {:>9.1} cr  (never yield)",
+            n.compute_reclaimed
+        );
+        println!(
+            "    tasks sent        {:>6}/{}",
+            n.tasks_done, n.tasks_total
+        );
+        println!(
+            "    truth Φ           {:>8.1}%  after {} handovers, {} oracle calls",
+            n.confidence * 100.0,
+            n.generation,
+            n.calibrations
+        );
         println!("    papers on table   {:>6}", n.papers);
         println!("    oak table root    {}", n.oak_root.short());
         if let Some(note) = &n.note {
@@ -206,5 +274,7 @@ fn print_receipt(engine: &mut Engine) {
     for g in &view.gates {
         println!("  {DIM}{g}{RESET}");
     }
-    println!("{GOLD}{BOLD}──────────────────────────────────────────────────────────────────────{RESET}");
+    println!(
+        "{GOLD}{BOLD}──────────────────────────────────────────────────────────────────────{RESET}"
+    );
 }

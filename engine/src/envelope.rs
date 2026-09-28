@@ -19,7 +19,11 @@ pub enum Payload {
     /// Hire a neighbour's service by atomic swap (Stage 2 DvP). The
     /// initiator commits to the price it *believes* is true; a stale belief
     /// produces a hash mismatch at the Letter Slot and the swap reverts.
-    HireService { service: String, believed_price: f64, believed_price_hash: Hash32 },
+    HireService {
+        service: String,
+        believed_price: f64,
+        believed_price_hash: Hash32,
+    },
     /// Pay the oracle: copy the Sovereign Graph's truth onto the Oak Table.
     /// Costs compute, not liquidity. Looking is not sending.
     StateSync,
@@ -40,12 +44,18 @@ impl Payload {
 
     /// Cannot be taken back once it leaves the house.
     pub fn is_irreversible(&self) -> bool {
-        matches!(self, Payload::LiquidityTransfer { .. } | Payload::Dispatch { .. } | Payload::Close { .. })
+        matches!(
+            self,
+            Payload::LiquidityTransfer { .. } | Payload::Dispatch { .. } | Payload::Close { .. }
+        )
     }
 
     /// Carries a `<LiquidityTransfer>` flag in doc 02's sense.
     pub fn moves_liquidity(&self) -> bool {
-        matches!(self, Payload::LiquidityTransfer { .. } | Payload::HireService { .. })
+        matches!(
+            self,
+            Payload::LiquidityTransfer { .. } | Payload::HireService { .. }
+        )
     }
 
     /// Stage 1 rule 2: anything that moves liquidity or cannot be undone
@@ -61,9 +71,15 @@ impl Payload {
 
     pub fn describe(&self) -> String {
         match self {
-            Payload::LiquidityTransfer { amount, memo } => format!("pay {amount:.1} tokens: {memo}"),
+            Payload::LiquidityTransfer { amount, memo } => {
+                format!("pay {amount:.1} tokens: {memo}")
+            }
             Payload::Dispatch { task_id, .. } => format!("send the finished draft for {task_id}"),
-            Payload::HireService { service, believed_price, .. } => format!("hire {service} at {believed_price:.1}"),
+            Payload::HireService {
+                service,
+                believed_price,
+                ..
+            } => format!("hire {service} at {believed_price:.1}"),
             Payload::StateSync => "sync with the Sovereign Graph".to_string(),
             Payload::Close { contract } => format!("close contract {contract}"),
         }
@@ -113,8 +129,18 @@ impl ProposalEnvelope {
     }
 
     /// Recompute and compare the signature a node would have produced.
-    pub fn signature_for(initiator: NodeId, secret: u64, payload_hash: &Hash32, tick: u64) -> Hash32 {
-        Hash32::digest_parts(&[&initiator.0.to_le_bytes(), &secret.to_le_bytes(), &payload_hash.0, &tick.to_le_bytes()])
+    pub fn signature_for(
+        initiator: NodeId,
+        secret: u64,
+        payload_hash: &Hash32,
+        tick: u64,
+    ) -> Hash32 {
+        Hash32::digest_parts(&[
+            &initiator.0.to_le_bytes(),
+            &secret.to_le_bytes(),
+            &payload_hash.0,
+            &tick.to_le_bytes(),
+        ])
     }
 }
 

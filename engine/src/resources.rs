@@ -35,13 +35,32 @@ pub struct TierSpec {
 }
 
 impl ModelTier {
-    pub const ALL: [ModelTier; 3] = [ModelTier::FastQuantized, ModelTier::BalancedStaff, ModelTier::FrontierDeep];
+    pub const ALL: [ModelTier; 3] = [
+        ModelTier::FastQuantized,
+        ModelTier::BalancedStaff,
+        ModelTier::FrontierDeep,
+    ];
 
     pub fn spec(self) -> TierSpec {
         match self {
-            ModelTier::FastQuantized => TierSpec { joules_per_tok: 0.002, flops_per_tok: 1.4e10, ms_per_tok: 0.8, stability: 0.90 },
-            ModelTier::BalancedStaff => TierSpec { joules_per_tok: 0.008, flops_per_tok: 1.4e11, ms_per_tok: 2.2, stability: 0.96 },
-            ModelTier::FrontierDeep => TierSpec { joules_per_tok: 0.035, flops_per_tok: 8.0e11, ms_per_tok: 6.5, stability: 0.99 },
+            ModelTier::FastQuantized => TierSpec {
+                joules_per_tok: 0.002,
+                flops_per_tok: 1.4e10,
+                ms_per_tok: 0.8,
+                stability: 0.90,
+            },
+            ModelTier::BalancedStaff => TierSpec {
+                joules_per_tok: 0.008,
+                flops_per_tok: 1.4e11,
+                ms_per_tok: 2.2,
+                stability: 0.96,
+            },
+            ModelTier::FrontierDeep => TierSpec {
+                joules_per_tok: 0.035,
+                flops_per_tok: 8.0e11,
+                ms_per_tok: 6.5,
+                stability: 0.99,
+            },
         }
     }
 
@@ -77,7 +96,11 @@ impl ResourceUnit {
     /// The physical cost of an inference turn on a given tier.
     pub fn burn(tier: ModelTier, tokens: u32, cache_hit: bool) -> ResourceUnit {
         let spec = tier.spec();
-        let effective = if cache_hit { (tokens as f64 * (1.0 - CACHE_HIT_DISCOUNT)) as u32 } else { tokens };
+        let effective = if cache_hit {
+            (tokens as f64 * (1.0 - CACHE_HIT_DISCOUNT)) as u32
+        } else {
+            tokens
+        };
         ResourceUnit {
             tokens,
             joules: effective as f64 * spec.joules_per_tok,
@@ -89,7 +112,13 @@ impl ResourceUnit {
 
     /// A flat cost expressed directly in credits (a door fee, a courier fee).
     pub fn flat(credits: f64) -> ResourceUnit {
-        ResourceUnit { tokens: (credits * TOKENS_PER_CREDIT).round() as u32, joules: credits * JOULES_PER_CREDIT, flops: 0.0, latency_ms: 0.0, cache_hit: false }
+        ResourceUnit {
+            tokens: (credits * TOKENS_PER_CREDIT).round() as u32,
+            joules: credits * JOULES_PER_CREDIT,
+            flops: 0.0,
+            latency_ms: 0.0,
+            cache_hit: false,
+        }
     }
 }
 
@@ -102,7 +131,11 @@ pub struct Exhausted {
 
 impl fmt::Display for Exhausted {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "runway exhausted: needed {:.2} cr, had {:.2} cr", self.requested, self.available)
+        write!(
+            f,
+            "runway exhausted: needed {:.2} cr, had {:.2} cr",
+            self.requested, self.available
+        )
     }
 }
 
@@ -123,7 +156,12 @@ pub struct Purse {
 
 impl Purse {
     pub fn new(compute: f64, liquidity: f64) -> Self {
-        Purse { compute, liquidity, compute_allocated: compute, ..Default::default() }
+        Purse {
+            compute,
+            liquidity,
+            compute_allocated: compute,
+            ..Default::default()
+        }
     }
 
     /// Exact: a purse never goes below zero, not even by a rounding error.
@@ -135,7 +173,10 @@ impl Purse {
     pub fn burn(&mut self, unit: ResourceUnit) -> Result<f64, Exhausted> {
         let credits = unit.credits();
         if !self.can_burn(credits) {
-            return Err(Exhausted { requested: credits, available: self.compute });
+            return Err(Exhausted {
+                requested: credits,
+                available: self.compute,
+            });
         }
         self.compute -= credits;
         self.compute_burned += credits;
@@ -146,7 +187,10 @@ impl Purse {
     /// Debit an already-priced amount (used when reconciling a draft's burn).
     pub fn burn_credits(&mut self, credits: f64) -> Result<f64, Exhausted> {
         if !self.can_burn(credits) {
-            return Err(Exhausted { requested: credits, available: self.compute });
+            return Err(Exhausted {
+                requested: credits,
+                available: self.compute,
+            });
         }
         self.compute -= credits;
         self.compute_burned += credits;
@@ -160,7 +204,11 @@ impl Purse {
         let actual = credits.min(self.compute).max(0.0);
         self.compute -= actual;
         self.compute_burned += actual;
-        self.joules_burned += if credits > 0.0 { joules * (actual / credits) } else { 0.0 };
+        self.joules_burned += if credits > 0.0 {
+            joules * (actual / credits)
+        } else {
+            0.0
+        };
         actual
     }
 
@@ -199,8 +247,14 @@ mod tests {
     #[test]
     fn kernel_parity_with_laboratory() {
         // 280 tokens fast, cache miss → 28.0 cr; 650 balanced cache hit → 9.75 cr
-        assert_eq!(ResourceUnit::burn(ModelTier::FastQuantized, 280, false).credits(), 28.0);
-        assert_eq!(ResourceUnit::burn(ModelTier::BalancedStaff, 650, true).credits(), 9.75);
+        assert_eq!(
+            ResourceUnit::burn(ModelTier::FastQuantized, 280, false).credits(),
+            28.0
+        );
+        assert_eq!(
+            ResourceUnit::burn(ModelTier::BalancedStaff, 650, true).credits(),
+            9.75
+        );
         let u = ResourceUnit::burn(ModelTier::FrontierDeep, 320, true);
         assert_eq!(u.credits(), 4.8);
         assert!((u.joules - 48.0 * 0.035).abs() < 1e-9);

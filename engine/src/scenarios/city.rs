@@ -29,7 +29,13 @@ pub const CITY_COURIER_PRICE: f64 = 10.0;
 /// discretely. (Calling `Engine::set_active_scale(Stage::City)` afterwards
 /// would fold the houses into their streets' statistical profiles under the
 /// LOD rule, and the clearinghouse would have nothing to net.)
-pub fn city(mut config: EngineConfig, streets: usize, houses_per_street: usize, budget_each: f64, tasks_each: usize) -> Engine {
+pub fn city(
+    mut config: EngineConfig,
+    streets: usize,
+    houses_per_street: usize,
+    budget_each: f64,
+    tasks_each: usize,
+) -> Engine {
     config.active_scale = Stage::City;
     let mut e = Engine::new(config);
     let city = e.add_node("The City", Stage::City, None, Purse::new(0.0, 0.0));
@@ -37,13 +43,29 @@ pub fn city(mut config: EngineConfig, streets: usize, houses_per_street: usize, 
     // (street, house) pairs, in build order, so peer lists are deterministic.
     let mut houses: Vec<(NodeId, NodeId)> = Vec::with_capacity(streets * houses_per_street);
     for s in 1..=streets {
-        let street = e.add_node(format!("Street {s}"), Stage::Street, Some(city), Purse::new(0.0, 0.0));
+        let street = e.add_node(
+            format!("Street {s}"),
+            Stage::Street,
+            Some(city),
+            Purse::new(0.0, 0.0),
+        );
         for h in 1..=houses_per_street {
-            let house = e.add_node(format!("S{s} House {h}"), Stage::House, Some(street), Purse::new(budget_each, CITY_HOUSE_LIQUIDITY));
+            let house = e.add_node(
+                format!("S{s} House {h}"),
+                Stage::House,
+                Some(street),
+                Purse::new(budget_each, CITY_HOUSE_LIQUIDITY),
+            );
             for t in 1..=tasks_each {
-                e.node_mut(house).unwrap().tasks.push(Task::synthesis(format!("s{s}h{h}_task_{t:02}")));
+                e.node_mut(house)
+                    .unwrap()
+                    .tasks
+                    .push(Task::synthesis(format!("s{s}h{h}_task_{t:02}")));
             }
-            e.node_mut(house).unwrap().oak_table.put("price/courier", format!("{CITY_COURIER_PRICE}"));
+            e.node_mut(house)
+                .unwrap()
+                .oak_table
+                .put("price/courier", format!("{CITY_COURIER_PRICE}"));
             for seat in staff() {
                 e.seat(house, seat);
             }
@@ -53,10 +75,16 @@ pub fn city(mut config: EngineConfig, streets: usize, houses_per_street: usize, 
 
     // Local knowledge, not a directory: addresses on other streets only.
     for (street, house) in &houses {
-        let peers: Vec<NodeId> = houses.iter().filter(|(s, _)| s != street).map(|(_, h)| *h).collect();
+        let peers: Vec<NodeId> = houses
+            .iter()
+            .filter(|(s, _)| s != street)
+            .map(|(_, h)| *h)
+            .collect();
         e.node_mut(*house).unwrap().known_peers = peers;
     }
 
-    e.graph.service_prices.insert("courier".into(), CITY_COURIER_PRICE);
+    e.graph
+        .service_prices
+        .insert("courier".into(), CITY_COURIER_PRICE);
     e
 }

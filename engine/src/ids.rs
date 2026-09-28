@@ -6,11 +6,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Identity of a [`crate::SovereignNode`] at any scale.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Debug, Default)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Debug, Default,
+)]
 pub struct NodeId(pub u64);
 
 /// Identity of a [`crate::ProposalEnvelope`] in the mempool.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Debug, Default)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Debug, Default,
+)]
 pub struct EnvelopeId(pub u64);
 
 impl fmt::Display for NodeId {

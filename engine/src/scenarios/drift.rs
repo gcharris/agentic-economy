@@ -18,7 +18,13 @@ pub const MOVED_PRICE: f64 = 12.0;
 
 /// The street, with the truth already moved before the first tick. Every
 /// Oak Table caches [`STALE_PRICE`]; the graph says `new_price`.
-pub fn street_under_drift(config: EngineConfig, houses: usize, budget_each: f64, tasks_each: usize, new_price: f64) -> Engine {
+pub fn street_under_drift(
+    config: EngineConfig,
+    houses: usize,
+    budget_each: f64,
+    tasks_each: usize,
+    new_price: f64,
+) -> Engine {
     let mut e = super::street(config, houses, budget_each, tasks_each);
     move_truth(&mut e, "courier", new_price);
     e

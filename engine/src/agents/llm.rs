@@ -41,9 +41,17 @@ impl std::fmt::Debug for LlmSeat {
 impl LlmSeat {
     fn prompt(&self, ctx: &DraftContext) -> String {
         let mut p = String::new();
-        p.push_str(&format!("You are {} at the oak table of {}.\n", self.seat, ctx.node_name()));
+        p.push_str(&format!(
+            "You are {} at the oak table of {}.\n",
+            self.seat,
+            ctx.node_name()
+        ));
         if ctx.cost_visible() {
-            p.push_str(&format!("Purse: {:.1} credits remain. This call is priced at {} J/token.\n", ctx.purse().compute, self.tier.spec().joules_per_tok));
+            p.push_str(&format!(
+                "Purse: {:.1} credits remain. This call is priced at {} J/token.\n",
+                ctx.purse().compute,
+                self.tier.spec().joules_per_tok
+            ));
         }
         if let Some(t) = ctx.task() {
             p.push_str(&format!("Task: {}.\n", t.id));
@@ -51,7 +59,9 @@ impl LlmSeat {
         for paper in ctx.papers().iter().rev().take(3) {
             p.push_str(&format!("On the table: {} — {}\n", paper.title, paper.body));
         }
-        p.push_str("Reply with your work. You may look and draft. You may not send, pay, or close.\n");
+        p.push_str(
+            "Reply with your work. You may look and draft. You may not send, pay, or close.\n",
+        );
         p
     }
 }
@@ -78,7 +88,10 @@ impl Agent for LlmSeat {
                     let tokens = prompt_tokens + (text.len() / 4) as u32;
                     if ctx.burn(&seat, "inference", tier, tokens, false).is_ok() {
                         ctx.record_handover(tier, rigor);
-                        let title = format!("{seat} · {}", ctx.task().map(|t| t.id.clone()).unwrap_or_default());
+                        let title = format!(
+                            "{seat} · {}",
+                            ctx.task().map(|t| t.id.clone()).unwrap_or_default()
+                        );
                         ctx.leave_paper(&seat, title, text.clone(), tokens);
                         ctx.think(&seat, text.chars().take(120).collect::<String>());
                     }

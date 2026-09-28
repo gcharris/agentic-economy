@@ -10,11 +10,19 @@ use context_engine::prelude::*;
 use std::sync::Arc;
 
 fn cfg(seed: u64) -> EngineConfig {
-    EngineConfig { seed, cost_visible: true, ..Default::default() }
+    EngineConfig {
+        seed,
+        cost_visible: true,
+        ..Default::default()
+    }
 }
 
 fn houses(e: &Engine) -> Vec<NodeId> {
-    e.nodes.values().filter(|n| n.scale_level == Stage::House).map(|n| n.id).collect()
+    e.nodes
+        .values()
+        .filter(|n| n.scale_level == Stage::House)
+        .map(|n| n.id)
+        .collect()
 }
 
 fn done(ctx: DraftContext) -> DraftFuture {
@@ -35,9 +43,21 @@ impl Agent for Impostor {
         ModelTier::FastQuantized
     }
     fn draft(&self, ctx: DraftContext) -> DraftFuture {
-        let mut fake = SovereignNode::new(self.victim, "a forgery", Stage::House, None, Purse::new(999.0, 0.0), 0);
+        let mut fake = SovereignNode::new(
+            self.victim,
+            "a forgery",
+            Stage::House,
+            None,
+            Purse::new(999.0, 0.0),
+            0,
+        );
         let mut forged = fake.draft_context(ctx.tick(), 1, true);
-        forged.leave_paper("Impostor", "poison", format!("written in the name of {}", self.victim), 0);
+        forged.leave_paper(
+            "Impostor",
+            "poison",
+            format!("written in the name of {}", self.victim),
+            0,
+        );
         done(forged)
     }
 }
@@ -55,10 +75,30 @@ fn a_forged_identity_is_attributed_to_the_job_not_the_claim() {
 
     block_on(e.tick());
 
-    assert_eq!(e.node_mut(b).unwrap().oak_table.root(), b_root, "B's table did not move");
-    assert_eq!(e.node(b).unwrap().purse.compute, b_compute, "B paid nothing");
-    assert!(e.node(a).unwrap().oak_table.papers.iter().any(|p| p.title == "poison"), "the paper landed on the impostor's own table");
-    assert_eq!(e.node(a).unwrap().purse.compute, a_compute, "a forged context with no receipts burns nothing");
+    assert_eq!(
+        e.node_mut(b).unwrap().oak_table.root(),
+        b_root,
+        "B's table did not move"
+    );
+    assert_eq!(
+        e.node(b).unwrap().purse.compute,
+        b_compute,
+        "B paid nothing"
+    );
+    assert!(
+        e.node(a)
+            .unwrap()
+            .oak_table
+            .papers
+            .iter()
+            .any(|p| p.title == "poison"),
+        "the paper landed on the impostor's own table"
+    );
+    assert_eq!(
+        e.node(a).unwrap().purse.compute,
+        a_compute,
+        "a forged context with no receipts burns nothing"
+    );
     assert!(e.events().iter().any(|ev| matches!(ev, EngineEvent::Thought { seat, text, .. } if seat == "engine" && text.contains("claiming to be"))));
 }
 
@@ -78,7 +118,15 @@ impl Agent for Thief {
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
         // Try to make the victim pay a stranger the victim has never heard of.
-        ctx.propose(ProposalDraft { target: NodeId(0xDEAD_BEEF), payload: Payload::LiquidityTransfer { amount: 150.0, memo: "to a stranger".into() }, requested_liquidity: 150.0, compute_weight: 0.0 });
+        ctx.propose(ProposalDraft {
+            target: NodeId(0xDEAD_BEEF),
+            payload: Payload::LiquidityTransfer {
+                amount: 150.0,
+                memo: "to a stranger".into(),
+            },
+            requested_liquidity: 150.0,
+            compute_weight: 0.0,
+        });
         // And try to pay itself out of the victim's pocket: the only name the
         // engine will sign with is the thief's own.
         let _ = self.victim;
@@ -134,7 +182,10 @@ fn a_seat_can_only_lower_its_truth() {
     block_on(e.tick());
     let after = e.node(h).unwrap();
     assert!(after.epistemics.confidence < before);
-    assert_eq!(after.epistemics.generation, 5, "five recorded handovers, replayed by the engine");
+    assert_eq!(
+        after.epistemics.generation, 5,
+        "five recorded handovers, replayed by the engine"
+    );
     assert_eq!(after.epistemics.calibrations, 0, "no free calibration");
 }
 
@@ -151,7 +202,13 @@ impl Agent for Spendthrift {
     }
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
         let _ = ctx.burn("Spendthrift", "think", ModelTier::FrontierDeep, 1000, false); // 100 cr
-        let _ = ctx.burn("Spendthrift", "think again", ModelTier::FrontierDeep, 500, true); // 7.5 cr
+        let _ = ctx.burn(
+            "Spendthrift",
+            "think again",
+            ModelTier::FrontierDeep,
+            500,
+            true,
+        ); // 7.5 cr
         done(ctx)
     }
 }
@@ -166,7 +223,10 @@ fn the_receipts_are_the_burn() {
     assert!((r.compute_burned - 107.5).abs() < 1e-9);
     assert!((n.purse.compute - 692.5).abs() < 1e-9);
     assert_eq!(n.receipts.len(), 2);
-    assert!((n.purse.joules_burned - (1000.0 * 0.035 + 75.0 * 0.035)).abs() < 1e-6, "joules follow the tier physics on the receipts");
+    assert!(
+        (n.purse.joules_burned - (1000.0 * 0.035 + 75.0 * 0.035)).abs() < 1e-6,
+        "joules follow the tier physics on the receipts"
+    );
 }
 
 /// A seat that panics under the Tokio executor loses only its own draft.
@@ -198,6 +258,12 @@ async fn a_panicking_seat_loses_only_its_own_draft() {
     let r = e.tick().await;
     assert_eq!(r.seat_failures, 1);
     assert_eq!(e.node(hs[0]).unwrap().purse.compute, compute);
-    assert!(e.events().iter().any(|ev| matches!(ev, EngineEvent::SeatFailed { node, .. } if *node == hs[0])));
-    assert!(e.node(hs[1]).unwrap().tasks_done() == 1 || e.node(hs[1]).unwrap().purse.compute < 600.0, "the other house drafted normally");
+    assert!(e
+        .events()
+        .iter()
+        .any(|ev| matches!(ev, EngineEvent::SeatFailed { node, .. } if *node == hs[0])));
+    assert!(
+        e.node(hs[1]).unwrap().tasks_done() == 1 || e.node(hs[1]).unwrap().purse.compute < 600.0,
+        "the other house drafted normally"
+    );
 }

@@ -59,7 +59,10 @@ pub struct Chancellor {
 
 impl Default for Chancellor {
     fn default() -> Self {
-        Chancellor { share: 0.02, settlement_fee: SETTLEMENT_FEE }
+        Chancellor {
+            share: 0.02,
+            settlement_fee: SETTLEMENT_FEE,
+        }
     }
 }
 
@@ -82,7 +85,13 @@ impl Agent for Chancellor {
         }
         // One cheap, cached call to read the ledger. On exhaustion the seat
         // stops here and the engine writes the note.
-        let Ok(unit) = ctx.burn("Chancellor", "read the ledger", ModelTier::FastQuantized, LEDGER_TOKENS, true) else {
+        let Ok(unit) = ctx.burn(
+            "Chancellor",
+            "read the ledger",
+            ModelTier::FastQuantized,
+            LEDGER_TOKENS,
+            true,
+        ) else {
             return done(ctx);
         };
 
@@ -91,14 +100,23 @@ impl Agent for Chancellor {
         // ledger does, which is what the validators aggregate.
         let balance = ctx.purse().liquidity;
         let line = format!("{balance:.2}");
-        let last = ctx.oak().papers.iter().rev().find(|p| p.title == LEDGER_TITLE).map(|p| p.body.as_str());
+        let last = ctx
+            .oak()
+            .papers
+            .iter()
+            .rev()
+            .find(|p| p.title == LEDGER_TITLE)
+            .map(|p| p.body.as_str());
         if last != Some(line.as_str()) {
             ctx.leave_paper("Chancellor", LEDGER_TITLE, line, unit.tokens);
         }
 
         let amount = (balance * self.share * 100.0).round() / 100.0;
         if amount < 1.0 {
-            ctx.think("Chancellor", format!("Nothing to settle: the ledger shows {balance:.2}."));
+            ctx.think(
+                "Chancellor",
+                format!("Nothing to settle: the ledger shows {balance:.2}."),
+            );
             return done(ctx);
         }
         let peer_count = ctx.known_peers().len() as u64;
@@ -107,7 +125,14 @@ impl Agent for Chancellor {
         ctx.think("Chancellor", format!("Settling {amount:.2} across the border to {target}. Finality is the validators' to give: 8–32 ticks, nothing burns while we wait."));
         ctx.propose(ProposalDraft {
             target,
-            payload: Payload::LiquidityTransfer { amount, memo: format!("cross-border settlement t{} from {}", ctx.tick(), ctx.node_name()) },
+            payload: Payload::LiquidityTransfer {
+                amount,
+                memo: format!(
+                    "cross-border settlement t{} from {}",
+                    ctx.tick(),
+                    ctx.node_name()
+                ),
+            },
             requested_liquidity: amount,
             compute_weight: self.settlement_fee,
         });
@@ -123,13 +148,33 @@ pub fn world(mut config: EngineConfig, countries: usize, cities_per_country: usi
     let mut e = Engine::new(config);
     let mut ids = Vec::with_capacity(countries);
     for i in 1..=countries {
-        let c = e.add_node(format!("Country {i}"), Stage::Country, None, Purse::new(COUNTRY_COMPUTE, COUNTRY_LIQUIDITY));
+        let c = e.add_node(
+            format!("Country {i}"),
+            Stage::Country,
+            None,
+            Purse::new(COUNTRY_COMPUTE, COUNTRY_LIQUIDITY),
+        );
         for j in 1..=cities_per_country {
-            e.add_node(format!("City {i}.{j}"), Stage::City, Some(c), Purse::new(0.0, CITY_LIQUIDITY));
+            e.add_node(
+                format!("City {i}.{j}"),
+                Stage::City,
+                Some(c),
+                Purse::new(0.0, CITY_LIQUIDITY),
+            );
         }
         let node = e.node_mut(c).expect("just added");
-        node.tasks.push(Task { id: STANDING_ORDER.into(), lookup_tokens: LEDGER_TOKENS, draft_tokens: 0, audit_tokens: 0, spend: SETTLEMENT_FEE, state: TaskState::Pending });
-        node.oak_table.put("charter", format!("Country {i}: sovereign ballast on the planetary rails"));
+        node.tasks.push(Task {
+            id: STANDING_ORDER.into(),
+            lookup_tokens: LEDGER_TOKENS,
+            draft_tokens: 0,
+            audit_tokens: 0,
+            spend: SETTLEMENT_FEE,
+            state: TaskState::Pending,
+        });
+        node.oak_table.put(
+            "charter",
+            format!("Country {i}: sovereign ballast on the planetary rails"),
+        );
         e.seat(c, Arc::new(Chancellor::default()));
         ids.push(c);
     }

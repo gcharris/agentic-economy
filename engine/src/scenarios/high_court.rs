@@ -37,12 +37,20 @@ pub struct Transferor {
 impl Transferor {
     /// Proposes more than any truth in the world can back.
     pub fn forger(arm_tick: u64) -> Self {
-        Transferor { amount: 10_000.0, arm_tick, memo: "settle the invoice (I am sure I am good for it)" }
+        Transferor {
+            amount: 10_000.0,
+            arm_tick,
+            memo: "settle the invoice (I am sure I am good for it)",
+        }
     }
 
     /// Proposes a modest, backed payment.
     pub fn honest(arm_tick: u64) -> Self {
-        Transferor { amount: 5.0, arm_tick, memo: "this week's courier bill" }
+        Transferor {
+            amount: 5.0,
+            arm_tick,
+            memo: "this week's courier bill",
+        }
     }
 }
 
@@ -62,10 +70,20 @@ impl Agent for Transferor {
         let Some(&peer) = ctx.known_peers().first() else {
             return Box::pin(async move { ctx });
         };
-        ctx.think("Transferor", format!("Paying {:.1} to {peer}; I believe I hold {:.1}.", self.amount, ctx.purse().liquidity));
+        ctx.think(
+            "Transferor",
+            format!(
+                "Paying {:.1} to {peer}; I believe I hold {:.1}.",
+                self.amount,
+                ctx.purse().liquidity
+            ),
+        );
         ctx.propose(ProposalDraft {
             target: peer,
-            payload: Payload::LiquidityTransfer { amount: self.amount, memo: self.memo.to_string() },
+            payload: Payload::LiquidityTransfer {
+                amount: self.amount,
+                memo: self.memo.to_string(),
+            },
             requested_liquidity: self.amount,
             compute_weight: 1.0,
         });
@@ -97,11 +115,25 @@ impl CourtWorld {
 /// deterministic: a forger's first peer is the first honest node (the
 /// mark), or the next forger when there is no honest node; an honest
 /// node's first peer is the next honest node, or the first forger.
-fn populate(e: &mut Engine, parent: NodeId, stage: Stage, forgers: usize, honest: usize, arm_tick: u64, truth_each: f64, delusion: f64) -> CourtWorld {
+fn populate(
+    e: &mut Engine,
+    parent: NodeId,
+    stage: Stage,
+    forgers: usize,
+    honest: usize,
+    arm_tick: u64,
+    truth_each: f64,
+    delusion: f64,
+) -> CourtWorld {
     let mut f_ids = Vec::with_capacity(forgers);
     let mut h_ids = Vec::with_capacity(honest);
     for i in 1..=forgers {
-        let id = e.add_node(format!("Forger {i}"), stage, Some(parent), Purse::new(600.0, truth_each));
+        let id = e.add_node(
+            format!("Forger {i}"),
+            stage,
+            Some(parent),
+            Purse::new(600.0, truth_each),
+        );
         let n = e.node_mut(id).expect("just added");
         n.purse.liquidity = delusion;
         n.tasks.push(Task::synthesis("standing_order"));
@@ -109,8 +141,16 @@ fn populate(e: &mut Engine, parent: NodeId, stage: Stage, forgers: usize, honest
         f_ids.push(id);
     }
     for i in 1..=honest {
-        let id = e.add_node(format!("Honest {i}"), stage, Some(parent), Purse::new(600.0, truth_each));
-        e.node_mut(id).expect("just added").tasks.push(Task::synthesis("standing_order"));
+        let id = e.add_node(
+            format!("Honest {i}"),
+            stage,
+            Some(parent),
+            Purse::new(600.0, truth_each),
+        );
+        e.node_mut(id)
+            .expect("just added")
+            .tasks
+            .push(Task::synthesis("standing_order"));
         e.seat(id, Arc::new(Transferor::honest(0)));
         h_ids.push(id);
     }
@@ -121,7 +161,12 @@ fn populate(e: &mut Engine, parent: NodeId, stage: Stage, forgers: usize, honest
         } else if f_ids.len() > 1 {
             peers.push(f_ids[(i + 1) % f_ids.len()]);
         }
-        let rest: Vec<NodeId> = f_ids.iter().chain(h_ids.iter()).copied().filter(|p| p != f && !peers.contains(p)).collect();
+        let rest: Vec<NodeId> = f_ids
+            .iter()
+            .chain(h_ids.iter())
+            .copied()
+            .filter(|p| p != f && !peers.contains(p))
+            .collect();
         peers.extend(rest);
         e.node_mut(*f).expect("forger").known_peers = peers;
     }
@@ -132,32 +177,78 @@ fn populate(e: &mut Engine, parent: NodeId, stage: Stage, forgers: usize, honest
         } else if let Some(f) = f_ids.first() {
             peers.push(*f);
         }
-        let rest: Vec<NodeId> = h_ids.iter().chain(f_ids.iter()).copied().filter(|p| p != h && !peers.contains(p)).collect();
+        let rest: Vec<NodeId> = h_ids
+            .iter()
+            .chain(f_ids.iter())
+            .copied()
+            .filter(|p| p != h && !peers.contains(p))
+            .collect();
         peers.extend(rest);
         e.node_mut(*h).expect("honest").known_peers = peers;
     }
-    CourtWorld { parent, forgers: f_ids, honest: h_ids }
+    CourtWorld {
+        parent,
+        forgers: f_ids,
+        honest: h_ids,
+    }
 }
 
 /// A street whose clearing collapses at the Letter Slot. Camera at the
 /// street. Each forger believes it holds `delusion` while the truth is
 /// `truth_each`; from `arm_tick` on it tries to pay 10 000 to the mark.
-pub fn forged_street(mut config: EngineConfig, forgers: usize, honest: usize, arm_tick: u64, truth_each: f64, delusion: f64) -> (Engine, CourtWorld) {
+pub fn forged_street(
+    mut config: EngineConfig,
+    forgers: usize,
+    honest: usize,
+    arm_tick: u64,
+    truth_each: f64,
+    delusion: f64,
+) -> (Engine, CourtWorld) {
     config.active_scale = Stage::Street;
     let mut e = Engine::new(config);
     let city = e.add_node("The City", Stage::City, None, Purse::new(0.0, 0.0));
-    let street = e.add_node("Elm Street", Stage::Street, Some(city), Purse::new(0.0, 0.0));
-    let world = populate(&mut e, street, Stage::House, forgers, honest, arm_tick, truth_each, delusion);
+    let street = e.add_node(
+        "Elm Street",
+        Stage::Street,
+        Some(city),
+        Purse::new(0.0, 0.0),
+    );
+    let world = populate(
+        &mut e,
+        street,
+        Stage::House,
+        forgers,
+        honest,
+        arm_tick,
+        truth_each,
+        delusion,
+    );
     (e, world)
 }
 
 /// A country whose cities' clearing collapses at the Clearinghouse. Camera
 /// at the city, so every member's envelope is netted before the court sees
 /// the tick.
-pub fn forged_country(mut config: EngineConfig, forgers: usize, honest: usize, arm_tick: u64, truth_each: f64, delusion: f64) -> (Engine, CourtWorld) {
+pub fn forged_country(
+    mut config: EngineConfig,
+    forgers: usize,
+    honest: usize,
+    arm_tick: u64,
+    truth_each: f64,
+    delusion: f64,
+) -> (Engine, CourtWorld) {
     config.active_scale = Stage::City;
     let mut e = Engine::new(config);
     let country = e.add_node("Albion", Stage::Country, None, Purse::new(0.0, 0.0));
-    let world = populate(&mut e, country, Stage::City, forgers, honest, arm_tick, truth_each, delusion);
+    let world = populate(
+        &mut e,
+        country,
+        Stage::City,
+        forgers,
+        honest,
+        arm_tick,
+        truth_each,
+        delusion,
+    );
     (e, world)
 }

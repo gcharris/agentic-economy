@@ -32,7 +32,13 @@ pub enum Stage {
 }
 
 impl Stage {
-    pub const ALL: [Stage; 5] = [Stage::House, Stage::Street, Stage::City, Stage::Country, Stage::World];
+    pub const ALL: [Stage; 5] = [
+        Stage::House,
+        Stage::Street,
+        Stage::City,
+        Stage::Country,
+        Stage::World,
+    ];
 
     pub fn level(self) -> u8 {
         self as u8
@@ -116,11 +122,46 @@ pub struct BoundaryPolicy {
 impl BoundaryPolicy {
     pub fn for_stage(stage: Stage) -> Self {
         match stage {
-            Stage::House => BoundaryPolicy { gate: Stage::House, human_gate: true, zero_idle_burn: true, refund_on_reject: false, slash_unbacked: false, slash_rate: 0.0 },
-            Stage::Street => BoundaryPolicy { gate: Stage::Street, human_gate: false, zero_idle_burn: true, refund_on_reject: false, slash_unbacked: false, slash_rate: 0.0 },
-            Stage::City => BoundaryPolicy { gate: Stage::City, human_gate: false, zero_idle_burn: true, refund_on_reject: false, slash_unbacked: true, slash_rate: 0.10 },
-            Stage::Country => BoundaryPolicy { gate: Stage::Country, human_gate: false, zero_idle_burn: true, refund_on_reject: false, slash_unbacked: true, slash_rate: 0.25 },
-            Stage::World => BoundaryPolicy { gate: Stage::World, human_gate: false, zero_idle_burn: true, refund_on_reject: false, slash_unbacked: true, slash_rate: 0.50 },
+            Stage::House => BoundaryPolicy {
+                gate: Stage::House,
+                human_gate: true,
+                zero_idle_burn: true,
+                refund_on_reject: false,
+                slash_unbacked: false,
+                slash_rate: 0.0,
+            },
+            Stage::Street => BoundaryPolicy {
+                gate: Stage::Street,
+                human_gate: false,
+                zero_idle_burn: true,
+                refund_on_reject: false,
+                slash_unbacked: false,
+                slash_rate: 0.0,
+            },
+            Stage::City => BoundaryPolicy {
+                gate: Stage::City,
+                human_gate: false,
+                zero_idle_burn: true,
+                refund_on_reject: false,
+                slash_unbacked: true,
+                slash_rate: 0.10,
+            },
+            Stage::Country => BoundaryPolicy {
+                gate: Stage::Country,
+                human_gate: false,
+                zero_idle_burn: true,
+                refund_on_reject: false,
+                slash_unbacked: true,
+                slash_rate: 0.25,
+            },
+            Stage::World => BoundaryPolicy {
+                gate: Stage::World,
+                human_gate: false,
+                zero_idle_burn: true,
+                refund_on_reject: false,
+                slash_unbacked: true,
+                slash_rate: 0.50,
+            },
         }
     }
 }
@@ -153,12 +194,20 @@ impl Task {
     /// the battery's `spend_amount = 25` was declared and never read. The
     /// engine adds doc 04's crossing tax on top, which the kernel did not.
     pub fn synthesis(id: impl Into<String>) -> Task {
-        Task { id: id.into(), lookup_tokens: 280, draft_tokens: 650, audit_tokens: 320, spend: 10.0, state: TaskState::Pending }
+        Task {
+            id: id.into(),
+            lookup_tokens: 280,
+            draft_tokens: 650,
+            audit_tokens: 320,
+            spend: 10.0,
+            state: TaskState::Pending,
+        }
     }
 
     /// Worst-case nominal estimate, for the steward's sweep.
     pub fn nominal_estimate(&self) -> f64 {
-        (self.lookup_tokens + self.draft_tokens + self.audit_tokens) as f64 / crate::resources::TOKENS_PER_CREDIT
+        (self.lookup_tokens + self.draft_tokens + self.audit_tokens) as f64
+            / crate::resources::TOKENS_PER_CREDIT
     }
 }
 
@@ -202,7 +251,14 @@ pub struct SovereignNode {
 }
 
 impl SovereignNode {
-    pub fn new(id: NodeId, name: impl Into<String>, scale_level: Stage, parent: Option<NodeId>, purse: Purse, secret: u64) -> Self {
+    pub fn new(
+        id: NodeId,
+        name: impl Into<String>,
+        scale_level: Stage,
+        parent: Option<NodeId>,
+        purse: Purse,
+        secret: u64,
+    ) -> Self {
         SovereignNode {
             id,
             name: name.into(),
@@ -232,11 +288,15 @@ impl SovereignNode {
     }
 
     pub fn current_task(&self) -> Option<&Task> {
-        self.tasks.iter().find(|t| matches!(t.state, TaskState::Pending | TaskState::Drafted))
+        self.tasks
+            .iter()
+            .find(|t| matches!(t.state, TaskState::Pending | TaskState::Drafted))
     }
 
     pub fn current_task_mut(&mut self) -> Option<&mut Task> {
-        self.tasks.iter_mut().find(|t| matches!(t.state, TaskState::Pending | TaskState::Drafted))
+        self.tasks
+            .iter_mut()
+            .find(|t| matches!(t.state, TaskState::Pending | TaskState::Drafted))
     }
 
     pub fn task_mut(&mut self, id: &str) -> Option<&mut Task> {
@@ -244,7 +304,10 @@ impl SovereignNode {
     }
 
     pub fn tasks_done(&self) -> usize {
-        self.tasks.iter().filter(|t| t.state == TaskState::Sent).count()
+        self.tasks
+            .iter()
+            .filter(|t| t.state == TaskState::Sent)
+            .count()
     }
 
     /// Stage 1 rule 1: no active task, no thread, no burn.
@@ -295,7 +358,10 @@ impl SovereignNode {
     /// children, and the peers it knows. Local knowledge, not a directory.
     /// An envelope to anyone else is dropped by the courier.
     pub fn allowed_target(&self, target: NodeId) -> bool {
-        target == self.id || self.parent == Some(target) || self.children.contains(&target) || self.known_peers.contains(&target)
+        target == self.id
+            || self.parent == Some(target)
+            || self.children.contains(&target)
+            || self.known_peers.contains(&target)
     }
 
     pub fn sign(&self, payload_hash: &Hash32, tick: u64) -> Hash32 {
@@ -326,7 +392,12 @@ impl SovereignNode {
     /// exhaustion, the week continues.
     pub fn top_up(&mut self, credits: f64) {
         self.purse.top_up(credits);
-        if self.status == NodeStatus::Halted && matches!(self.note.as_ref().map(|n| &n.reason), Some(HaltReason::RunwayExhausted { .. })) {
+        if self.status == NodeStatus::Halted
+            && matches!(
+                self.note.as_ref().map(|n| &n.reason),
+                Some(HaltReason::RunwayExhausted { .. })
+            )
+        {
             self.status = NodeStatus::Active;
             self.note = None;
         }
@@ -496,16 +567,49 @@ impl DraftContext {
     /// Burn an inference turn against the purse copy. On exhaustion the
     /// seat gets an `Err`, the context records what it was doing, and the
     /// engine writes the note when it reconciles.
-    pub fn burn(&mut self, seat: &str, action: &str, tier: ModelTier, tokens: u32, cache_hit: bool) -> Result<ResourceUnit, Exhausted> {
+    pub fn burn(
+        &mut self,
+        seat: &str,
+        action: &str,
+        tier: ModelTier,
+        tokens: u32,
+        cache_hit: bool,
+    ) -> Result<ResourceUnit, Exhausted> {
         let unit = ResourceUnit::burn(tier, tokens, cache_hit);
         match self.purse.burn(unit) {
             Ok(credits) => {
-                self.receipts.push(SeatReceipt { tick: self.tick, node: self.node_id, seat: seat.to_string(), action: action.to_string(), tier, cost: unit, credits, confidence_after: self.epistemics.confidence, status: "done".into() });
+                self.receipts.push(SeatReceipt {
+                    tick: self.tick,
+                    node: self.node_id,
+                    seat: seat.to_string(),
+                    action: action.to_string(),
+                    tier,
+                    cost: unit,
+                    credits,
+                    confidence_after: self.epistemics.confidence,
+                    status: "done".into(),
+                });
                 Ok(unit)
             }
             Err(e) => {
-                self.halted_doing = Some(format!("{} ({}, {} tok on {})", action, seat, tokens, tier.label()));
-                self.receipts.push(SeatReceipt { tick: self.tick, node: self.node_id, seat: seat.to_string(), action: action.to_string(), tier, cost: unit, credits: 0.0, confidence_after: self.epistemics.confidence, status: "halted (runway exhausted)".into() });
+                self.halted_doing = Some(format!(
+                    "{} ({}, {} tok on {})",
+                    action,
+                    seat,
+                    tokens,
+                    tier.label()
+                ));
+                self.receipts.push(SeatReceipt {
+                    tick: self.tick,
+                    node: self.node_id,
+                    seat: seat.to_string(),
+                    action: action.to_string(),
+                    tier,
+                    cost: unit,
+                    credits: 0.0,
+                    confidence_after: self.epistemics.confidence,
+                    status: "halted (runway exhausted)".into(),
+                });
                 Err(e)
             }
         }
@@ -523,12 +627,27 @@ impl DraftContext {
         self.cushion += credits.max(0.0);
     }
 
-    pub fn leave_paper(&mut self, seat: &str, title: impl Into<String>, body: impl Into<String>, tokens: u32) {
-        self.papers.push(Paper { tick: self.tick, seat: seat.to_string(), title: title.into(), body: body.into(), tokens });
+    pub fn leave_paper(
+        &mut self,
+        seat: &str,
+        title: impl Into<String>,
+        body: impl Into<String>,
+        tokens: u32,
+    ) {
+        self.papers.push(Paper {
+            tick: self.tick,
+            seat: seat.to_string(),
+            title: title.into(),
+            body: body.into(),
+            tokens,
+        });
     }
 
     pub fn think(&mut self, seat: &str, text: impl Into<String>) {
-        self.thoughts.push(Thought { seat: seat.to_string(), text: text.into() });
+        self.thoughts.push(Thought {
+            seat: seat.to_string(),
+            text: text.into(),
+        });
     }
 
     pub fn propose(&mut self, draft: ProposalDraft) {
@@ -551,8 +670,24 @@ impl DraftContext {
     /// Consumed by the engine in the Collect phase.
     pub fn into_outputs(self) -> DraftOutputs {
         let burned = self.burned();
-        let joules = self.receipts.iter().filter(|r| r.credits > 0.0).map(|r| r.cost.joules).sum();
-        DraftOutputs { claimed_node: self.node_id, burned, joules, papers: self.papers, proposals: self.proposals, thoughts: self.thoughts, receipts: self.receipts, handovers: self.handovers, cushion: self.cushion, halted_doing: self.halted_doing }
+        let joules = self
+            .receipts
+            .iter()
+            .filter(|r| r.credits > 0.0)
+            .map(|r| r.cost.joules)
+            .sum();
+        DraftOutputs {
+            claimed_node: self.node_id,
+            burned,
+            joules,
+            papers: self.papers,
+            proposals: self.proposals,
+            thoughts: self.thoughts,
+            receipts: self.receipts,
+            handovers: self.handovers,
+            cushion: self.cushion,
+            halted_doing: self.halted_doing,
+        }
     }
 }
 

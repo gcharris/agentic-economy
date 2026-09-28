@@ -15,7 +15,11 @@ use context_engine::prelude::*;
 use std::sync::Arc;
 
 fn cfg(seed: u64) -> EngineConfig {
-    EngineConfig { seed, cost_visible: true, ..Default::default() }
+    EngineConfig {
+        seed,
+        cost_visible: true,
+        ..Default::default()
+    }
 }
 
 const TRUTH: f64 = 200.0;
@@ -26,7 +30,12 @@ fn court_slashes(e: &Engine, tick: u64) -> Vec<(NodeId, f64)> {
     e.events()
         .iter()
         .filter_map(|ev| match ev {
-            EngineEvent::Slashed { tick: t, node, amount, reason } if *t == tick && reason.contains("High Court") => Some((*node, *amount)),
+            EngineEvent::Slashed {
+                tick: t,
+                node,
+                amount,
+                reason,
+            } if *t == tick && reason.contains("High Court") => Some((*node, *amount)),
             _ => None,
         })
         .collect()
@@ -34,7 +43,12 @@ fn court_slashes(e: &Engine, tick: u64) -> Vec<(NodeId, f64)> {
 
 fn rolled_back(e: &Engine, tick: u64) -> Option<(u64, String, usize)> {
     e.events().iter().find_map(|ev| match ev {
-        EngineEvent::RolledBack { tick: t, to_tick, reason, slashed } if *t == tick => Some((*to_tick, reason.clone(), *slashed)),
+        EngineEvent::RolledBack {
+            tick: t,
+            to_tick,
+            reason,
+            slashed,
+        } if *t == tick => Some((*to_tick, reason.clone(), *slashed)),
         _ => None,
     })
 }
@@ -43,7 +57,13 @@ fn rejections(e: &Engine, tick: u64) -> Vec<(EnvelopeId, Stage, String)> {
     e.events()
         .iter()
         .filter_map(|ev| match ev {
-            EngineEvent::Rejected { tick: t, envelope, gate, reason, .. } if *t == tick => Some((*envelope, *gate, reason.clone())),
+            EngineEvent::Rejected {
+                tick: t,
+                envelope,
+                gate,
+                reason,
+                ..
+            } if *t == tick => Some((*envelope, *gate, reason.clone())),
             _ => None,
         })
         .collect()
@@ -57,7 +77,12 @@ fn proposed_by(e: &Engine, tick: u64, node: NodeId) -> Vec<EnvelopeId> {
     e.events()
         .iter()
         .filter_map(|ev| match ev {
-            EngineEvent::Proposed { tick: t, envelope, from, .. } if *t == tick && *from == node => Some(*envelope),
+            EngineEvent::Proposed {
+                tick: t,
+                envelope,
+                from,
+                ..
+            } if *t == tick && *from == node => Some(*envelope),
             _ => None,
         })
         .collect()
@@ -74,7 +99,11 @@ fn a_systemic_failure_trips_the_circuit_breaker() {
     let (mut e, w) = forged_street(cfg(41), 5, 2, 2, TRUTH, DELUSION);
     for f in &w.forgers {
         assert_eq!(e.graph.liquidity_of(*f), TRUTH, "the truth is modest");
-        assert_eq!(e.node(*f).unwrap().purse.liquidity, DELUSION, "the belief is not");
+        assert_eq!(
+            e.node(*f).unwrap().purse.liquidity,
+            DELUSION,
+            "the belief is not"
+        );
     }
 
     // ── tick 1: calm ──
@@ -86,7 +115,10 @@ fn a_systemic_failure_trips_the_circuit_breaker() {
     let root_1 = r1.root;
     let truth_1 = e.graph.clone(); // the previous coherent state, kept by the test
     assert_eq!(truth_1.root(), root_1);
-    assert_eq!(e.graph.snapshots().last().map(|s| (s.tick, s.root)), Some((1, root_1)));
+    assert_eq!(
+        e.graph.snapshots().last().map(|s| (s.tick, s.root)),
+        Some((1, root_1))
+    );
 
     // ── tick 2: the collapse ──
     let r2 = block_on(e.tick());
@@ -100,28 +132,47 @@ fn a_systemic_failure_trips_the_circuit_breaker() {
     let (to_tick, reason, slashed) = rolled_back(&e, 2).expect("a RolledBack event");
     assert_eq!(to_tick, 1);
     assert_eq!(slashed, 5);
-    assert!(reason.contains("71%") && reason.contains("7 envelopes"), "reason: {reason}");
+    assert!(
+        reason.contains("71%") && reason.contains("7 envelopes"),
+        "reason: {reason}"
+    );
     assert_eq!(e.court.rollbacks, 1);
 
     // The lock failures are ordinary rejections, one per forger.
     let rej = rejections(&e, 2);
     assert_eq!(rej.len(), 5);
-    assert!(rej.iter().all(|(_, gate, reason)| *gate == Stage::Street && reason.starts_with("lock failed")));
+    assert!(rej
+        .iter()
+        .all(|(_, gate, reason)| *gate == Stage::Street && reason.starts_with("lock failed")));
 
     // Offenders lost exactly 25 % of their *truth* liquidity, once, to the court.
     let slashes = court_slashes(&e, 2);
-    assert_eq!(slashes.len(), 5, "one High Court slash per offender: {slashes:?}");
+    assert_eq!(
+        slashes.len(),
+        5,
+        "one High Court slash per offender: {slashes:?}"
+    );
     for f in &w.forgers {
         let before = truth_1.liquidity_of(*f);
-        let (_, amount) = slashes.iter().find(|(n, _)| n == f).expect("every forger was slashed");
-        assert!((amount - before * 0.25).abs() < 1e-9, "25% of {before} is not {amount}");
+        let (_, amount) = slashes
+            .iter()
+            .find(|(n, _)| n == f)
+            .expect("every forger was slashed");
+        assert!(
+            (amount - before * 0.25).abs() < 1e-9,
+            "25% of {before} is not {amount}"
+        );
         assert!((e.graph.liquidity_of(*f) - before * 0.75).abs() < 1e-9);
         // The delusion is over: the purse belief was re-synced to the truth.
         assert!((e.node(*f).unwrap().purse.liquidity - e.graph.liquidity_of(*f)).abs() < 1e-9);
         assert!(e.court.injunctions.contains(f));
     }
     for h in &w.honest {
-        assert_eq!(e.graph.liquidity_of(*h), truth_1.liquidity_of(*h), "the innocent were not touched");
+        assert_eq!(
+            e.graph.liquidity_of(*h),
+            truth_1.liquidity_of(*h),
+            "the innocent were not touched"
+        );
         assert!(!e.court.injunctions.contains(h));
     }
 
@@ -134,14 +185,29 @@ fn a_systemic_failure_trips_the_circuit_breaker() {
         let have = expected.liquidity_of(*f);
         expected.slash(*f, have * 0.25);
     }
-    assert_eq!(e.graph.root(), expected.root(), "the truth after the ruling is tick 1 + the fines");
+    assert_eq!(
+        e.graph.root(),
+        expected.root(),
+        "the truth after the ruling is tick 1 + the fines"
+    );
     assert_eq!(r2.root, expected.root());
     assert_ne!(e.graph.root(), root_1);
-    assert_eq!(e.graph.contracts.len(), truth_1.contracts.len(), "no contract from the failed tick was booked");
+    assert_eq!(
+        e.graph.contracts.len(),
+        truth_1.contracts.len(),
+        "no contract from the failed tick was booked"
+    );
     // The snapshot chain was cut at tick 1 and continued at tick 2.
     let ticks: Vec<u64> = e.graph.snapshots().map(|s| s.tick).collect();
     assert_eq!(ticks, vec![1, 2]);
-    assert_eq!(e.graph.root_history.iter().map(|(t, _)| *t).collect::<Vec<_>>(), vec![1, 2]);
+    assert_eq!(
+        e.graph
+            .root_history
+            .iter()
+            .map(|(t, _)| *t)
+            .collect::<Vec<_>>(),
+        vec![1, 2]
+    );
 }
 
 /// (1b) The exact-root case: when the court has nothing to seize (the
@@ -161,7 +227,11 @@ fn rollback_lands_on_the_previous_root_when_there_is_nothing_to_seize() {
     assert!(r2.rolled_back);
     assert_eq!(r2.rejected, 5);
     assert_eq!(rolled_back(&e, 2).map(|(t, _, n)| (t, n)), Some((1, 5)));
-    assert_eq!(e.graph.root(), root_1, "nothing seized, nothing settled: the root is tick 1's");
+    assert_eq!(
+        e.graph.root(),
+        root_1,
+        "nothing seized, nothing settled: the root is tick 1's"
+    );
     assert_eq!(r2.root, root_1);
     assert!(court_slashes(&e, 2).iter().all(|(_, a)| *a == 0.0));
 }
@@ -193,13 +263,24 @@ fn offenders_are_under_injunction_at_the_country_gate() {
     // itself is what is under test, not a second collapse.
     let knockers = [w.forgers[0], w.forgers[1]];
     for f in &w.forgers {
-        let staff: Vec<Arc<dyn Agent>> = if knockers.contains(f) { vec![Arc::new(Transferor { amount: 1.0, arm_tick: 0, memo: "a small, backed payment" })] } else { vec![] };
+        let staff: Vec<Arc<dyn Agent>> = if knockers.contains(f) {
+            vec![Arc::new(Transferor {
+                amount: 1.0,
+                arm_tick: 0,
+                memo: "a small, backed payment",
+            })]
+        } else {
+            vec![]
+        };
         e.replace_staff(*f, staff);
     }
     let truth_before = e.graph.clone();
     let r3 = block_on(e.tick());
     assert_eq!(r3.envelopes_minted, 4);
-    assert!(!r3.rolled_back, "2 of 4 is below the sample the court needs");
+    assert!(
+        !r3.rolled_back,
+        "2 of 4 is below the sample the court needs"
+    );
     assert_eq!(r3.approved, 2, "the honest payments passed Statutory Law");
     assert_eq!(r3.rejected, 2, "the offenders' did not");
 
@@ -208,11 +289,21 @@ fn offenders_are_under_injunction_at_the_country_gate() {
     for f in knockers {
         let mine = proposed_by(&e, 3, f);
         assert_eq!(mine.len(), 1);
-        let (_, gate, reason) = rej.iter().find(|(id, _, _)| *id == mine[0]).expect("the offender's envelope was rejected");
+        let (_, gate, reason) = rej
+            .iter()
+            .find(|(id, _, _)| *id == mine[0])
+            .expect("the offender's envelope was rejected");
         assert_eq!(*gate, Stage::Country);
         assert!(reason.contains("injunction"), "reason: {reason}");
-        assert!(e.graph.liquidity_of(f) + 1e-9 >= 1.0, "it was backed; the injunction, not the lock, refused it");
-        assert_eq!(e.graph.liquidity_of(f), truth_before.liquidity_of(f), "refused on sight, not fined again");
+        assert!(
+            e.graph.liquidity_of(f) + 1e-9 >= 1.0,
+            "it was backed; the injunction, not the lock, refused it"
+        );
+        assert_eq!(
+            e.graph.liquidity_of(f),
+            truth_before.liquidity_of(f),
+            "refused on sight, not fined again"
+        );
     }
     for h in &w.honest {
         let mine = proposed_by(&e, 3, *h);
@@ -220,10 +311,20 @@ fn offenders_are_under_injunction_at_the_country_gate() {
         assert!(!rej.iter().any(|(id, _, _)| *id == mine[0]));
         assert!(e.events().iter().any(|ev| matches!(ev, EngineEvent::Approved { tick: 3, envelope, gate: Stage::Country } if *envelope == mine[0])));
     }
-    assert_eq!(settled_at(&e, 3), 2, "the honest payments settled at the Country gate");
+    assert_eq!(
+        settled_at(&e, 3),
+        2,
+        "the honest payments settled at the Country gate"
+    );
     // The one court: the gate the frontend sees is the court that ruled.
     let view = e.state_view();
-    assert!(view.gates.iter().any(|g| g.contains("1 rollbacks") && g.contains("5 injunctions")), "gates: {:?}", view.gates);
+    assert!(
+        view.gates
+            .iter()
+            .any(|g| g.contains("1 rollbacks") && g.contains("5 injunctions")),
+        "gates: {:?}",
+        view.gates
+    );
 }
 
 /// (3) Approved-but-uncommitted envelopes from the failed tick are void.
@@ -234,31 +335,52 @@ fn offenders_are_under_injunction_at_the_country_gate() {
 fn approvals_from_the_failed_tick_are_voided() {
     let (mut e, w) = forged_street(cfg(44), 5, 2, 2, TRUTH, DELUSION);
     block_on(e.tick());
-    let compute_before: Vec<f64> = w.honest.iter().map(|h| e.node(*h).unwrap().purse.compute).collect();
+    let compute_before: Vec<f64> = w
+        .honest
+        .iter()
+        .map(|h| e.node(*h).unwrap().purse.compute)
+        .collect();
     let liquidity_before: Vec<f64> = w.honest.iter().map(|h| e.graph.liquidity_of(*h)).collect();
     let contracts_before = e.graph.contracts.len();
     let settled_before = e.graph.total_settled;
 
     let r2 = block_on(e.tick());
     assert!(r2.rolled_back);
-    assert_eq!(r2.approved, 2, "the gate approved the honest payments before the court sat");
+    assert_eq!(
+        r2.approved, 2,
+        "the gate approved the honest payments before the court sat"
+    );
     assert_eq!(settled_at(&e, 2), 0, "nothing settled in the failed tick");
     assert_eq!(r2.settled_liquidity, 0.0);
     assert_eq!(e.graph.contracts.len(), contracts_before);
     assert_eq!(e.graph.total_settled, settled_before);
     for (i, h) in w.honest.iter().enumerate() {
-        assert_eq!(e.graph.liquidity_of(*h), liquidity_before[i], "truth unchanged");
-        assert_eq!(e.node(*h).unwrap().purse.liquidity, liquidity_before[i], "belief unchanged");
+        assert_eq!(
+            e.graph.liquidity_of(*h),
+            liquidity_before[i],
+            "truth unchanged"
+        );
+        assert_eq!(
+            e.node(*h).unwrap().purse.liquidity,
+            liquidity_before[i],
+            "belief unchanged"
+        );
         // Only the crossing tax of one envelope (1.0 cr × 25 %) left the purse;
         // the 1.0 cr send fee is charged at commit, which never came.
         let spent = compute_before[i] - e.node(*h).unwrap().purse.compute;
         assert!((spent - 0.25).abs() < 1e-9, "spent {spent}");
     }
     // The approved ids were announced and then never settled or delivered.
-    let approved_ids: Vec<EnvelopeId> = e.events().iter().filter_map(|ev| match ev {
-        EngineEvent::Approved { tick: 2, envelope, .. } => Some(*envelope),
-        _ => None,
-    }).collect();
+    let approved_ids: Vec<EnvelopeId> = e
+        .events()
+        .iter()
+        .filter_map(|ev| match ev {
+            EngineEvent::Approved {
+                tick: 2, envelope, ..
+            } => Some(*envelope),
+            _ => None,
+        })
+        .collect();
     assert_eq!(approved_ids.len(), 2);
     for id in approved_ids {
         assert!(!e.events().iter().any(|ev| matches!(ev, EngineEvent::Settled { envelope, .. } | EngineEvent::Delivered { envelope, .. } if *envelope == id)));
@@ -286,9 +408,19 @@ fn a_clearinghouse_collapse_is_fined_once_by_the_court() {
     assert_eq!(r2.slashed, 5, "netting found five unbacked net positions");
     assert_eq!(r2.rejected, 5);
     assert!(r2.rolled_back);
-    assert!(e.events().iter().any(|ev| matches!(ev, EngineEvent::Netted { tick: 2, envelopes: 7, .. })));
+    assert!(e.events().iter().any(|ev| matches!(
+        ev,
+        EngineEvent::Netted {
+            tick: 2,
+            envelopes: 7,
+            ..
+        }
+    )));
     for f in &w.forgers {
-        assert!((e.graph.liquidity_of(*f) - truth_1.liquidity_of(*f) * 0.75).abs() < 1e-9, "the fine that stands is the court's 25%");
+        assert!(
+            (e.graph.liquidity_of(*f) - truth_1.liquidity_of(*f) * 0.75).abs() < 1e-9,
+            "the fine that stands is the court's 25%"
+        );
         assert!((e.node(*f).unwrap().purse.liquidity - e.graph.liquidity_of(*f)).abs() < 1e-9);
     }
     let mut expected = truth_1.clone();
@@ -338,7 +470,10 @@ fn a_ruling_on_tick_one_still_vetoes_and_fines() {
     for h in &w.honest {
         assert_eq!(e.graph.liquidity_of(*h), TRUTH);
     }
-    assert_eq!(e.graph.snapshots().map(|s| s.tick).collect::<Vec<_>>(), vec![1]);
+    assert_eq!(
+        e.graph.snapshots().map(|s| s.tick).collect::<Vec<_>>(),
+        vec![1]
+    );
 }
 
 /// Determinism through the court: two engines with the same seed roll back

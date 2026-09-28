@@ -46,7 +46,14 @@ struct Args {
 }
 
 fn parse_args() -> Args {
-    let mut a = Args { scenario: "house".into(), budget: 800.0, tasks: 15, seed: 7, interval_ms: 700, port: 8787 };
+    let mut a = Args {
+        scenario: "house".into(),
+        budget: 800.0,
+        tasks: 15,
+        seed: 7,
+        interval_ms: 700,
+        port: 8787,
+    };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
         match k.as_str() {
@@ -54,7 +61,12 @@ fn parse_args() -> Args {
             "--budget" => a.budget = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.budget),
             "--tasks" => a.tasks = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.tasks),
             "--seed" => a.seed = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.seed),
-            "--interval-ms" => a.interval_ms = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.interval_ms),
+            "--interval-ms" => {
+                a.interval_ms = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(a.interval_ms)
+            }
             "--port" => a.port = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.port),
             _ => {}
         }
@@ -126,7 +138,12 @@ fn apply(engine: &mut Engine, cmd: Cmd, paused: &mut bool) -> String {
 }
 
 /// The only place `&mut Engine` exists. Runs until every command sender is gone.
-async fn engine_task(mut engine: Engine, interval_ms: u64, mut rx: mpsc::Receiver<Request>, ticks: broadcast::Sender<Arc<str>>) {
+async fn engine_task(
+    mut engine: Engine,
+    interval_ms: u64,
+    mut rx: mpsc::Receiver<Request>,
+    ticks: broadcast::Sender<Arc<str>>,
+) {
     let mut paused = false;
     let mut clock = tokio::time::interval(Duration::from_millis(interval_ms.max(1)));
     clock.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
@@ -159,7 +176,10 @@ fn json(status: &str, body: &str) -> Vec<u8> {
 }
 
 fn error(status: &str, msg: &str) -> Vec<u8> {
-    json(status, &format!(r#"{{"ok":false,"error":"{}"}}"#, msg.replace('"', "'")))
+    json(
+        status,
+        &format!(r#"{{"ok":false,"error":"{}"}}"#, msg.replace('"', "'")),
+    )
 }
 
 /// Read the request line and headers (up to the blank line). Bodies are ignored.
@@ -189,8 +209,14 @@ fn route_post(path: &str) -> Result<Cmd, Vec<u8>> {
     match seg.as_slice() {
         ["pause"] => Ok(Cmd::Pause),
         ["resume"] => Ok(Cmd::Resume),
-        ["authorize", id] => id.parse().map(|v| Cmd::Authorize(EnvelopeId(v))).map_err(|_| bad("envelope id")),
-        ["reject", id] => id.parse().map(|v| Cmd::Reject(EnvelopeId(v))).map_err(|_| bad("envelope id")),
+        ["authorize", id] => id
+            .parse()
+            .map(|v| Cmd::Authorize(EnvelopeId(v)))
+            .map_err(|_| bad("envelope id")),
+        ["reject", id] => id
+            .parse()
+            .map(|v| Cmd::Reject(EnvelopeId(v)))
+            .map_err(|_| bad("envelope id")),
         ["top-up", id, credits] => {
             let node = id.parse().map(NodeId).map_err(|_| bad("node id"))?;
             let credits: f64 = credits.parse().map_err(|_| bad("credits"))?;
@@ -199,7 +225,12 @@ fn route_post(path: &str) -> Result<Cmd, Vec<u8>> {
             }
             Ok(Cmd::TopUp(node, credits))
         }
-        ["zoom", level] => level.parse::<u8>().ok().and_then(Stage::from_level).map(Cmd::Zoom).ok_or_else(|| bad("zoom level (1-5)")),
+        ["zoom", level] => level
+            .parse::<u8>()
+            .ok()
+            .and_then(Stage::from_level)
+            .map(Cmd::Zoom)
+            .ok_or_else(|| bad("zoom level (1-5)")),
         _ => Err(error("404 Not Found", &format!("no route for POST {path}"))),
     }
 }
@@ -212,7 +243,9 @@ async fn ask(hub: &Hub, cmd: Cmd) -> Option<String> {
 
 /// One connection, start to finish. Every early return is a clean close.
 async fn handle(hub: Arc<Hub>, mut stream: TcpStream) {
-    let Some((method, path)) = read_head(&mut stream).await else { return };
+    let Some((method, path)) = read_head(&mut stream).await else {
+        return;
+    };
     let answer: Vec<u8> = match (method.as_str(), path.as_str()) {
         ("OPTIONS", _) => format!("HTTP/1.1 204 No Content\r\n{CORS}Access-Control-Max-Age: 86400\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").into_bytes(),
         ("GET", "/state") => match ask(&hub, Cmd::State).await {
@@ -270,13 +303,22 @@ async fn stream_events(hub: Arc<Hub>, stream: TcpStream) {
 #[tokio::main]
 async fn main() {
     let a = parse_args();
-    let config = EngineConfig { seed: a.seed, ..Default::default() };
+    let config = EngineConfig {
+        seed: a.seed,
+        ..Default::default()
+    };
     let mut engine = match a.scenario.as_str() {
         "street" => street(config, 6, a.budget, a.tasks),
         _ => house(config, a.budget, a.tasks),
     };
     engine.set_executor(Box::new(TokioExecutor));
-    let hello = format!("context-engine {} (native, {} executor, scenario {}, seed {})", env!("CARGO_PKG_VERSION"), engine.executor_name(), a.scenario, a.seed);
+    let hello = format!(
+        "context-engine {} (native, {} executor, scenario {}, seed {})",
+        env!("CARGO_PKG_VERSION"),
+        engine.executor_name(),
+        a.scenario,
+        a.seed
+    );
 
     let listener = match TcpListener::bind(("127.0.0.1", a.port)).await {
         Ok(l) => l,
@@ -293,7 +335,11 @@ async fn main() {
     let (cmd_tx, cmd_rx) = mpsc::channel::<Request>(256);
     let (tick_tx, _) = broadcast::channel::<Arc<str>>(64);
     tokio::spawn(engine_task(engine, a.interval_ms, cmd_rx, tick_tx.clone()));
-    let hub = Arc::new(Hub { commands: cmd_tx, ticks: tick_tx, hello });
+    let hub = Arc::new(Hub {
+        commands: cmd_tx,
+        ticks: tick_tx,
+        hello,
+    });
 
     loop {
         match listener.accept().await {

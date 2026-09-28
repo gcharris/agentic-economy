@@ -34,7 +34,11 @@ fn write_out(bytes: Vec<u8>) -> u32 {
 /// scenario 1 = the house (Stage 1), 2 = the street (Stage 2).
 #[no_mangle]
 pub extern "C" fn engine_new(scenario: u32, seed: u64, budget: f64, tasks: u32, cost_visible: u32) {
-    let config = EngineConfig { seed, cost_visible: cost_visible != 0, ..Default::default() };
+    let config = EngineConfig {
+        seed,
+        cost_visible: cost_visible != 0,
+        ..Default::default()
+    };
     let engine = match scenario {
         2 => scenarios::street(config, 6, budget, tasks as usize),
         _ => scenarios::house(config, budget, tasks as usize),
@@ -48,7 +52,12 @@ pub extern "C" fn engine_new(scenario: u32, seed: u64, budget: f64, tasks: u32, 
 /// simply reported as not run).
 #[no_mangle]
 pub extern "C" fn engine_tick() -> u64 {
-    with_engine(|e| block_on_bounded(e.tick(), 100_000).map(|r| r.tick).unwrap_or(0)).unwrap_or(0)
+    with_engine(|e| {
+        block_on_bounded(e.tick(), 100_000)
+            .map(|r| r.tick)
+            .unwrap_or(0)
+    })
+    .unwrap_or(0)
 }
 
 /// Returns 1 if the envelope was actually held at a door, 0 otherwise.
@@ -91,7 +100,9 @@ pub extern "C" fn engine_state() -> u32 {
 /// Serialise and drain the event log into the output buffer. Returns its length.
 #[no_mangle]
 pub extern "C" fn engine_events() -> u32 {
-    let json = with_engine(|e| serde_json::to_string(&e.drain_events()).unwrap_or_else(|_| "[]".into())).unwrap_or_else(|| "[]".into());
+    let json =
+        with_engine(|e| serde_json::to_string(&e.drain_events()).unwrap_or_else(|_| "[]".into()))
+            .unwrap_or_else(|| "[]".into());
     write_out(json.into_bytes())
 }
 
@@ -104,5 +115,11 @@ pub extern "C" fn engine_out_ptr() -> *const u8 {
 /// The engine's version string, for the HUD.
 #[no_mangle]
 pub extern "C" fn engine_version() -> u32 {
-    write_out(format!("context-engine {} (wasm32, sequential executor)", env!("CARGO_PKG_VERSION")).into_bytes())
+    write_out(
+        format!(
+            "context-engine {} (wasm32, sequential executor)",
+            env!("CARGO_PKG_VERSION")
+        )
+        .into_bytes(),
+    )
 }

@@ -32,7 +32,11 @@ impl SeatReceipt {
             self.credits,
             self.cost.joules,
             self.cost.tokens,
-            if self.cost.cache_hit { ", cache hit" } else { "" },
+            if self.cost.cache_hit {
+                ", cache hit"
+            } else {
+                ""
+            },
             self.confidence_after * 100.0
         )
     }
@@ -76,7 +80,9 @@ pub struct Note {
 impl Note {
     pub fn to_plain_line(&self) -> String {
         let status = match &self.reason {
-            HaltReason::RunwayExhausted { .. } => "Runway exhausted. A person must top up or close.",
+            HaltReason::RunwayExhausted { .. } => {
+                "Runway exhausted. A person must top up or close."
+            }
             HaltReason::Closed => "Closed by the person. The week is over.",
             HaltReason::Slashed { .. } => "Slashed by the High Court. Reserves seized.",
             HaltReason::Partitioned => "Partitioned from the global rails until the root resolves.",

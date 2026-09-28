@@ -21,7 +21,9 @@ pub struct Scout {
 
 impl Default for Scout {
     fn default() -> Self {
-        Scout { rigor: DEFAULT_RIGOR }
+        Scout {
+            rigor: DEFAULT_RIGOR,
+        }
     }
 }
 
@@ -35,19 +37,29 @@ impl Agent for Scout {
     }
 
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(task) = ctx.task().cloned() else { return done(ctx) };
+        let Some(task) = ctx.task().cloned() else {
+            return done(ctx);
+        };
 
         if ctx.epistemics().overdue_for_oracle() || ctx.epistemics().is_hallucinating() {
             let (gen, phi) = (ctx.epistemics().generation, ctx.epistemics().confidence);
             ctx.think("Scout", format!("My notes are {gen} handovers old (Φ {:.0}%). Asking the oracle before I look anything up.", phi * 100.0));
             let me = ctx.node_id();
-            ctx.propose(ProposalDraft { target: me, payload: Payload::StateSync, requested_liquidity: 0.0, compute_weight: ORACLE_COST });
+            ctx.propose(ProposalDraft {
+                target: me,
+                payload: Payload::StateSync,
+                requested_liquidity: 0.0,
+                compute_weight: ORACLE_COST,
+            });
         }
 
         let nominal = task.nominal_estimate();
         let tokens = if ctx.cost_visible() && ctx.purse().compute < nominal * 1.5 {
             let left = ctx.purse().compute;
-            ctx.think("Scout", format!("The purse is light ({left:.0} cr). Buying the compact lookup."));
+            ctx.think(
+                "Scout",
+                format!("The purse is light ({left:.0} cr). Buying the compact lookup."),
+            );
             (task.lookup_tokens as f64 * 0.6) as u32
         } else {
             task.lookup_tokens
@@ -56,8 +68,16 @@ impl Agent for Scout {
         if let Ok(unit) = ctx.burn("Scout", "lookup", ModelTier::FastQuantized, tokens, false) {
             let sources = 3 + ctx.rng().below(4);
             ctx.scratch().insert("sources".into(), sources.to_string());
-            ctx.leave_paper("Scout", format!("Lookup notes · {}", task.id), format!("{sources} sources consulted, {} tokens read", unit.tokens), unit.tokens);
-            ctx.think("Scout", format!("Looked up {sources} sources for {}.", task.id));
+            ctx.leave_paper(
+                "Scout",
+                format!("Lookup notes · {}", task.id),
+                format!("{sources} sources consulted, {} tokens read", unit.tokens),
+                unit.tokens,
+            );
+            ctx.think(
+                "Scout",
+                format!("Looked up {sources} sources for {}.", task.id),
+            );
         }
         done(ctx)
     }
@@ -87,7 +107,9 @@ impl Agent for Scribble {
     }
 
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(task) = ctx.task().cloned() else { return done(ctx) };
+        let Some(task) = ctx.task().cloned() else {
+            return done(ctx);
+        };
         if ctx.halted() {
             return done(ctx);
         }
@@ -101,8 +123,14 @@ impl Agent for Scribble {
             (ModelTier::FrontierDeep, task.draft_tokens * 2)
         } else if ctx.purse().compute < task.nominal_estimate() * 1.5 {
             let left = ctx.purse().compute;
-            ctx.think("Scribble", format!("The purse is light ({left:.0} cr). Writing the compact draft."));
-            (ModelTier::BalancedStaff, (task.draft_tokens as f64 * 0.6) as u32)
+            ctx.think(
+                "Scribble",
+                format!("The purse is light ({left:.0} cr). Writing the compact draft."),
+            );
+            (
+                ModelTier::BalancedStaff,
+                (task.draft_tokens as f64 * 0.6) as u32,
+            )
         } else {
             (ModelTier::BalancedStaff, task.draft_tokens)
         };
@@ -116,14 +144,38 @@ impl Agent for Scribble {
                 let sign = if ctx.rng().chance(0.5) { 1.0 } else { -1.0 };
                 let drift = 1.0 + ctx.rng().range_f64(0.10, 0.30) * sign;
                 let b = (cached * drift * 100.0).round() / 100.0;
-                ctx.think("Scribble", format!("I'm fairly sure the courier costs {b:.2} now (Φ {:.0}%).", phi * 100.0));
+                ctx.think(
+                    "Scribble",
+                    format!(
+                        "I'm fairly sure the courier costs {b:.2} now (Φ {:.0}%).",
+                        phi * 100.0
+                    ),
+                );
                 b
             } else {
                 cached
             };
-            ctx.scratch().insert("believed_price".into(), format!("{believed:.4}"));
-            ctx.leave_paper("Scribble", format!("Draft · {}", task.id), format!("{} tokens, courier priced at {believed:.2}, Φ {:.1}%", unit.tokens, phi * 100.0), unit.tokens);
-            ctx.think("Scribble", format!("Drafted {} ({} tok{}).", task.id, unit.tokens, if cache_hit { ", cache hit" } else { "" }));
+            ctx.scratch()
+                .insert("believed_price".into(), format!("{believed:.4}"));
+            ctx.leave_paper(
+                "Scribble",
+                format!("Draft · {}", task.id),
+                format!(
+                    "{} tokens, courier priced at {believed:.2}, Φ {:.1}%",
+                    unit.tokens,
+                    phi * 100.0
+                ),
+                unit.tokens,
+            );
+            ctx.think(
+                "Scribble",
+                format!(
+                    "Drafted {} ({} tok{}).",
+                    task.id,
+                    unit.tokens,
+                    if cache_hit { ", cache hit" } else { "" }
+                ),
+            );
         }
         done(ctx)
     }
@@ -151,18 +203,49 @@ impl Agent for Inspector {
     }
 
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(task) = ctx.task().cloned() else { return done(ctx) };
+        let Some(task) = ctx.task().cloned() else {
+            return done(ctx);
+        };
         if ctx.halted() {
             return done(ctx);
         }
         let cache_hit = ctx.scratch().contains_key("believed_price");
-        let tokens = if ctx.cost_visible() { task.audit_tokens } else { task.audit_tokens * 3 / 2 };
-        if let Ok(unit) = ctx.burn("Inspector", "audit", ModelTier::FrontierDeep, tokens, cache_hit) {
+        let tokens = if ctx.cost_visible() {
+            task.audit_tokens
+        } else {
+            task.audit_tokens * 3 / 2
+        };
+        if let Ok(unit) = ctx.burn(
+            "Inspector",
+            "audit",
+            ModelTier::FrontierDeep,
+            tokens,
+            cache_hit,
+        ) {
             let phi = ctx.record_handover(ModelTier::FrontierDeep, self.rigor);
-            let verdict = if ctx.epistemics().is_hallucinating() { "flagged" } else { "passed" };
+            let verdict = if ctx.epistemics().is_hallucinating() {
+                "flagged"
+            } else {
+                "passed"
+            };
             ctx.scratch().insert("audit".into(), verdict.into());
-            ctx.leave_paper("Inspector", format!("Audit · {}", task.id), format!("{verdict}, {} tokens, Φ {:.1}%", unit.tokens, phi * 100.0), unit.tokens);
-            ctx.think("Inspector", if verdict == "passed" { format!("Audit passed for {}.", task.id) } else { format!("I cannot verify {} from what is on the table. Flagging it.", task.id) });
+            ctx.leave_paper(
+                "Inspector",
+                format!("Audit · {}", task.id),
+                format!("{verdict}, {} tokens, Φ {:.1}%", unit.tokens, phi * 100.0),
+                unit.tokens,
+            );
+            ctx.think(
+                "Inspector",
+                if verdict == "passed" {
+                    format!("Audit passed for {}.", task.id)
+                } else {
+                    format!(
+                        "I cannot verify {} from what is on the table. Flagging it.",
+                        task.id
+                    )
+                },
+            );
         }
         done(ctx)
     }
@@ -208,29 +291,48 @@ impl Agent for Porter {
     }
 
     fn draft(&self, mut ctx: DraftContext) -> DraftFuture {
-        let Some(task) = ctx.task().cloned() else { return done(ctx) };
+        let Some(task) = ctx.task().cloned() else {
+            return done(ctx);
+        };
         if ctx.halted() || !ctx.scratch().contains_key("audit") {
             return done(ctx);
         }
         let audit = ctx.scratch().get("audit").cloned().unwrap_or_default();
         let target = ctx.parent().unwrap_or(ctx.node_id());
-        ctx.think("Porter", format!("Walking to the door with {}. Sending costs {:.0} cr. Nothing burns while we wait.", task.id, task.spend));
+        ctx.think(
+            "Porter",
+            format!(
+                "Walking to the door with {}. Sending costs {:.0} cr. Nothing burns while we wait.",
+                task.id, task.spend
+            ),
+        );
         ctx.propose(ProposalDraft {
             target,
-            payload: Payload::Dispatch { message: format!("Finished draft for {} (audit {audit})", task.id), task_id: task.id.clone() },
+            payload: Payload::Dispatch {
+                message: format!("Finished draft for {} (audit {audit})", task.id),
+                task_id: task.id.clone(),
+            },
             requested_liquidity: 0.0,
             compute_weight: task.spend,
         });
 
         // On a street, a house also hires its neighbour's courier by atomic swap.
         if ctx.stage() == Stage::House && !ctx.known_peers().is_empty() {
-            if let Some(believed) = ctx.scratch().get("believed_price").and_then(|s| s.parse::<f64>().ok()) {
+            if let Some(believed) = ctx
+                .scratch()
+                .get("believed_price")
+                .and_then(|s| s.parse::<f64>().ok())
+            {
                 let peers = ctx.known_peers().to_vec();
                 let idx = ctx.rng().below(peers.len() as u64) as usize;
                 let peer = peers[idx];
                 ctx.propose(ProposalDraft {
                     target: peer,
-                    payload: Payload::HireService { service: "courier".into(), believed_price: believed, believed_price_hash: SovereignGraph::hash_price("courier", believed) },
+                    payload: Payload::HireService {
+                        service: "courier".into(),
+                        believed_price: believed,
+                        believed_price_hash: SovereignGraph::hash_price("courier", believed),
+                    },
                     requested_liquidity: believed,
                     compute_weight: 2.0,
                 });

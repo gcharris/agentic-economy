@@ -5,11 +5,19 @@ use context_engine::prelude::*;
 use std::sync::Arc;
 
 fn cfg(seed: u64) -> EngineConfig {
-    EngineConfig { seed, cost_visible: true, ..Default::default() }
+    EngineConfig {
+        seed,
+        cost_visible: true,
+        ..Default::default()
+    }
 }
 
 fn house_id(e: &Engine) -> NodeId {
-    e.nodes.values().find(|n| n.scale_level == Stage::House).unwrap().id
+    e.nodes
+        .values()
+        .find(|n| n.scale_level == Stage::House)
+        .unwrap()
+        .id
 }
 
 /// Law 1. A draft owns its context. There is no lifetime through which a
@@ -40,7 +48,10 @@ fn law_1_drafts_are_isolated_by_type() {
     let h = house_id(&e);
     e.replace_staff(h, vec![Arc::new(Nosy)]);
     block_on(e.tick());
-    assert!(e.events().iter().any(|ev| matches!(ev, EngineEvent::Thought { seat, .. } if seat == "Nosy")));
+    assert!(e
+        .events()
+        .iter()
+        .any(|ev| matches!(ev, EngineEvent::Thought { seat, .. } if seat == "Nosy")));
 }
 
 /// Law 2. The Oak Table is local: a draft's snapshot is a copy, and the
@@ -53,14 +64,25 @@ fn law_2_oak_table_is_local() {
     let street_root_before = e.node_mut(street).unwrap().oak_table.root();
     block_on(e.tick());
     // The house drafted; the street's table did not move.
-    assert_eq!(e.node_mut(street).unwrap().oak_table.root(), street_root_before);
+    assert_eq!(
+        e.node_mut(street).unwrap().oak_table.root(),
+        street_root_before
+    );
     // Approve the dispatch: now, and only now, the street's inbox changes.
     let held: Vec<EnvelopeId> = e.held_envelopes().map(|(_, env)| env.id).collect();
     assert_eq!(held.len(), 1);
     e.authorize(held[0]);
     block_on(e.tick());
-    assert_ne!(e.node_mut(street).unwrap().oak_table.root(), street_root_before);
-    assert!(e.node(street).unwrap().oak_table.entries().any(|(k, _)| k.starts_with("inbox/")));
+    assert_ne!(
+        e.node_mut(street).unwrap().oak_table.root(),
+        street_root_before
+    );
+    assert!(e
+        .node(street)
+        .unwrap()
+        .oak_table
+        .entries()
+        .any(|(k, _)| k.starts_with("inbox/")));
 }
 
 /// Law 3. State transitions only at boundaries: the Sovereign Graph root
@@ -107,7 +129,10 @@ fn once_asked_only_the_person_answers() {
     assert!(e.authorize(id));
     let r = block_on(e.tick());
     assert_eq!(r.approved, 1);
-    assert!(!e.authorize(id), "an envelope that is no longer held cannot be answered again");
+    assert!(
+        !e.authorize(id),
+        "an envelope that is no longer held cannot be answered again"
+    );
 }
 
 /// Law 4. Sovereignty: the Door holds an irreversible send, nothing burns
@@ -127,8 +152,14 @@ fn law_4_the_door_holds_at_zero_burn() {
         assert_eq!(r.drafted, 0);
     }
     let n = e.node(h).unwrap();
-    assert_eq!(n.purse.compute, compute_at_door, "0.0 credits leaked in 100 ticks");
-    assert!(n.epistemics.confidence < phi_at_door, "truth decays while the person thinks");
+    assert_eq!(
+        n.purse.compute, compute_at_door,
+        "0.0 credits leaked in 100 ticks"
+    );
+    assert!(
+        n.epistemics.confidence < phi_at_door,
+        "truth decays while the person thinks"
+    );
     assert!((n.epistemics.confidence - idle_decay(phi_at_door, 100)).abs() < 1e-9);
     // The person says yes: the send cost comes out only now.
     let id = e.held_envelopes().next().unwrap().1.id;
@@ -136,7 +167,10 @@ fn law_4_the_door_holds_at_zero_burn() {
     let r = block_on(e.tick());
     assert_eq!(r.approved, 1);
     let n = e.node(h).unwrap();
-    assert!((compute_at_door - n.purse.compute - 10.0).abs() < 30.0, "the door fee (10 cr) plus the next draft");
+    assert!(
+        (compute_at_door - n.purse.compute - 10.0).abs() < 30.0,
+        "the door fee (10 cr) plus the next draft"
+    );
     assert_eq!(n.tasks_done(), 1);
 }
 
@@ -152,7 +186,10 @@ fn rejection_is_sunk_cost() {
     let r = block_on(e.tick());
     assert_eq!(r.rejected, 1);
     let n = e.node(h).unwrap();
-    assert_eq!(n.purse.compute, after_draft, "no refund, and no send fee either");
+    assert_eq!(
+        n.purse.compute, after_draft,
+        "no refund, and no send fee either"
+    );
     assert!(n.held_at_door.is_empty());
     assert_eq!(n.tasks[0].state, TaskState::Rejected);
     assert!(!n.boundary_rules.refund_on_reject);
@@ -170,8 +207,13 @@ fn exhaustion_leaves_a_note_and_keeps_the_papers() {
     assert_eq!(n.status, NodeStatus::Halted);
     let note = n.note.clone().expect("a note");
     assert!(matches!(note.reason, HaltReason::RunwayExhausted { .. }));
-    assert!(note.to_plain_line().contains("A person must top up or close"));
-    assert!(!n.oak_table.papers.is_empty(), "the papers stay on the table");
+    assert!(note
+        .to_plain_line()
+        .contains("A person must top up or close"));
+    assert!(
+        !n.oak_table.papers.is_empty(),
+        "the papers stay on the table"
+    );
     assert!(n.oak_table.get("note").is_some());
     // Nothing was deleted; the person tops up and it continues.
     e.top_up(h, 500.0);
@@ -202,10 +244,17 @@ fn the_oracle_is_paid_and_resets_truth() {
     let mut synced = false;
     for _ in 0..20 {
         block_on(e.tick());
-        for (_, env) in e.held_envelopes().map(|(n, e)| (n.id, e.id)).collect::<Vec<_>>() {
+        for (_, env) in e
+            .held_envelopes()
+            .map(|(n, e)| (n.id, e.id))
+            .collect::<Vec<_>>()
+        {
             e.authorize(env);
         }
-        if e.events().iter().any(|ev| matches!(ev, EngineEvent::StateSync { cost, .. } if *cost == ORACLE_COST)) {
+        if e.events()
+            .iter()
+            .any(|ev| matches!(ev, EngineEvent::StateSync { cost, .. } if *cost == ORACLE_COST))
+        {
             synced = true;
             break;
         }
@@ -219,12 +268,26 @@ fn the_oracle_is_paid_and_resets_truth() {
 #[test]
 fn pack_and_unpack_conserve_compute() {
     let mut e = street(cfg(9), 5, 400.0, 3);
-    let street_id = e.nodes.values().find(|n| n.scale_level == Stage::Street).unwrap().id;
+    let street_id = e
+        .nodes
+        .values()
+        .find(|n| n.scale_level == Stage::Street)
+        .unwrap()
+        .id;
     block_on(e.tick());
-    let total_before: f64 = e.nodes.values().filter(|n| n.scale_level == Stage::House).map(|n| n.purse.compute).sum();
+    let total_before: f64 = e
+        .nodes
+        .values()
+        .filter(|n| n.scale_level == Stage::House)
+        .map(|n| n.purse.compute)
+        .sum();
     e.set_active_scale(Stage::Country); // houses are two levels below the camera's neighbour: stasis
     assert!(e.node(street_id).unwrap().packed.is_some());
-    assert!(e.nodes.values().filter(|n| n.scale_level == Stage::House).all(|n| n.status == NodeStatus::Packed));
+    assert!(e
+        .nodes
+        .values()
+        .filter(|n| n.scale_level == Stage::House)
+        .all(|n| n.status == NodeStatus::Packed));
     let mut macro_ticks = 0;
     for _ in 0..10 {
         let r = block_on(e.tick());
@@ -232,15 +295,42 @@ fn pack_and_unpack_conserve_compute() {
         macro_ticks += r.packed_groups;
     }
     assert!(macro_ticks >= 10);
-    let pending = e.node(street_id).unwrap().packed.as_ref().unwrap().pending_burn;
+    let pending = e
+        .node(street_id)
+        .unwrap()
+        .packed
+        .as_ref()
+        .unwrap()
+        .pending_burn;
     e.set_active_scale(Stage::Street);
     assert!(e.node(street_id).unwrap().packed.is_none());
-    let total_after: f64 = e.nodes.values().filter(|n| n.scale_level == Stage::House).map(|n| n.purse.compute).sum();
-    assert!(total_after <= total_before + 1e-9, "unpacking never mints compute");
-    assert!((total_before - total_after - pending).abs() < 1e-6, "the macro burn was distributed exactly");
+    let total_after: f64 = e
+        .nodes
+        .values()
+        .filter(|n| n.scale_level == Stage::House)
+        .map(|n| n.purse.compute)
+        .sum();
+    assert!(
+        total_after <= total_before + 1e-9,
+        "unpacking never mints compute"
+    );
+    assert!(
+        (total_before - total_after - pending).abs() < 1e-6,
+        "the macro burn was distributed exactly"
+    );
     // Determinism: the same seed packs and unpacks to the same weights.
-    let a = PackedStatisticalState { stochastic_seed: 99, child_count: 5, ..PackedStatisticalState::pack(&[], 0, 99) }.unpack_weights();
-    let b = PackedStatisticalState { stochastic_seed: 99, child_count: 5, ..PackedStatisticalState::pack(&[], 0, 99) }.unpack_weights();
+    let a = PackedStatisticalState {
+        stochastic_seed: 99,
+        child_count: 5,
+        ..PackedStatisticalState::pack(&[], 0, 99)
+    }
+    .unpack_weights();
+    let b = PackedStatisticalState {
+        stochastic_seed: 99,
+        child_count: 5,
+        ..PackedStatisticalState::pack(&[], 0, 99)
+    }
+    .unpack_weights();
     assert_eq!(a, b);
 }
 
@@ -262,11 +352,23 @@ fn replay_is_exact() {
 #[test]
 fn cost_visibility_changes_what_gets_bought() {
     fn run(visible: bool) -> (usize, f64) {
-        let mut e = house(EngineConfig { seed: 12, cost_visible: visible, ..Default::default() }, 260.0, 10);
+        let mut e = house(
+            EngineConfig {
+                seed: 12,
+                cost_visible: visible,
+                ..Default::default()
+            },
+            260.0,
+            10,
+        );
         let h = house_id(&e);
         for _ in 0..60 {
             block_on(e.tick());
-            for id in e.held_envelopes().map(|(_, env)| env.id).collect::<Vec<_>>() {
+            for id in e
+                .held_envelopes()
+                .map(|(_, env)| env.id)
+                .collect::<Vec<_>>()
+            {
                 e.authorize(id);
             }
             if e.node(h).unwrap().status == NodeStatus::Halted {
@@ -278,7 +380,10 @@ fn cost_visibility_changes_what_gets_bought() {
     }
     let (done_visible, _) = run(true);
     let (done_hidden, _) = run(false);
-    assert!(done_visible >= done_hidden, "visible {done_visible} vs hidden {done_hidden}");
+    assert!(
+        done_visible >= done_hidden,
+        "visible {done_visible} vs hidden {done_hidden}"
+    );
 }
 
 /// Nobody keeps a score. There is no field anywhere that ranks seats.

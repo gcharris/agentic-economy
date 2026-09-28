@@ -80,7 +80,9 @@ impl SovereignGraph {
     }
 
     pub fn price_hash(&self, service: &str) -> Option<Hash32> {
-        self.service_prices.get(service).map(|p| Self::hash_price(service, *p))
+        self.service_prices
+            .get(service)
+            .map(|p| Self::hash_price(service, *p))
     }
 
     pub fn hash_price(service: &str, price: f64) -> Hash32 {
@@ -130,7 +132,10 @@ impl SovereignGraph {
     }
 
     pub fn deliver(&mut self, to: NodeId, envelope: EnvelopeId, message: String) {
-        self.deliveries.entry(to).or_default().push((envelope, message));
+        self.deliveries
+            .entry(to)
+            .or_default()
+            .push((envelope, message));
     }
 
     pub fn record_contract(&mut self, c: Contract) {
@@ -142,12 +147,24 @@ impl SovereignGraph {
         let mut leaves: Vec<Hash32> = self
             .liquidity
             .iter()
-            .map(|(id, amt)| Hash32::digest_parts(&[&id.0.to_le_bytes(), format!("{amt:.6}").as_bytes()]))
+            .map(|(id, amt)| {
+                Hash32::digest_parts(&[&id.0.to_le_bytes(), format!("{amt:.6}").as_bytes()])
+            })
             .collect();
-        leaves.extend(self.contracts.iter().map(|c| Hash32::digest_parts(&[&c.id.0.to_le_bytes(), &c.tick.to_le_bytes(), format!("{:.6}", c.amount).as_bytes()])));
+        leaves.extend(self.contracts.iter().map(|c| {
+            Hash32::digest_parts(&[
+                &c.id.0.to_le_bytes(),
+                &c.tick.to_le_bytes(),
+                format!("{:.6}", c.amount).as_bytes(),
+            ])
+        }));
         for (to, msgs) in &self.deliveries {
             for (id, msg) in msgs {
-                leaves.push(Hash32::digest_parts(&[&to.0.to_le_bytes(), &id.0.to_le_bytes(), msg.as_bytes()]));
+                leaves.push(Hash32::digest_parts(&[
+                    &to.0.to_le_bytes(),
+                    &id.0.to_le_bytes(),
+                    msg.as_bytes(),
+                ]));
             }
         }
         Hash32::merkle_root(&leaves)
@@ -160,7 +177,15 @@ impl SovereignGraph {
             self.snapshots.pop_front();
         }
         let deliveries = self.deliveries.iter().map(|(k, v)| (*k, v.len())).collect();
-        self.snapshots.push_back(GraphSnapshot { tick, root, liquidity: self.liquidity.clone(), contracts_len: self.contracts.len(), deliveries, total_settled: self.total_settled, total_slashed: self.total_slashed });
+        self.snapshots.push_back(GraphSnapshot {
+            tick,
+            root,
+            liquidity: self.liquidity.clone(),
+            contracts_len: self.contracts.len(),
+            deliveries,
+            total_settled: self.total_settled,
+            total_slashed: self.total_slashed,
+        });
         root
     }
 

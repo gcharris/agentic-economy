@@ -43,7 +43,10 @@ pub async fn run_job(job: DraftJob) -> DraftOutcome {
         }
         ctx = seat.draft(ctx).await;
     }
-    DraftOutcome { node, ctx: Some(ctx) }
+    DraftOutcome {
+        node,
+        ctx: Some(ctx),
+    }
 }
 
 pub type ExecFuture<'a> = Pin<Box<dyn Future<Output = Vec<DraftOutcome>> + Send + 'a>>;
@@ -99,7 +102,13 @@ impl DraftExecutor for TokioExecutor {
             for (i, job) in jobs.into_iter().enumerate() {
                 set.spawn(async move { (i, run_job(job).await) });
             }
-            let mut slots: Vec<DraftOutcome> = nodes.iter().map(|n| DraftOutcome { node: *n, ctx: None }).collect();
+            let mut slots: Vec<DraftOutcome> = nodes
+                .iter()
+                .map(|n| DraftOutcome {
+                    node: *n,
+                    ctx: None,
+                })
+                .collect();
             while let Some(res) = set.join_next().await {
                 if let Ok((i, outcome)) = res {
                     slots[i] = outcome;

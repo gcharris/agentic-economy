@@ -34,13 +34,29 @@ pub struct PackedStatisticalState {
 impl PackedStatisticalState {
     /// Fold a set of discrete children into one profile.
     pub fn pack(all_children: &[&SovereignNode], tick: u64, seed: u64) -> Self {
-        let children: Vec<&SovereignNode> = all_children.iter().copied().filter(|c| c.status == NodeStatus::Active).collect();
+        let children: Vec<&SovereignNode> = all_children
+            .iter()
+            .copied()
+            .filter(|c| c.status == NodeStatus::Active)
+            .collect();
         let children = &children[..];
         let n = children.len().max(1) as f64;
         let burn: f64 = children.iter().map(|c| c.avg_burn_rate()).sum::<f64>() / n;
-        let liq: f64 = children.iter().map(|c| c.purse.liquidity.abs()).sum::<f64>() / n;
-        let mean_conf: f64 = children.iter().map(|c| c.epistemics.confidence).sum::<f64>() / n;
-        let var: f64 = children.iter().map(|c| (c.epistemics.confidence - mean_conf).powi(2)).sum::<f64>() / n;
+        let liq: f64 = children
+            .iter()
+            .map(|c| c.purse.liquidity.abs())
+            .sum::<f64>()
+            / n;
+        let mean_conf: f64 = children
+            .iter()
+            .map(|c| c.epistemics.confidence)
+            .sum::<f64>()
+            / n;
+        let var: f64 = children
+            .iter()
+            .map(|c| (c.epistemics.confidence - mean_conf).powi(2))
+            .sum::<f64>()
+            / n;
         let total_compute: f64 = children.iter().map(|c| c.purse.compute).sum();
         PackedStatisticalState {
             avg_compute_burn_rate: burn,
@@ -74,7 +90,9 @@ impl PackedStatisticalState {
     /// back onto the children. Same seed, same weights, every time.
     pub fn unpack_weights(&self) -> Vec<f64> {
         let mut rng = Rng::seed_from_u64(self.stochastic_seed);
-        let raw: Vec<f64> = (0..self.child_count).map(|_| 0.5 + rng.next_f64()).collect();
+        let raw: Vec<f64> = (0..self.child_count)
+            .map(|_| 0.5 + rng.next_f64())
+            .collect();
         let sum: f64 = raw.iter().sum::<f64>().max(f64::MIN_POSITIVE);
         raw.into_iter().map(|w| w / sum).collect()
     }
@@ -95,7 +113,21 @@ mod tests {
 
     #[test]
     fn weights_are_deterministic_and_normalised() {
-        let p = PackedStatisticalState { avg_compute_burn_rate: 1.0, liquidity_velocity: 0.0, epistemic_variance: 0.0, mean_confidence: 1.0, stochastic_seed: 42, packed_at_tick: 0, active_children: Vec::new(), child_count: 20, total_compute_at_pack: 100.0, macro_ticks: 0, pending_burn: 0.0, pending_liquidity_delta: 0.0, pending_decay_ticks: 0 };
+        let p = PackedStatisticalState {
+            avg_compute_burn_rate: 1.0,
+            liquidity_velocity: 0.0,
+            epistemic_variance: 0.0,
+            mean_confidence: 1.0,
+            stochastic_seed: 42,
+            packed_at_tick: 0,
+            active_children: Vec::new(),
+            child_count: 20,
+            total_compute_at_pack: 100.0,
+            macro_ticks: 0,
+            pending_burn: 0.0,
+            pending_liquidity_delta: 0.0,
+            pending_decay_ticks: 0,
+        };
         let a = p.unpack_weights();
         let b = p.unpack_weights();
         assert_eq!(a, b);
@@ -104,7 +136,21 @@ mod tests {
 
     #[test]
     fn macro_burn_never_exceeds_packed_compute() {
-        let mut p = PackedStatisticalState { avg_compute_burn_rate: 30.0, liquidity_velocity: 0.0, epistemic_variance: 0.0, mean_confidence: 1.0, stochastic_seed: 1, packed_at_tick: 0, active_children: Vec::new(), child_count: 5, total_compute_at_pack: 200.0, macro_ticks: 0, pending_burn: 0.0, pending_liquidity_delta: 0.0, pending_decay_ticks: 0 };
+        let mut p = PackedStatisticalState {
+            avg_compute_burn_rate: 30.0,
+            liquidity_velocity: 0.0,
+            epistemic_variance: 0.0,
+            mean_confidence: 1.0,
+            stochastic_seed: 1,
+            packed_at_tick: 0,
+            active_children: Vec::new(),
+            child_count: 5,
+            total_compute_at_pack: 200.0,
+            macro_ticks: 0,
+            pending_burn: 0.0,
+            pending_liquidity_delta: 0.0,
+            pending_decay_ticks: 0,
+        };
         let mut rng = Rng::seed_from_u64(9);
         for _ in 0..100 {
             p.simulate_stochastically(&mut rng);

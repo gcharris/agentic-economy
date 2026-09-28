@@ -23,7 +23,11 @@ pub struct CoordinationTax {
 
 impl Default for CoordinationTax {
     fn default() -> Self {
-        CoordinationTax { intra: 1.0, same_parent: 1.25, cross_parent: 1.40 }
+        CoordinationTax {
+            intra: 1.0,
+            same_parent: 1.25,
+            cross_parent: 1.40,
+        }
     }
 }
 
@@ -58,7 +62,12 @@ mod tests {
         assert_eq!(t.routed_cost(Crossing::SameParent, 10.0), 12.5);
         assert_eq!(t.routed_cost(Crossing::CrossParent, 10.0), 14.0);
         // the observed band the multipliers are drawn from
-        assert!(t.tax_only(Crossing::SameParent, 100.0) / 125.0 * 100.0 <= OBSERVED_MARKET_TAX_PCT + 0.01);
-        assert!(t.tax_only(Crossing::CrossParent, 100.0) / 140.0 * 100.0 <= OBSERVED_JOB_MARKET_TAX_PCT);
+        assert!(
+            t.tax_only(Crossing::SameParent, 100.0) / 125.0 * 100.0
+                <= OBSERVED_MARKET_TAX_PCT + 0.01
+        );
+        assert!(
+            t.tax_only(Crossing::CrossParent, 100.0) / 140.0 * 100.0 <= OBSERVED_JOB_MARKET_TAX_PCT
+        );
     }
 }

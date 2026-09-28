@@ -80,14 +80,27 @@ impl OakTable {
             .iter()
             .map(|(k, v)| Hash32::digest_parts(&[k.as_bytes(), b"=", v.as_bytes()]))
             .collect();
-        leaves.extend(papers.iter().map(|p| Hash32::digest_parts(&[p.seat.as_bytes(), b":", p.title.as_bytes(), b":", p.body.as_bytes()])));
+        leaves.extend(papers.iter().map(|p| {
+            Hash32::digest_parts(&[
+                p.seat.as_bytes(),
+                b":",
+                p.title.as_bytes(),
+                b":",
+                p.body.as_bytes(),
+            ])
+        }));
         Hash32::merkle_root(&leaves)
     }
 
     /// An owned copy for a draft. This is the *only* view a draft ever gets.
     pub fn snapshot(&mut self, tick: u64) -> OakSnapshot {
         let root = self.root();
-        OakSnapshot { entries: self.entries.clone(), papers: self.papers.clone(), root, taken_at_tick: tick }
+        OakSnapshot {
+            entries: self.entries.clone(),
+            papers: self.papers.clone(),
+            root,
+            taken_at_tick: tick,
+        }
     }
 }
 
@@ -123,7 +136,13 @@ mod tests {
         assert_ne!(empty, one);
         t.put("price/flour", "12.5");
         assert_eq!(one, t.root(), "idempotent write keeps the root");
-        t.leave_paper(Paper { tick: 1, seat: "Scribble".into(), title: "Draft".into(), body: "…".into(), tokens: 10 });
+        t.leave_paper(Paper {
+            tick: 1,
+            seat: "Scribble".into(),
+            title: "Draft".into(),
+            body: "…".into(),
+            tokens: 10,
+        });
         assert_ne!(one, t.root());
     }
 

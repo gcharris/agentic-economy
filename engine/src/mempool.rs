@@ -16,7 +16,10 @@ impl Mempool {
     pub fn submit(&mut self, env: ProposalEnvelope) -> Result<(), Box<(ProposalEnvelope, String)>> {
         if env.payload.moves_liquidity() && env.requested_liquidity <= 0.0 {
             self.dropped_total += 1;
-            return Err(Box::new((env, "courier rule: liquidity payload without liquidity allocation".into())));
+            return Err(Box::new((
+                env,
+                "courier rule: liquidity payload without liquidity allocation".into(),
+            )));
         }
         if env.requested_liquidity < 0.0 {
             self.dropped_total += 1;

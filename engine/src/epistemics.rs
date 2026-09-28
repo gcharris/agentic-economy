@@ -67,7 +67,14 @@ pub struct Epistemics {
 
 impl Default for Epistemics {
     fn default() -> Self {
-        Epistemics { confidence: 1.0, confidence_at_sync: 1.0, last_sync_tick: 0, generation: 0, calibrations: 0, idle_ticks: 0 }
+        Epistemics {
+            confidence: 1.0,
+            confidence_at_sync: 1.0,
+            last_sync_tick: 0,
+            generation: 0,
+            calibrations: 0,
+            idle_ticks: 0,
+        }
     }
 }
 
@@ -124,7 +131,11 @@ mod tests {
     /// Reproduces `output/ael_experiment_results.json` → benchmark 2, uncalibrated.
     #[test]
     fn twenty_handovers_land_on_the_laboratory_record() {
-        let rotation = [ModelTier::FastQuantized, ModelTier::BalancedStaff, ModelTier::FrontierDeep];
+        let rotation = [
+            ModelTier::FastQuantized,
+            ModelTier::BalancedStaff,
+            ModelTier::FrontierDeep,
+        ];
         let mut e = Epistemics::default();
         let mut history = Vec::new();
         for gen in 1..=20u32 {
@@ -141,7 +152,10 @@ mod tests {
     #[test]
     fn idle_decay_is_calibrated_to_the_record() {
         let after_20 = idle_decay(1.0, 20);
-        assert!((after_20 - OBSERVED_CONFIDENCE_AFTER_20_HANDOVERS).abs() < 0.001, "{after_20}");
+        assert!(
+            (after_20 - OBSERVED_CONFIDENCE_AFTER_20_HANDOVERS).abs() < 0.001,
+            "{after_20}"
+        );
         let mut e = Epistemics::default();
         for _ in 0..20 {
             e.record_idle_tick();
@@ -151,7 +165,11 @@ mod tests {
 
     #[test]
     fn oracle_every_five_generations_holds_the_line() {
-        let rotation = [ModelTier::FastQuantized, ModelTier::BalancedStaff, ModelTier::FrontierDeep];
+        let rotation = [
+            ModelTier::FastQuantized,
+            ModelTier::BalancedStaff,
+            ModelTier::FrontierDeep,
+        ];
         let mut e = Epistemics::default();
         let mut spend = 0.0;
         for gen in 1..=20u32 {

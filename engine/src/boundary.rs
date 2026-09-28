@@ -80,11 +80,18 @@ pub enum HoldReason {
 pub enum Verdict {
     Approved,
     /// The envelope is destroyed. Compute spent generating it is not refunded.
-    Rejected { reason: String },
+    Rejected {
+        reason: String,
+    },
     /// The envelope waits at the gate. Zero idle burn.
-    Held { reason: HoldReason },
+    Held {
+        reason: HoldReason,
+    },
     /// Rejected, and reserves seized on top.
-    Slashed { amount: f64, reason: String },
+    Slashed {
+        amount: f64,
+        reason: String,
+    },
 }
 
 impl Verdict {
@@ -94,7 +101,11 @@ impl Verdict {
     pub fn is_liquidity_failure(&self) -> bool {
         match self {
             Verdict::Slashed { .. } => true,
-            Verdict::Rejected { reason } => reason.starts_with("lock failed") || reason.starts_with("unbacked") || reason.starts_with("proof failed"),
+            Verdict::Rejected { reason } => {
+                reason.starts_with("lock failed")
+                    || reason.starts_with("unbacked")
+                    || reason.starts_with("proof failed")
+            }
             _ => false,
         }
     }
@@ -114,17 +125,30 @@ pub struct BoundaryView<'a> {
 impl BoundaryView<'_> {
     pub fn signature_valid(&self, env: &ProposalEnvelope) -> bool {
         match self.node_secrets.get(&env.initiator) {
-            Some(secret) => ProposalEnvelope::signature_for(env.initiator, *secret, &env.payload_hash, env.created_tick) == env.auth_signature,
+            Some(secret) => {
+                ProposalEnvelope::signature_for(
+                    env.initiator,
+                    *secret,
+                    &env.payload_hash,
+                    env.created_tick,
+                ) == env.auth_signature
+            }
             None => false,
         }
     }
 
     pub fn target_alive(&self, env: &ProposalEnvelope) -> bool {
-        matches!(self.node_status.get(&env.target), Some(NodeStatus::Active | NodeStatus::WaitingAtDoor | NodeStatus::Packed))
+        matches!(
+            self.node_status.get(&env.target),
+            Some(NodeStatus::Active | NodeStatus::WaitingAtDoor | NodeStatus::Packed)
+        )
     }
 
     pub fn initiator_alive(&self, env: &ProposalEnvelope) -> bool {
-        matches!(self.node_status.get(&env.initiator), Some(NodeStatus::Active | NodeStatus::WaitingAtDoor | NodeStatus::Packed))
+        matches!(
+            self.node_status.get(&env.initiator),
+            Some(NodeStatus::Active | NodeStatus::WaitingAtDoor | NodeStatus::Packed)
+        )
     }
 
     /// Lock phase of every liquidity-bearing verdict: the *truth* must cover
@@ -145,16 +169,25 @@ impl BoundaryView<'_> {
 /// Checks every gate runs before its own rule.
 pub fn preflight(env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Option<Verdict> {
     if env.payload_hash != env.payload.hash() {
-        return Some(Verdict::Rejected { reason: "payload hash does not match payload".into() });
+        return Some(Verdict::Rejected {
+            reason: "payload hash does not match payload".into(),
+        });
     }
     if !view.signature_valid(env) {
-        return Some(Verdict::Rejected { reason: "bad signature".into() });
+        return Some(Verdict::Rejected {
+            reason: "bad signature".into(),
+        });
     }
     if !view.initiator_alive(env) {
-        return Some(Verdict::Rejected { reason: "initiator is halted or partitioned: a closed house neither sends nor pays".into() });
+        return Some(Verdict::Rejected {
+            reason: "initiator is halted or partitioned: a closed house neither sends nor pays"
+                .into(),
+        });
     }
     if !view.target_alive(env) {
-        return Some(Verdict::Rejected { reason: format!("target {} is not reachable", env.target) });
+        return Some(Verdict::Rejected {
+            reason: format!("target {} is not reachable", env.target),
+        });
     }
     None
 }
@@ -163,12 +196,24 @@ pub fn preflight(env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Option<Verd
 /// be the hash of the price it claims, the locked amount must be that
 /// price, and the price must be the truth. Otherwise the swap reverts.
 pub fn dvp_binding(env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Option<Verdict> {
-    let Payload::HireService { service, believed_price, believed_price_hash } = &env.payload else { return None };
+    let Payload::HireService {
+        service,
+        believed_price,
+        believed_price_hash,
+    } = &env.payload
+    else {
+        return None;
+    };
     if SovereignGraph::hash_price(service, *believed_price) != *believed_price_hash {
         return Some(Verdict::Rejected { reason: format!("hash mismatch: the committed hash is not the hash of the claimed price {believed_price:.2}") });
     }
     if (env.requested_liquidity - believed_price).abs() > 1e-9 {
-        return Some(Verdict::Rejected { reason: format!("lock failed: locked {:.2} but the verified price is {believed_price:.2}", env.requested_liquidity) });
+        return Some(Verdict::Rejected {
+            reason: format!(
+                "lock failed: locked {:.2} but the verified price is {believed_price:.2}",
+                env.requested_liquidity
+            ),
+        });
     }
     match view.graph.price_hash(service) {
         None => Some(Verdict::Rejected { reason: format!("no such service: {service}") }),
@@ -225,19 +270,26 @@ impl VerificationStrategy for Stage1Door {
             }
             Some(HumanDecision::Reject) => {
                 self.rejections += 1;
-                Verdict::Rejected { reason: "the person said no at the door".into() }
+                Verdict::Rejected {
+                    reason: "the person said no at the door".into(),
+                }
             }
             None => {
                 if !env.asked_human {
                     self.signatures_requested += 1;
                 }
-                Verdict::Held { reason: HoldReason::AwaitingHumanSignature }
+                Verdict::Held {
+                    reason: HoldReason::AwaitingHumanSignature,
+                }
             }
         }
     }
 
     fn describe(&self) -> String {
-        format!("The Door (human): {} asked, {} yes, {} no", self.signatures_requested, self.approvals, self.rejections)
+        format!(
+            "The Door (human): {} asked, {} yes, {} no",
+            self.signatures_requested, self.approvals, self.rejections
+        )
     }
 }
 
@@ -256,38 +308,79 @@ pub struct Stage2LetterSlot {
 }
 
 impl Stage2LetterSlot {
-    fn record(&mut self, env: &ProposalEnvelope, expected: Hash32, actual: Hash32, phase: DvpPhase) {
+    fn record(
+        &mut self,
+        env: &ProposalEnvelope,
+        expected: Hash32,
+        actual: Hash32,
+        phase: DvpPhase,
+    ) {
         if self.history.len() >= 256 {
             self.history.remove(0);
         }
-        self.history.push(AtomicDvP { envelope: env.id, locked_liquidity: env.requested_liquidity, locked_compute: env.tax_paid, expected_hash: expected, actual_hash: actual, phase });
+        self.history.push(AtomicDvP {
+            envelope: env.id,
+            locked_liquidity: env.requested_liquidity,
+            locked_compute: env.tax_paid,
+            expected_hash: expected,
+            actual_hash: actual,
+            phase,
+        });
     }
 
-    fn verify_one(&mut self, env: &ProposalEnvelope, view: &BoundaryView<'_>, locked: &mut BTreeMap<NodeId, f64>) -> Verdict {
+    fn verify_one(
+        &mut self,
+        env: &ProposalEnvelope,
+        view: &BoundaryView<'_>,
+        locked: &mut BTreeMap<NodeId, f64>,
+    ) -> Verdict {
         if let Some(v) = preflight(env, view) {
             return v;
         }
         let already = *locked.get(&env.initiator).unwrap_or(&0.0);
         if let Err(have) = view.liquidity_backed(env, already) {
-            if let Payload::HireService { believed_price_hash, .. } = &env.payload {
+            if let Payload::HireService {
+                believed_price_hash,
+                ..
+            } = &env.payload
+            {
                 self.reverts += 1;
                 self.record(env, *believed_price_hash, Hash32::ZERO, DvpPhase::Reverted);
             }
             return Verdict::Rejected { reason: format!("lock failed: truth balance {have:.1} (after {already:.1} already locked) < {:.1} requested", env.requested_liquidity) };
         }
         if let Some(v) = dvp_binding(env, view) {
-            if let Payload::HireService { service, believed_price_hash, .. } = &env.payload {
+            if let Payload::HireService {
+                service,
+                believed_price_hash,
+                ..
+            } = &env.payload
+            {
                 self.reverts += 1;
-                self.record(env, *believed_price_hash, view.graph.price_hash(service).unwrap_or(Hash32::ZERO), DvpPhase::Reverted);
+                self.record(
+                    env,
+                    *believed_price_hash,
+                    view.graph.price_hash(service).unwrap_or(Hash32::ZERO),
+                    DvpPhase::Reverted,
+                );
             }
             return v;
         }
         if env.payload.moves_liquidity() {
             *locked.entry(env.initiator).or_insert(0.0) += env.requested_liquidity;
         }
-        if let Payload::HireService { believed_price_hash, .. } = &env.payload {
+        if let Payload::HireService {
+            believed_price_hash,
+            ..
+        } = &env.payload
+        {
             self.swaps += 1;
-            self.record(env, *believed_price_hash, *believed_price_hash, DvpPhase::Settled);
+            self.record(
+                env,
+                *believed_price_hash,
+                *believed_price_hash,
+                DvpPhase::Settled,
+            );
         }
         Verdict::Approved
     }
@@ -305,11 +398,16 @@ impl VerificationStrategy for Stage2LetterSlot {
 
     fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {
         let mut locked: BTreeMap<NodeId, f64> = BTreeMap::new();
-        envs.iter().map(|e| self.verify_one(e, view, &mut locked)).collect()
+        envs.iter()
+            .map(|e| self.verify_one(e, view, &mut locked))
+            .collect()
     }
 
     fn describe(&self) -> String {
-        format!("The Letter Slot (atomic DvP): {} settled, {} reverted", self.swaps, self.reverts)
+        format!(
+            "The Letter Slot (atomic DvP): {} settled, {} reverted",
+            self.swaps, self.reverts
+        )
     }
 }
 
@@ -331,7 +429,13 @@ pub struct Stage3Clearinghouse {
 
 impl Default for Stage3Clearinghouse {
     fn default() -> Self {
-        Stage3Clearinghouse { slash_rate: 0.10, runs: 0, last_gross: 0.0, last_net: 0.0, last_envelopes: 0 }
+        Stage3Clearinghouse {
+            slash_rate: 0.10,
+            runs: 0,
+            last_gross: 0.0,
+            last_net: 0.0,
+            last_envelopes: 0,
+        }
     }
 }
 
@@ -347,7 +451,10 @@ impl VerificationStrategy for Stage3Clearinghouse {
     fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {
         self.runs += 1;
         // Envelopes that fail preflight or the price binding never enter the netting.
-        let pre: Vec<Option<Verdict>> = envs.iter().map(|e| preflight(e, view).or_else(|| dvp_binding(e, view))).collect();
+        let pre: Vec<Option<Verdict>> = envs
+            .iter()
+            .map(|e| preflight(e, view).or_else(|| dvp_binding(e, view)))
+            .collect();
         let mut net: BTreeMap<NodeId, f64> = BTreeMap::new();
         let mut gross = 0.0;
         for (e, p) in envs.iter().zip(&pre) {
@@ -375,14 +482,22 @@ impl VerificationStrategy for Stage3Clearinghouse {
                 if truth >= position {
                     Verdict::Approved
                 } else {
-                    Verdict::Slashed { amount: e.requested_liquidity * self.slash_rate, reason: format!("unbacked in netting: net position {position:.1} > truth {truth:.1}") }
+                    Verdict::Slashed {
+                        amount: e.requested_liquidity * self.slash_rate,
+                        reason: format!(
+                            "unbacked in netting: net position {position:.1} > truth {truth:.1}"
+                        ),
+                    }
                 }
             })
             .collect()
     }
 
     fn describe(&self) -> String {
-        format!("The Clearinghouse (netting): {} runs, last gross {:.1} → net {:.1}", self.runs, self.last_gross, self.last_net)
+        format!(
+            "The Clearinghouse (netting): {} runs, last gross {:.1} → net {:.1}",
+            self.runs, self.last_gross, self.last_net
+        )
     }
 }
 
@@ -402,7 +517,11 @@ pub struct TickStats {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "order", rename_all = "snake_case")]
 pub enum CourtOrder {
-    Rollback { to_tick: u64, reason: String, slash: Vec<NodeId> },
+    Rollback {
+        to_tick: u64,
+        reason: String,
+        slash: Vec<NodeId>,
+    },
 }
 
 /// Stop-lines and the High Court. Verifies country-level envelopes like any
@@ -420,7 +539,12 @@ pub struct Stage4StatutoryLaw {
 
 impl Default for Stage4StatutoryLaw {
     fn default() -> Self {
-        Stage4StatutoryLaw { reject_threshold: 0.5, min_sample: 5, rollbacks: 0, injunctions: BTreeSet::new() }
+        Stage4StatutoryLaw {
+            reject_threshold: 0.5,
+            min_sample: 5,
+            rollbacks: 0,
+            injunctions: BTreeSet::new(),
+        }
     }
 }
 
@@ -436,7 +560,15 @@ impl Stage4StatutoryLaw {
             for n in &stats.offenders {
                 self.injunctions.insert(*n);
             }
-            Some(CourtOrder::Rollback { to_tick: tick.saturating_sub(1), reason: format!("{:.0}% of {} liquidity verdicts failed: systemic collapse", rate * 100.0, stats.total), slash: stats.offenders.clone() })
+            Some(CourtOrder::Rollback {
+                to_tick: tick.saturating_sub(1),
+                reason: format!(
+                    "{:.0}% of {} liquidity verdicts failed: systemic collapse",
+                    rate * 100.0,
+                    stats.total
+                ),
+                slash: stats.offenders.clone(),
+            })
         } else {
             None
         }
@@ -453,19 +585,28 @@ impl VerificationStrategy for Stage4StatutoryLaw {
             return v;
         }
         if self.injunctions.contains(&env.initiator) {
-            return Verdict::Rejected { reason: "injunction: the initiator is barred by the court".into() };
+            return Verdict::Rejected {
+                reason: "injunction: the initiator is barred by the court".into(),
+            };
         }
         if let Some(v) = dvp_binding(env, view) {
             return v;
         }
         match view.liquidity_backed(env, 0.0) {
             Ok(()) => Verdict::Approved,
-            Err(have) => Verdict::Slashed { amount: (env.requested_liquidity - have) * 0.25, reason: format!("unbacked spend under statute: truth {have:.1}") },
+            Err(have) => Verdict::Slashed {
+                amount: (env.requested_liquidity - have) * 0.25,
+                reason: format!("unbacked spend under statute: truth {have:.1}"),
+            },
         }
     }
 
     fn describe(&self) -> String {
-        format!("Statutory Law (High Court): {} rollbacks, {} injunctions", self.rollbacks, self.injunctions.len())
+        format!(
+            "Statutory Law (High Court): {} rollbacks, {} injunctions",
+            self.rollbacks,
+            self.injunctions.len()
+        )
     }
 }
 
@@ -504,7 +645,15 @@ pub struct Stage5RecursiveStark {
 
 impl Default for Stage5RecursiveStark {
     fn default() -> Self {
-        Stage5RecursiveStark { min_latency: 8, max_latency: 32, pending: BTreeMap::new(), proofs: 0, last_global_root: None, last_roots: BTreeMap::new(), rejected_this_window: BTreeSet::new() }
+        Stage5RecursiveStark {
+            min_latency: 8,
+            max_latency: 32,
+            pending: BTreeMap::new(),
+            proofs: 0,
+            last_global_root: None,
+            last_roots: BTreeMap::new(),
+            rejected_this_window: BTreeSet::new(),
+        }
     }
 }
 
@@ -515,7 +664,10 @@ impl Stage5RecursiveStark {
 
     /// Aggregate the roots of the countries into one global root.
     pub fn heartbeat(&mut self, roots: &[(NodeId, Hash32)]) -> Hash32 {
-        let leaves: Vec<Hash32> = roots.iter().map(|(id, r)| Hash32::digest_parts(&[&id.0.to_le_bytes(), &r.0])).collect();
+        let leaves: Vec<Hash32> = roots
+            .iter()
+            .map(|(id, r)| Hash32::digest_parts(&[&id.0.to_le_bytes(), &r.0]))
+            .collect();
         let global = Hash32::merkle_root(&leaves);
         self.proofs += 1;
         self.last_global_root = Some(global);
@@ -530,13 +682,21 @@ impl Stage5RecursiveStark {
     /// The partition rule, once per heartbeat, over every country's current
     /// root and status. Stores the roots as the next baseline and opens a
     /// new window.
-    pub fn assess(&mut self, roots: &[(NodeId, Hash32)], status: &BTreeMap<NodeId, NodeStatus>) -> PartitionOrder {
+    pub fn assess(
+        &mut self,
+        roots: &[(NodeId, Hash32)],
+        status: &BTreeMap<NodeId, NodeStatus>,
+    ) -> PartitionOrder {
         let mut order = PartitionOrder::default();
         for (id, root) in roots {
             let stable = self.last_roots.get(id).is_none_or(|prev| prev == root);
             match status.get(id) {
                 Some(NodeStatus::Partitioned) if stable => order.readmit.push(*id),
-                Some(NodeStatus::Active | NodeStatus::WaitingAtDoor) if !stable && self.rejected_this_window.contains(id) => order.partition.push(*id),
+                Some(NodeStatus::Active | NodeStatus::WaitingAtDoor)
+                    if !stable && self.rejected_this_window.contains(id) =>
+                {
+                    order.partition.push(*id)
+                }
                 _ => {}
             }
         }
@@ -566,24 +726,37 @@ impl VerificationStrategy for Stage5RecursiveStark {
         }
         if let Err(have) = view.liquidity_backed(env, 0.0) {
             self.pending.remove(&env.id);
-            return Verdict::Rejected { reason: format!("proof failed: truth {have:.1} cannot back {:.1}", env.requested_liquidity) };
+            return Verdict::Rejected {
+                reason: format!(
+                    "proof failed: truth {have:.1} cannot back {:.1}",
+                    env.requested_liquidity
+                ),
+            };
         }
         match self.pending.get(&env.id).copied() {
             Some(until) if view.tick >= until => {
                 self.pending.remove(&env.id);
                 Verdict::Approved
             }
-            Some(until) => Verdict::Held { reason: HoldReason::AwaitingFinality { until_tick: until } },
+            Some(until) => Verdict::Held {
+                reason: HoldReason::AwaitingFinality { until_tick: until },
+            },
             None => {
                 let until = view.tick + self.latency_for(&env.payload_hash);
                 self.pending.insert(env.id, until);
-                Verdict::Held { reason: HoldReason::AwaitingFinality { until_tick: until } }
+                Verdict::Held {
+                    reason: HoldReason::AwaitingFinality { until_tick: until },
+                }
             }
         }
     }
 
     fn describe(&self) -> String {
-        format!("Recursive STARKs: {} proofs, {} awaiting finality", self.proofs, self.pending.len())
+        format!(
+            "Recursive STARKs: {} proofs, {} awaiting finality",
+            self.proofs,
+            self.pending.len()
+        )
     }
 }
 

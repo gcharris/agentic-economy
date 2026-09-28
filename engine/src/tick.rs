@@ -12,7 +12,10 @@
 //! deliveries, in Commit from an approved envelope. Search this file for
 //! `self.graph.` to audit it.
 
-use crate::boundary::{default_strategies, BoundaryView, CourtOrder, HoldReason, HumanDecisions, Stage4StatutoryLaw, Stage5RecursiveStark, TickStats, Verdict, VerificationStrategy};
+use crate::boundary::{
+    default_strategies, BoundaryView, CourtOrder, HoldReason, HumanDecisions, Stage4StatutoryLaw,
+    Stage5RecursiveStark, TickStats, Verdict, VerificationStrategy,
+};
 use crate::envelope::{Crossing, Payload, ProposalEnvelope};
 use crate::events::EngineEvent;
 use crate::executor::{DraftExecutor, DraftJob, SequentialExecutor};
@@ -46,7 +49,14 @@ pub struct EngineConfig {
 
 impl Default for EngineConfig {
     fn default() -> Self {
-        EngineConfig { seed: 7, cost_visible: true, active_scale: Stage::House, snapshot_depth: 64, stark_period: 16, max_events_retained: 4096 }
+        EngineConfig {
+            seed: 7,
+            cost_visible: true,
+            active_scale: Stage::House,
+            snapshot_depth: 64,
+            stark_period: 16,
+            max_events_retained: 4096,
+        }
     }
 }
 
@@ -100,7 +110,14 @@ pub struct Engine {
 
 impl fmt::Debug for Engine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Engine(tick {}, {} nodes, {} events, executor {})", self.tick, self.nodes.len(), self.events.len(), self.executor.name())
+        write!(
+            f,
+            "Engine(tick {}, {} nodes, {} events, executor {})",
+            self.tick,
+            self.nodes.len(),
+            self.events.len(),
+            self.executor.name()
+        )
     }
 }
 
@@ -166,7 +183,13 @@ impl Engine {
 
     // ───────────────────────────── world building ─────────────────────────
 
-    pub fn add_node(&mut self, name: impl Into<String>, stage: Stage, parent: Option<NodeId>, purse: Purse) -> NodeId {
+    pub fn add_node(
+        &mut self,
+        name: impl Into<String>,
+        stage: Stage,
+        parent: Option<NodeId>,
+        purse: Purse,
+    ) -> NodeId {
         let id = self.mint_node_id();
         let secret = self.mint_id();
         let node = SovereignNode::new(id, name, stage, parent, purse, secret);
@@ -229,7 +252,9 @@ impl Engine {
     }
 
     pub fn is_held(&self, envelope: EnvelopeId) -> bool {
-        self.nodes.values().any(|n| n.held_at_door.iter().any(|e| e.id == envelope))
+        self.nodes
+            .values()
+            .any(|n| n.held_at_door.iter().any(|e| e.id == envelope))
     }
 
     /// Put money in the purse. A halted house continues.
@@ -237,7 +262,11 @@ impl Engine {
         let tick = self.tick;
         if let Some(n) = self.nodes.get_mut(&node) {
             n.top_up(credits);
-            self.events.push(EngineEvent::ToppedUp { tick, node, credits });
+            self.events.push(EngineEvent::ToppedUp {
+                tick,
+                node,
+                credits,
+            });
         }
     }
 
@@ -245,9 +274,16 @@ impl Engine {
     pub fn close(&mut self, node: NodeId) -> Option<Note> {
         let tick = self.tick;
         let n = self.nodes.get_mut(&node)?;
-        let doing = n.current_task().map(|t| t.id.clone()).unwrap_or_else(|| "idle".into());
+        let doing = n
+            .current_task()
+            .map(|t| t.id.clone())
+            .unwrap_or_else(|| "idle".into());
         let note = n.halt(tick, doing, HaltReason::Closed);
-        self.events.push(EngineEvent::Halted { tick, node, note: note.clone() });
+        self.events.push(EngineEvent::Halted {
+            tick,
+            node,
+            note: note.clone(),
+        });
         Some(note)
     }
 
@@ -265,7 +301,12 @@ impl Engine {
     /// rest fold into their parents' statistical profiles.
     pub fn set_active_scale(&mut self, stage: Stage) {
         self.config.active_scale = stage;
-        let parents: Vec<NodeId> = self.nodes.values().filter(|n| !n.children.is_empty()).map(|n| n.id).collect();
+        let parents: Vec<NodeId> = self
+            .nodes
+            .values()
+            .filter(|n| !n.children.is_empty())
+            .map(|n| n.id)
+            .collect();
         for p in parents {
             let child_level = self.nodes[&p].scale_level.level().saturating_sub(1);
             let should_pack = child_level + 1 < stage.level();
@@ -318,7 +359,9 @@ impl Engine {
     }
 
     pub fn held_envelopes(&self) -> impl Iterator<Item = (&SovereignNode, &ProposalEnvelope)> {
-        self.nodes.values().flat_map(|n| n.held_at_door.iter().map(move |e| (n, e)))
+        self.nodes
+            .values()
+            .flat_map(|n| n.held_at_door.iter().map(move |e| (n, e)))
     }
 
     // ───────────────────────────────── the tick ───────────────────────────
@@ -327,7 +370,10 @@ impl Engine {
     pub async fn tick(&mut self) -> TickReport {
         self.tick += 1;
         let tick = self.tick;
-        let mut report = TickReport { tick, ..Default::default() };
+        let mut report = TickReport {
+            tick,
+            ..Default::default()
+        };
         let cost_visible = self.config.cost_visible;
 
         // ── Phase 1: DRAFT. Off-chain, parallel, isolated. ──
@@ -347,7 +393,11 @@ impl Engine {
             }
             let ctx = node.draft_context(tick, seed, cost_visible);
             drafted.insert(id);
-            jobs.push(DraftJob { node: id, ctx, seats });
+            jobs.push(DraftJob {
+                node: id,
+                ctx,
+                seats,
+            });
         }
         report.drafted = jobs.len();
         let outcomes = self.executor.run(jobs).await;
@@ -357,7 +407,10 @@ impl Engine {
             match outcome.ctx {
                 Some(ctx) => self.collect(outcome.node, ctx.into_outputs(), tick, &mut report),
                 None => {
-                    self.events.push(EngineEvent::SeatFailed { tick, node: outcome.node });
+                    self.events.push(EngineEvent::SeatFailed {
+                        tick,
+                        node: outcome.node,
+                    });
                     report.seat_failures += 1;
                 }
             }
@@ -386,7 +439,16 @@ impl Engine {
                 NodeStatus::Partitioned => partitioned += 1,
             }
         }
-        self.events.push(EngineEvent::TickCommitted { tick, root: report.root, active_scale: self.config.active_scale, nodes_active: active, nodes_waiting: waiting, nodes_halted: halted, nodes_packed: packed, nodes_partitioned: partitioned });
+        self.events.push(EngineEvent::TickCommitted {
+            tick,
+            root: report.root,
+            active_scale: self.config.active_scale,
+            nodes_active: active,
+            nodes_waiting: waiting,
+            nodes_halted: halted,
+            nodes_packed: packed,
+            nodes_partitioned: partitioned,
+        });
         if self.events.len() > self.config.max_events_retained {
             let drop = self.events.len() - self.config.max_events_retained;
             self.events.drain(..drop);
@@ -399,17 +461,46 @@ impl Engine {
     /// the seat wrote is trusted for identity or for money: the burn is the
     /// sum of the receipts, Φ moves by replaying the recorded handovers, and
     /// `claimed_node` is ignored.
-    fn collect(&mut self, node_id: NodeId, mut out: DraftOutputs, tick: u64, report: &mut TickReport) {
+    fn collect(
+        &mut self,
+        node_id: NodeId,
+        mut out: DraftOutputs,
+        tick: u64,
+        report: &mut TickReport,
+    ) {
         let active_scale = self.config.active_scale;
         let tax = self.tax;
         if out.claimed_node != node_id {
-            self.events.push(EngineEvent::Thought { tick, node: node_id, seat: "engine".into(), text: format!("a seat handed back a draft claiming to be {}; attributed to {} regardless", out.claimed_node, node_id) });
+            self.events.push(EngineEvent::Thought {
+                tick,
+                node: node_id,
+                seat: "engine".into(),
+                text: format!(
+                    "a seat handed back a draft claiming to be {}; attributed to {} regardless",
+                    out.claimed_node, node_id
+                ),
+            });
         }
-        let allowed: Vec<bool> = out.proposals.iter().map(|p| self.nodes.get(&node_id).map(|n| n.allowed_target(p.target)).unwrap_or(false)).collect();
-        let crossings: Vec<Crossing> = out.proposals.iter().map(|p| self.crossing(node_id, p.target)).collect();
+        let allowed: Vec<bool> = out
+            .proposals
+            .iter()
+            .map(|p| {
+                self.nodes
+                    .get(&node_id)
+                    .map(|n| n.allowed_target(p.target))
+                    .unwrap_or(false)
+            })
+            .collect();
+        let crossings: Vec<Crossing> = out
+            .proposals
+            .iter()
+            .map(|p| self.crossing(node_id, p.target))
+            .collect();
         let ids: Vec<u64> = (0..out.proposals.len()).map(|_| self.mint_id()).collect();
 
-        let Some(node) = self.nodes.get_mut(&node_id) else { return };
+        let Some(node) = self.nodes.get_mut(&node_id) else {
+            return;
+        };
 
         // Reconcile the burn against the real purse. The draft burned a copy
         // of this same purse, receipt by receipt, so this cannot overdraw.
@@ -424,7 +515,15 @@ impl Engine {
 
         for r in &out.receipts {
             if r.credits > 0.0 {
-                self.events.push(EngineEvent::Burn { tick, node: node_id, seat: r.seat.clone(), credits: r.credits, joules: r.cost.joules, tier: r.tier.label().into(), cache_hit: r.cost.cache_hit });
+                self.events.push(EngineEvent::Burn {
+                    tick,
+                    node: node_id,
+                    seat: r.seat.clone(),
+                    credits: r.credits,
+                    joules: r.cost.joules,
+                    tier: r.tier.label().into(),
+                    cache_hit: r.cost.cache_hit,
+                });
             }
         }
         node.receipts.append(&mut out.receipts);
@@ -432,14 +531,28 @@ impl Engine {
             node.oak_table.leave_paper(p);
         }
         for t in out.thoughts.drain(..) {
-            self.events.push(EngineEvent::Thought { tick, node: node_id, seat: t.seat, text: t.text });
+            self.events.push(EngineEvent::Thought {
+                tick,
+                node: node_id,
+                seat: t.seat,
+                text: t.text,
+            });
         }
 
         // Exhaustion is a pause, not a failure. The papers stay on the table.
         if let Some(doing) = out.halted_doing.take() {
-            let shortfall = node.receipts.last().map(|r| r.cost.credits() - node.purse.compute).unwrap_or(0.0).max(0.0);
+            let shortfall = node
+                .receipts
+                .last()
+                .map(|r| r.cost.credits() - node.purse.compute)
+                .unwrap_or(0.0)
+                .max(0.0);
             let note = node.halt(tick, doing, HaltReason::RunwayExhausted { shortfall });
-            self.events.push(EngineEvent::Halted { tick, node: node_id, note });
+            self.events.push(EngineEvent::Halted {
+                tick,
+                node: node_id,
+                note,
+            });
             report.halted += 1;
             return;
         }
@@ -448,14 +561,27 @@ impl Engine {
         // formatted); the base send cost is paid only after approval.
         for (i, p) in out.proposals.drain(..).enumerate() {
             if !allowed[i] {
-                self.events.push(EngineEvent::DroppedByCourier { tick, from: node_id, to: p.target, reason: format!("unknown address: {} is not this node, its parent, a child or a known peer", p.target) });
+                self.events.push(EngineEvent::DroppedByCourier {
+                    tick,
+                    from: node_id,
+                    to: p.target,
+                    reason: format!(
+                        "unknown address: {} is not this node, its parent, a child or a known peer",
+                        p.target
+                    ),
+                });
                 report.dropped_by_courier += 1;
                 continue;
             }
             let crossing = crossings[i];
             let tax_due = tax.tax_only(crossing, p.compute_weight);
             if !node.purse.can_burn(tax_due) {
-                self.events.push(EngineEvent::DroppedByCourier { tick, from: node_id, to: p.target, reason: format!("cannot afford the crossing tax of {tax_due:.1} cr") });
+                self.events.push(EngineEvent::DroppedByCourier {
+                    tick,
+                    from: node_id,
+                    to: p.target,
+                    reason: format!("cannot afford the crossing tax of {tax_due:.1} cr"),
+                });
                 report.dropped_by_courier += 1;
                 continue;
             }
@@ -489,12 +615,25 @@ impl Engine {
                 Ok(()) => {
                     report.envelopes_minted += 1;
                     let e = self.mempool.peek().last().expect("just pushed");
-                    self.events.push(EngineEvent::Proposed { tick, envelope: e.id, from: e.initiator, to: e.target, kind: e.payload.kind().into(), requested_liquidity: e.requested_liquidity, tax_paid: e.tax_paid });
+                    self.events.push(EngineEvent::Proposed {
+                        tick,
+                        envelope: e.id,
+                        from: e.initiator,
+                        to: e.target,
+                        kind: e.payload.kind().into(),
+                        requested_liquidity: e.requested_liquidity,
+                        tax_paid: e.tax_paid,
+                    });
                 }
                 Err(boxed) => {
                     let (env, reason) = *boxed;
                     report.dropped_by_courier += 1;
-                    self.events.push(EngineEvent::DroppedByCourier { tick, from: env.initiator, to: env.target, reason });
+                    self.events.push(EngineEvent::DroppedByCourier {
+                        tick,
+                        from: env.initiator,
+                        to: env.target,
+                        reason,
+                    });
                 }
             }
         }
@@ -502,9 +641,15 @@ impl Engine {
 
     fn verify(&mut self, tick: u64, report: &mut TickReport) {
         let active_scale = self.config.active_scale;
-        let node_status: BTreeMap<NodeId, NodeStatus> = self.nodes.values().map(|n| (n.id, n.status)).collect();
-        let node_secrets: BTreeMap<NodeId, u64> = self.nodes.values().map(|n| (n.id, n.secret)).collect();
-        let own_gates: BTreeMap<NodeId, Stage> = self.nodes.values().map(|n| (n.id, n.boundary_rules.gate)).collect();
+        let node_status: BTreeMap<NodeId, NodeStatus> =
+            self.nodes.values().map(|n| (n.id, n.status)).collect();
+        let node_secrets: BTreeMap<NodeId, u64> =
+            self.nodes.values().map(|n| (n.id, n.secret)).collect();
+        let own_gates: BTreeMap<NodeId, Stage> = self
+            .nodes
+            .values()
+            .map(|n| (n.id, n.boundary_rules.gate))
+            .collect();
 
         // Previously held envelopes are re-evaluated first (a decision may
         // have arrived, finality may have landed), then the fresh mempool.
@@ -519,8 +664,15 @@ impl Engine {
         // Door whatever the camera does.
         let mut by_gate: BTreeMap<Stage, Vec<ProposalEnvelope>> = BTreeMap::new();
         for mut e in all {
-            let own = own_gates.get(&e.initiator).copied().unwrap_or(e.origin_stage);
-            e.gate = if e.asked_human { Stage::House } else { own.max(active_scale) };
+            let own = own_gates
+                .get(&e.initiator)
+                .copied()
+                .unwrap_or(e.origin_stage);
+            e.gate = if e.asked_human {
+                Stage::House
+            } else {
+                own.max(active_scale)
+            };
             by_gate.entry(e.gate).or_default().push(e);
         }
 
@@ -530,18 +682,38 @@ impl Engine {
         let mut rejected: Vec<(ProposalEnvelope, Verdict)> = Vec::new();
         let mut slashed: Vec<(ProposalEnvelope, f64, String)> = Vec::new();
         {
-            let view = BoundaryView { tick, graph: &self.graph, decisions: &self.decisions, node_status: &node_status, node_secrets: &node_secrets };
+            let view = BoundaryView {
+                tick,
+                graph: &self.graph,
+                decisions: &self.decisions,
+                node_status: &node_status,
+                node_secrets: &node_secrets,
+            };
             for (gate, envs) in by_gate {
                 let verdicts = match gate {
                     Stage::Country => self.court.verify_batch(&envs, &view),
                     Stage::World => self.stark.verify_batch(&envs, &view),
-                    _ => strategies.get_mut(&gate).expect("a strategy for every replaceable stage").verify_batch(&envs, &view),
+                    _ => strategies
+                        .get_mut(&gate)
+                        .expect("a strategy for every replaceable stage")
+                        .verify_batch(&envs, &view),
                 };
                 if gate == Stage::City && !envs.is_empty() {
                     let (_, gross) = net_positions(envs.iter());
-                    let (positions, _) = net_positions(envs.iter().zip(&verdicts).filter(|(_, v)| matches!(v, Verdict::Approved)).map(|(e, _)| e));
+                    let (positions, _) = net_positions(
+                        envs.iter()
+                            .zip(&verdicts)
+                            .filter(|(_, v)| matches!(v, Verdict::Approved))
+                            .map(|(e, _)| e),
+                    );
                     let net = net_of(&positions);
-                    self.events.push(EngineEvent::Netted { tick, clearinghouse: gate, gross, net, envelopes: envs.len() });
+                    self.events.push(EngineEvent::Netted {
+                        tick,
+                        clearinghouse: gate,
+                        gross,
+                        net,
+                        envelopes: envs.len(),
+                    });
                 }
                 for (env, v) in envs.into_iter().zip(verdicts) {
                     match v {
@@ -560,7 +732,11 @@ impl Engine {
 
         for env in &approved {
             self.decisions.take(env.id);
-            self.events.push(EngineEvent::Approved { tick, envelope: env.id, gate: env.gate });
+            self.events.push(EngineEvent::Approved {
+                tick,
+                envelope: env.id,
+                gate: env.gate,
+            });
             if env.gate != Stage::House && env.payload.moves_liquidity() {
                 stats.total += 1;
             }
@@ -573,16 +749,30 @@ impl Engine {
                 HoldReason::AwaitingHumanSignature => {
                     if !env.asked_human {
                         env.asked_human = true;
-                        self.events.push(EngineEvent::AwaitingHumanSignature { tick, node: env.initiator, envelope: env.id, description: env.payload.describe(), cost: env.compute_weight });
+                        self.events.push(EngineEvent::AwaitingHumanSignature {
+                            tick,
+                            node: env.initiator,
+                            envelope: env.id,
+                            description: env.payload.describe(),
+                            cost: env.compute_weight,
+                        });
                     }
                 }
                 HoldReason::AwaitingFinality { until_tick } => {
-                    self.events.push(EngineEvent::AwaitingFinality { tick, envelope: env.id, until_tick });
+                    self.events.push(EngineEvent::AwaitingFinality {
+                        tick,
+                        envelope: env.id,
+                        until_tick,
+                    });
                 }
                 HoldReason::AwaitingCounterparty => {}
             }
             if let Payload::Dispatch { task_id, .. } = &env.payload {
-                if let Some(t) = self.nodes.get_mut(&env.initiator).and_then(|n| n.task_mut(task_id)) {
+                if let Some(t) = self
+                    .nodes
+                    .get_mut(&env.initiator)
+                    .and_then(|n| n.task_mut(task_id))
+                {
                     t.state = TaskState::AtDoor;
                 }
             }
@@ -601,16 +791,29 @@ impl Engine {
             if env.gate == Stage::World {
                 self.stark.note_rejection(env.initiator);
             }
-            if env.gate != Stage::House && env.payload.moves_liquidity() && !reason.starts_with("injunction") {
+            if env.gate != Stage::House
+                && env.payload.moves_liquidity()
+                && !reason.starts_with("injunction")
+            {
                 stats.total += 1;
                 if verdict.is_liquidity_failure() {
                     stats.rejected += 1;
                     stats.offenders.push(env.initiator);
                 }
             }
-            self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason, sunk_compute: env.tax_paid });
+            self.events.push(EngineEvent::Rejected {
+                tick,
+                envelope: env.id,
+                gate: env.gate,
+                reason,
+                sunk_compute: env.tax_paid,
+            });
             if let Payload::Dispatch { task_id, .. } = &env.payload {
-                if let Some(t) = self.nodes.get_mut(&env.initiator).and_then(|n| n.task_mut(task_id)) {
+                if let Some(t) = self
+                    .nodes
+                    .get_mut(&env.initiator)
+                    .and_then(|n| n.task_mut(task_id))
+                {
                     t.state = TaskState::Rejected;
                 }
             }
@@ -626,8 +829,19 @@ impl Engine {
             if let Some(n) = self.nodes.get_mut(&env.initiator) {
                 n.purse.liquidity = self.graph.liquidity_of(env.initiator);
             }
-            self.events.push(EngineEvent::Slashed { tick, node: env.initiator, amount: taken, reason: reason.clone() });
-            self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason, sunk_compute: env.tax_paid });
+            self.events.push(EngineEvent::Slashed {
+                tick,
+                node: env.initiator,
+                amount: taken,
+                reason: reason.clone(),
+            });
+            self.events.push(EngineEvent::Rejected {
+                tick,
+                envelope: env.id,
+                gate: env.gate,
+                reason,
+                sunk_compute: env.tax_paid,
+            });
             report.slashed += 1;
             report.rejected += 1;
         }
@@ -651,7 +865,11 @@ impl Engine {
 
     fn apply_court_order(&mut self, tick: u64, order: CourtOrder, report: &mut TickReport) {
         match order {
-            CourtOrder::Rollback { to_tick, reason, slash } => {
+            CourtOrder::Rollback {
+                to_tick,
+                reason,
+                slash,
+            } => {
                 let restored = self.graph.rollback_to(to_tick);
                 let mut count = 0;
                 for n in &slash {
@@ -660,15 +878,29 @@ impl Engine {
                     if let Some(node) = self.nodes.get_mut(n) {
                         node.purse.liquidity = self.graph.liquidity_of(*n);
                     }
-                    self.events.push(EngineEvent::Slashed { tick, node: *n, amount: taken, reason: "High Court: systemic failure".into() });
+                    self.events.push(EngineEvent::Slashed {
+                        tick,
+                        node: *n,
+                        amount: taken,
+                        reason: "High Court: systemic failure".into(),
+                    });
                     count += 1;
                 }
                 // Approved-but-uncommitted envelopes from the failed tick are void.
                 for env in self.approved.drain(..) {
-                    self.events.push(EngineEvent::Voided { tick, envelope: env.id, reason: "voided by the High Court's rollback".into() });
+                    self.events.push(EngineEvent::Voided {
+                        tick,
+                        envelope: env.id,
+                        reason: "voided by the High Court's rollback".into(),
+                    });
                     report.voided += 1;
                 }
-                self.events.push(EngineEvent::RolledBack { tick, to_tick: restored.unwrap_or(tick), reason, slashed: count });
+                self.events.push(EngineEvent::RolledBack {
+                    tick,
+                    to_tick: restored.unwrap_or(tick),
+                    reason,
+                    slashed: count,
+                });
                 report.rolled_back = true;
             }
         }
@@ -678,45 +910,89 @@ impl Engine {
         let approved = std::mem::take(&mut self.approved);
         // Stage 3: liquidity the Clearinghouse approved settles as one netted
         // batch (only the net differences move). Everything else, one by one.
-        let (netted, approved): (Vec<ProposalEnvelope>, Vec<ProposalEnvelope>) = approved.into_iter().partition(|e| e.gate == Stage::City && e.payload.moves_liquidity());
+        let (netted, approved): (Vec<ProposalEnvelope>, Vec<ProposalEnvelope>) = approved
+            .into_iter()
+            .partition(|e| e.gate == Stage::City && e.payload.moves_liquidity());
         self.settle_netted(tick, netted, report);
         for env in approved {
             // The cost of sending comes out of the purse after yes, and it
             // must be there: a send the purse cannot pay for does not go out.
-            let affordable = self.nodes.get(&env.initiator).map(|n| n.purse.can_burn(env.compute_weight)).unwrap_or(false);
+            let affordable = self
+                .nodes
+                .get(&env.initiator)
+                .map(|n| n.purse.can_burn(env.compute_weight))
+                .unwrap_or(false);
             if !affordable {
                 if env.gate == Stage::World {
                     self.stark.note_rejection(env.initiator);
                 }
-                self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason: format!("cannot afford the send cost of {:.1} cr", env.compute_weight), sunk_compute: env.tax_paid });
+                self.events.push(EngineEvent::Rejected {
+                    tick,
+                    envelope: env.id,
+                    gate: env.gate,
+                    reason: format!(
+                        "cannot afford the send cost of {:.1} cr",
+                        env.compute_weight
+                    ),
+                    sunk_compute: env.tax_paid,
+                });
                 report.rejected += 1;
                 continue;
             }
             match &env.payload {
-                Payload::LiquidityTransfer { .. } | Payload::HireService { .. } => match self.graph.transfer(env.initiator, env.target, env.requested_liquidity) {
+                Payload::LiquidityTransfer { .. } | Payload::HireService { .. } => match self
+                    .graph
+                    .transfer(env.initiator, env.target, env.requested_liquidity)
+                {
                     Ok(()) => {
-                        report.compute_burned += self.charge_send(env.initiator, env.compute_weight);
+                        report.compute_burned +=
+                            self.charge_send(env.initiator, env.compute_weight);
                         if let Some(n) = self.nodes.get_mut(&env.initiator) {
                             n.purse.liquidity -= env.requested_liquidity;
                             if let Payload::HireService { service, .. } = &env.payload {
-                                n.oak_table.put(format!("services/{}", env.id), format!("{service} delivered by {}", env.target));
+                                n.oak_table.put(
+                                    format!("services/{}", env.id),
+                                    format!("{service} delivered by {}", env.target),
+                                );
                             }
                         }
                         if let Some(t) = self.nodes.get_mut(&env.target) {
                             t.purse.liquidity += env.requested_liquidity;
                             if let Payload::HireService { service, .. } = &env.payload {
-                                t.oak_table.put(format!("orders/{}", env.id), format!("{service} for {}", env.initiator));
+                                t.oak_table.put(
+                                    format!("orders/{}", env.id),
+                                    format!("{service} for {}", env.initiator),
+                                );
                             }
                         }
-                        self.graph.record_contract(Contract { id: env.id, tick, initiator: env.initiator, target: env.target, kind: env.payload.kind().into(), amount: env.requested_liquidity });
-                        self.events.push(EngineEvent::Settled { tick, envelope: env.id, from: env.initiator, to: env.target, amount: env.requested_liquidity });
+                        self.graph.record_contract(Contract {
+                            id: env.id,
+                            tick,
+                            initiator: env.initiator,
+                            target: env.target,
+                            kind: env.payload.kind().into(),
+                            amount: env.requested_liquidity,
+                        });
+                        self.events.push(EngineEvent::Settled {
+                            tick,
+                            envelope: env.id,
+                            from: env.initiator,
+                            to: env.target,
+                            amount: env.requested_liquidity,
+                        });
                         report.settled_liquidity += env.requested_liquidity;
                     }
                     Err(have) => {
                         if env.gate == Stage::World {
                             self.stark.note_rejection(env.initiator);
                         }
-                        self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason: format!("stale belief at commit: truth {have:.1}"), sunk_compute: env.tax_paid });
+                        self.events.push(EngineEvent::Rejected {
+                            tick,
+                            envelope: env.id,
+                            gate: env.gate,
+                            reason: format!("stale belief at commit: truth {have:.1}"),
+                            sunk_compute: env.tax_paid,
+                        });
                         report.rejected += 1;
                     }
                 },
@@ -727,12 +1003,21 @@ impl Engine {
                     // recipient's inbox.
                     self.graph.deliver(env.target, env.id, message.clone());
                     if let Some(t) = self.nodes.get_mut(&env.target) {
-                        t.oak_table.put(format!("inbox/{}", env.id), message.clone());
+                        t.oak_table
+                            .put(format!("inbox/{}", env.id), message.clone());
                     }
-                    if let Some(t) = self.nodes.get_mut(&env.initiator).and_then(|n| n.task_mut(task_id)) {
+                    if let Some(t) = self
+                        .nodes
+                        .get_mut(&env.initiator)
+                        .and_then(|n| n.task_mut(task_id))
+                    {
                         t.state = TaskState::Sent;
                     }
-                    self.events.push(EngineEvent::Delivered { tick, envelope: env.id, to: env.target });
+                    self.events.push(EngineEvent::Delivered {
+                        tick,
+                        envelope: env.id,
+                        to: env.target,
+                    });
                 }
                 Payload::StateSync => {
                     report.compute_burned += self.charge_send(env.initiator, env.compute_weight);
@@ -745,13 +1030,25 @@ impl Engine {
                             n.oak_table.put("price/courier", format!("{p}"));
                         }
                         n.epistemics.calibrate(tick);
-                        self.events.push(EngineEvent::StateSync { tick, node: env.initiator, cost: env.compute_weight, confidence_before: before });
+                        self.events.push(EngineEvent::StateSync {
+                            tick,
+                            node: env.initiator,
+                            cost: env.compute_weight,
+                            confidence_before: before,
+                        });
                         report.synced += 1;
                     }
                 }
                 Payload::Close { contract } => {
                     report.compute_burned += self.charge_send(env.initiator, env.compute_weight);
-                    self.graph.record_contract(Contract { id: env.id, tick, initiator: env.initiator, target: env.target, kind: format!("close:{contract}"), amount: 0.0 });
+                    self.graph.record_contract(Contract {
+                        id: env.id,
+                        tick,
+                        initiator: env.initiator,
+                        target: env.target,
+                        kind: format!("close:{contract}"),
+                        amount: 0.0,
+                    });
                 }
             }
         }
@@ -760,7 +1057,10 @@ impl Engine {
     /// The send fee, flat-priced (no tier physics: it is a door fee, not a
     /// thought). Callers check affordability first.
     fn charge_send(&mut self, node: NodeId, credits: f64) -> f64 {
-        self.nodes.get_mut(&node).and_then(|n| n.purse.burn_credits(credits).ok()).unwrap_or(0.0)
+        self.nodes
+            .get_mut(&node)
+            .and_then(|n| n.purse.burn_credits(credits).ok())
+            .unwrap_or(0.0)
     }
 
     /// Stage 3 settlement. The gate verified every initiator's *net* position
@@ -777,9 +1077,22 @@ impl Engine {
         let mut batch: Vec<ProposalEnvelope> = batch
             .into_iter()
             .filter(|env| {
-                let ok = self.nodes.get(&env.initiator).map(|n| n.purse.can_burn(env.compute_weight)).unwrap_or(false);
+                let ok = self
+                    .nodes
+                    .get(&env.initiator)
+                    .map(|n| n.purse.can_burn(env.compute_weight))
+                    .unwrap_or(false);
                 if !ok {
-                    self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason: format!("cannot afford the send cost of {:.1} cr", env.compute_weight), sunk_compute: env.tax_paid });
+                    self.events.push(EngineEvent::Rejected {
+                        tick,
+                        envelope: env.id,
+                        gate: env.gate,
+                        reason: format!(
+                            "cannot afford the send cost of {:.1} cr",
+                            env.compute_weight
+                        ),
+                        sunk_compute: env.tax_paid,
+                    });
                     report.rejected += 1;
                 }
                 ok
@@ -788,12 +1101,17 @@ impl Engine {
         // Unwind. Removing a debtor only worsens the others, so the loop converges.
         loop {
             let (positions, _) = net_positions(batch.iter());
-            let unbacked: Vec<(NodeId, f64, f64)> = positions.iter().map(|(id, p)| (*id, *p, self.graph.liquidity_of(*id))).filter(|(_, p, truth)| *p > 0.0 && *truth < *p).collect();
+            let unbacked: Vec<(NodeId, f64, f64)> = positions
+                .iter()
+                .map(|(id, p)| (*id, *p, self.graph.liquidity_of(*id)))
+                .filter(|(_, p, truth)| *p > 0.0 && *truth < *p)
+                .collect();
             if unbacked.is_empty() {
                 break;
             }
             for (id, position, truth) in unbacked {
-                let (mine, rest): (Vec<ProposalEnvelope>, Vec<ProposalEnvelope>) = batch.into_iter().partition(|e| e.initiator == id);
+                let (mine, rest): (Vec<ProposalEnvelope>, Vec<ProposalEnvelope>) =
+                    batch.into_iter().partition(|e| e.initiator == id);
                 batch = rest;
                 for env in mine {
                     self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason: format!("unbacked at commit after netting: net position {position:.1} > truth {truth:.1}"), sunk_compute: env.tax_paid });
@@ -806,7 +1124,13 @@ impl Engine {
             Ok(net) => net,
             Err((who, have)) => {
                 for env in batch {
-                    self.events.push(EngineEvent::Rejected { tick, envelope: env.id, gate: env.gate, reason: format!("netting batch void: {who} truth {have:.1}"), sunk_compute: env.tax_paid });
+                    self.events.push(EngineEvent::Rejected {
+                        tick,
+                        envelope: env.id,
+                        gate: env.gate,
+                        reason: format!("netting batch void: {who} truth {have:.1}"),
+                        sunk_compute: env.tax_paid,
+                    });
                     report.rejected += 1;
                 }
                 return;
@@ -817,17 +1141,36 @@ impl Engine {
             if let Some(n) = self.nodes.get_mut(&env.initiator) {
                 n.purse.liquidity -= env.requested_liquidity;
                 if let Payload::HireService { service, .. } = &env.payload {
-                    n.oak_table.put(format!("services/{}", env.id), format!("{service} delivered by {}", env.target));
+                    n.oak_table.put(
+                        format!("services/{}", env.id),
+                        format!("{service} delivered by {}", env.target),
+                    );
                 }
             }
             if let Some(t) = self.nodes.get_mut(&env.target) {
                 t.purse.liquidity += env.requested_liquidity;
                 if let Payload::HireService { service, .. } = &env.payload {
-                    t.oak_table.put(format!("orders/{}", env.id), format!("{service} for {}", env.initiator));
+                    t.oak_table.put(
+                        format!("orders/{}", env.id),
+                        format!("{service} for {}", env.initiator),
+                    );
                 }
             }
-            self.graph.record_contract(Contract { id: env.id, tick, initiator: env.initiator, target: env.target, kind: env.payload.kind().into(), amount: env.requested_liquidity });
-            self.events.push(EngineEvent::Settled { tick, envelope: env.id, from: env.initiator, to: env.target, amount: env.requested_liquidity });
+            self.graph.record_contract(Contract {
+                id: env.id,
+                tick,
+                initiator: env.initiator,
+                target: env.target,
+                kind: env.payload.kind().into(),
+                amount: env.requested_liquidity,
+            });
+            self.events.push(EngineEvent::Settled {
+                tick,
+                envelope: env.id,
+                from: env.initiator,
+                to: env.target,
+                amount: env.requested_liquidity,
+            });
         }
         report.settled_liquidity += net;
     }
@@ -836,7 +1179,9 @@ impl Engine {
     /// stasis or halted does not: its clock is stopped with it.
     fn decay_idle(&mut self, drafted: &BTreeSet<NodeId>) {
         for n in self.nodes.values_mut() {
-            if !drafted.contains(&n.id) && !matches!(n.status, NodeStatus::Halted | NodeStatus::Packed) {
+            if !drafted.contains(&n.id)
+                && !matches!(n.status, NodeStatus::Halted | NodeStatus::Packed)
+            {
                 n.epistemics.record_idle_tick();
             }
         }
@@ -859,7 +1204,12 @@ impl Engine {
     /// proof, then apply the partition rule. Returns true when a proof was
     /// emitted.
     fn heartbeat(&mut self, tick: u64) -> bool {
-        let roots: Vec<(NodeId, Hash32)> = self.nodes.values_mut().filter(|n| n.parent.is_none()).map(|n| (n.id, n.oak_table.root())).collect();
+        let roots: Vec<(NodeId, Hash32)> = self
+            .nodes
+            .values_mut()
+            .filter(|n| n.parent.is_none())
+            .map(|n| (n.id, n.oak_table.root()))
+            .collect();
         if roots.is_empty() {
             return false;
         }
@@ -869,7 +1219,8 @@ impl Engine {
         // window is cut from the rails; one whose root held still is let
         // back on. Its Oak Table is untouched: partition is a status, not a
         // write, so the root it must hold still is its own.
-        let status: BTreeMap<NodeId, NodeStatus> = self.nodes.values().map(|n| (n.id, n.status)).collect();
+        let status: BTreeMap<NodeId, NodeStatus> =
+            self.nodes.values().map(|n| (n.id, n.status)).collect();
         let order = self.stark.assess(&roots, &status);
         for id in &order.partition {
             if let Some(n) = self.nodes.get_mut(id) {
@@ -881,8 +1232,18 @@ impl Engine {
                 n.status = NodeStatus::Active;
             }
         }
-        let partitioned: Vec<NodeId> = self.nodes.values().filter(|n| n.status == NodeStatus::Partitioned).map(|n| n.id).collect();
-        self.events.push(EngineEvent::GlobalStateConfirmed { tick, root: global, latency_ticks: latency, partitioned });
+        let partitioned: Vec<NodeId> = self
+            .nodes
+            .values()
+            .filter(|n| n.status == NodeStatus::Partitioned)
+            .map(|n| n.id)
+            .collect();
+        self.events.push(EngineEvent::GlobalStateConfirmed {
+            tick,
+            root: global,
+            latency_ticks: latency,
+            partitioned,
+        });
         true
     }
 
@@ -899,7 +1260,8 @@ impl Engine {
             Some(p) if !p.children.is_empty() && p.packed.is_none() => p.children.clone(),
             _ => return,
         };
-        let children: Vec<&SovereignNode> = child_ids.iter().filter_map(|c| self.nodes.get(c)).collect();
+        let children: Vec<&SovereignNode> =
+            child_ids.iter().filter_map(|c| self.nodes.get(c)).collect();
         let profile = PackedStatisticalState::pack(&children, tick, seed);
         let count = children.len();
         for c in &child_ids {
@@ -912,14 +1274,25 @@ impl Engine {
         if let Some(p) = self.nodes.get_mut(&parent) {
             p.packed = Some(profile);
         }
-        self.events.push(EngineEvent::Packed { tick, parent, children: count, seed });
+        self.events.push(EngineEvent::Packed {
+            tick,
+            parent,
+            children: count,
+            seed,
+        });
     }
 
     /// Unfold the profile back onto the children, deterministically.
     pub fn unpack_children(&mut self, parent: NodeId) {
         let tick = self.tick;
-        let Some(profile) = self.nodes.get_mut(&parent).and_then(|p| p.packed.take()) else { return };
-        let child_ids = self.nodes.get(&parent).map(|p| p.children.clone()).unwrap_or_default();
+        let Some(profile) = self.nodes.get_mut(&parent).and_then(|p| p.packed.take()) else {
+            return;
+        };
+        let child_ids = self
+            .nodes
+            .get(&parent)
+            .map(|p| p.children.clone())
+            .unwrap_or_default();
         let active = &profile.active_children;
         let weights = profile.unpack_weights();
         let n = active.len().max(1) as f64;
@@ -933,7 +1306,17 @@ impl Engine {
             if remaining <= 1e-9 {
                 break;
             }
-            let room: Vec<(usize, f64)> = active.iter().enumerate().filter(|(_, c)| self.nodes.get(c).map(|x| x.purse.compute > 1e-9).unwrap_or(false)).map(|(i, _)| (i, weights.get(i).copied().unwrap_or(1.0 / n))).collect();
+            let room: Vec<(usize, f64)> = active
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| {
+                    self.nodes
+                        .get(c)
+                        .map(|x| x.purse.compute > 1e-9)
+                        .unwrap_or(false)
+                })
+                .map(|(i, _)| (i, weights.get(i).copied().unwrap_or(1.0 / n)))
+                .collect();
             let weight_room: f64 = room.iter().map(|(_, w)| w).sum();
             if room.is_empty() || weight_room <= 0.0 {
                 break;
@@ -960,11 +1343,21 @@ impl Engine {
                     for _ in 0..profile.pending_decay_ticks {
                         node.epistemics.record_idle_tick();
                     }
-                    node.status = if node.held_at_door.is_empty() { NodeStatus::Active } else { NodeStatus::WaitingAtDoor };
+                    node.status = if node.held_at_door.is_empty() {
+                        NodeStatus::Active
+                    } else {
+                        NodeStatus::WaitingAtDoor
+                    };
                 }
             }
         }
-        self.events.push(EngineEvent::Unpacked { tick, parent, children: child_ids.len(), macro_ticks: profile.macro_ticks, burn_distributed });
+        self.events.push(EngineEvent::Unpacked {
+            tick,
+            parent,
+            children: child_ids.len(),
+            macro_ticks: profile.macro_ticks,
+            burn_distributed,
+        });
     }
 
     // ────────────────────────────── the frontend's view ───────────────────
@@ -987,8 +1380,21 @@ impl Engine {
                 halted += 1;
             }
             for e in &n.held_at_door {
-                let reason = if e.gate == Stage::World { "awaiting_finality" } else { "awaiting_human_signature" };
-                held.push(HeldView { envelope: e.id, node: n.id, node_name: n.name.clone(), description: e.payload.describe(), cost: e.compute_weight, gate: e.gate, reason: reason.into(), created_tick: e.created_tick });
+                let reason = if e.gate == Stage::World {
+                    "awaiting_finality"
+                } else {
+                    "awaiting_human_signature"
+                };
+                held.push(HeldView {
+                    envelope: e.id,
+                    node: n.id,
+                    node_name: n.name.clone(),
+                    description: e.payload.describe(),
+                    cost: e.compute_weight,
+                    gate: e.gate,
+                    reason: reason.into(),
+                    created_tick: e.created_tick,
+                });
             }
             let oak_root = n.oak_table.root();
             nodes.push(NodeView {
@@ -1020,7 +1426,13 @@ impl Engine {
                 burned_this_tick: n.burned_this_tick,
                 oak_root,
                 papers: n.oak_table.papers.len(),
-                receipts: n.receipts.iter().rev().take(6).map(|r| r.to_plain_line()).collect(),
+                receipts: n
+                    .receipts
+                    .iter()
+                    .rev()
+                    .take(6)
+                    .map(|r| r.to_plain_line())
+                    .collect(),
             });
         }
         let mut gates: Vec<String> = self.strategies.values().map(|s| s.describe()).collect();
@@ -1046,7 +1458,14 @@ impl Engine {
             },
             gates,
             last_report: self.reports.last().cloned(),
-            root_history: self.graph.root_history.iter().rev().take(16).map(|(t, r)| (*t, r.short())).collect(),
+            root_history: self
+                .graph
+                .root_history
+                .iter()
+                .rev()
+                .take(16)
+                .map(|(t, r)| (*t, r.short()))
+                .collect(),
         }
     }
 
@@ -1057,7 +1476,9 @@ impl Engine {
 
 /// Multilateral netting: what each node pays (+) or receives (−) once the
 /// opposing debts in a batch cancel, and the gross the batch asked for.
-fn net_positions<'a>(envs: impl Iterator<Item = &'a ProposalEnvelope>) -> (BTreeMap<NodeId, f64>, f64) {
+fn net_positions<'a>(
+    envs: impl Iterator<Item = &'a ProposalEnvelope>,
+) -> (BTreeMap<NodeId, f64>, f64) {
     let mut positions: BTreeMap<NodeId, f64> = BTreeMap::new();
     let mut gross = 0.0;
     for e in envs.filter(|e| e.payload.moves_liquidity()) {

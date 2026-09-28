@@ -90,11 +90,16 @@ pub use boundary::{HoldReason, HumanDecision, HumanDecisions, Verdict, Verificat
 pub use envelope::{Crossing, Payload, ProposalEnvelope};
 pub use epistemics::Epistemics;
 pub use events::EngineEvent;
-pub use executor::{block_on, block_on_bounded, DraftExecutor, DraftJob, DraftOutcome, SequentialExecutor};
+pub use executor::{
+    block_on, block_on_bounded, DraftExecutor, DraftJob, DraftOutcome, SequentialExecutor,
+};
 pub use graph::SovereignGraph;
 pub use hash::Hash32;
 pub use ids::{EnvelopeId, NodeId};
-pub use node::{Agent, BoundaryPolicy, DraftContext, DraftFuture, DraftOutputs, Handover, NodeStatus, ProposalDraft, SovereignNode, Stage, Task};
+pub use node::{
+    Agent, BoundaryPolicy, DraftContext, DraftFuture, DraftOutputs, Handover, NodeStatus,
+    ProposalDraft, SovereignNode, Stage, Task,
+};
 pub use oak_table::OakTable;
 pub use receipt::{Note, SeatReceipt};
 pub use resources::{ModelTier, Purse, ResourceUnit};
