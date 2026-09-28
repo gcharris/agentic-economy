@@ -31,7 +31,14 @@ fn write_out(bytes: Vec<u8>) -> u32 {
     })
 }
 
-/// scenario 1 = the house (Stage 1), 2 = the street (Stage 2).
+/// scenario 1 = the house (Stage 1), 2 = the street (Stage 2), 3 = the city
+/// (Stage 3: 2 streets × 3 houses, `budget` and `tasks` per house, the camera
+/// at the city so the Clearinghouse nets), 4 = a country whose cities'
+/// clearing collapses (Stage 4: the High Court; fixed parameters, `budget`
+/// and `tasks` ignored), 5 = the world (Stage 5: 3 countries × 2 cities in
+/// stasis; `budget` and `tasks` ignored; drain `engine_events()` once before
+/// the first tick to see the tick-0 `PACKED` events). Anything else builds
+/// the house.
 #[no_mangle]
 pub extern "C" fn engine_new(scenario: u32, seed: u64, budget: f64, tasks: u32, cost_visible: u32) {
     let config = EngineConfig {
@@ -41,6 +48,9 @@ pub extern "C" fn engine_new(scenario: u32, seed: u64, budget: f64, tasks: u32, 
     };
     let engine = match scenario {
         2 => scenarios::street(config, 6, budget, tasks as usize),
+        3 => scenarios::city(config, 2, 3, budget, tasks as usize),
+        4 => scenarios::forged_country(config, 5, 2, 2, 200.0, 10_000.0).0,
+        5 => scenarios::world(config, 3, 2),
         _ => scenarios::house(config, budget, tasks as usize),
     };
     ENGINE.with(|e| *e.borrow_mut() = Some(engine));

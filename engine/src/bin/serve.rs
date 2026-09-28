@@ -3,6 +3,7 @@
 //! ```text
 //! cargo run --release --bin serve -- --scenario house --budget 800 --tasks 15 --seed 7 --interval-ms 700 --port 8787
 //! cargo run --release --bin serve -- --scenario street --port 0     # port 0: pick a free port, print it
+//! cargo run --release --bin serve -- --scenario city|country|world   # Stages 3, 4, 5 (fixed shapes; see wasm_abi.rs)
 //! ```
 //!
 //! The engine lives in **one Tokio task** that owns `&mut Engine`. Nothing else
@@ -320,6 +321,9 @@ async fn main() {
     };
     let mut engine = match a.scenario.as_str() {
         "street" => street(config, 6, a.budget, a.tasks),
+        "city" => city(config, 2, 3, a.budget, a.tasks),
+        "country" => forged_country(config, 5, 2, 2, 200.0, 10_000.0).0,
+        "world" => world(config, 3, 2),
         _ => house(config, a.budget, a.tasks),
     };
     engine.set_executor(Box::new(TokioExecutor));

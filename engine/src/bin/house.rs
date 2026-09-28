@@ -98,6 +98,9 @@ async fn main() {
     };
     let mut engine = match a.scenario.as_str() {
         "street" => street(config, 6, a.budget, a.tasks),
+        "city" => city(config, 2, 3, a.budget, a.tasks),
+        "country" => forged_country(config, 5, 2, 2, 200.0, 10_000.0).0,
+        "world" => world(config, 3, 2),
         _ => house(config, a.budget, a.tasks),
     };
     engine.set_executor(Box::new(TokioExecutor)); // same engine, all cores
