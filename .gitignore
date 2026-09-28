@@ -4,3 +4,9 @@ __pycache__/
 .DS_Store
 *.log
 local_saved_state.json
+
+# Rust build output (the wasm artefact is copied to engine/dist/ by engine/build-wasm.sh)
+engine/target/
+# Frontend
+node_modules/
+frontend/dist/
