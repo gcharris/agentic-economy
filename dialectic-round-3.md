@@ -1,0 +1,5 @@
+1. What remains in the bid is a revocable, local claim: expected compute shape, duration, priority, and willingness to yield. It is still different from one orchestrator assigning the next job because providers and other agents can accept, refuse, or renegotiate; no single queue-owner determines assignment. But without fees, reputation, or irreversible close, the bid is advisory, not a binding price or commitment—closer to cooperative scheduling than to a market.
+
+2. You removed the permanent public scratch surface, but not the shared allocation state. If the pool has one visible objective and a shared record of what works, agents can still stampede onto whatever works and dress the reversible record. The envelope helps only if objectives and records are kept private or plural; with one shared objective, the surface remains.
+
+In the first year, run small, private, reversible experiments with no shared scoreboard and no single objective until a stable allocation pattern emerges.

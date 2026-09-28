@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The House: A Week with a Helper</title>
+<style>
+  :root {
+    --bg: #14110e;
+    --room-bg: #221b14;
+    --wall: #2c231a;
+    --floor: #19130d;
+    --wood: #5a422f;
+    --wood-dark: #3e2d1f;
+    --gold: #d4a755;
+    --gold-light: #f2cb7a;
+    --paper: #f0e6d2;
+    --paper-dark: #d8c8a8;
+    --ink: #1c150e;
+    --text: #e8ded0;
+    --muted: #a39580;
+    --red: #b84a39;
+    --green: #4a8a55;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: Palatino, Georgia, "Times New Roman", serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; overflow-x: hidden;
+  }
+  #game-wrap {
+    width: min(980px, 98vw);
+    background: var(--room-bg);
+    border: 2px solid #3d3124;
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Header / Week Progress */
+  header {
+    background: #1a140f;
+    border-bottom: 2px solid #33271c;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .title-group h1 {
+    margin: 0; font-size: 1.3rem; font-weight: 600; color: var(--gold-light);
+    letter-spacing: 0.02em;
+  }
+  .title-group p { margin: 2px 0 0; font-size: 0.8rem; color: var(--muted); }
+  .day-badge {
+    background: #2b2117; border: 1px solid #4a3a2a; border-radius: 999px;
+    padding: 6px 14px; font-size: 0.85rem; color: var(--gold); font-weight: bold;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .audio-toggle {
+    background: transparent; border: 1px solid #4a3a2a; color: var(--muted);
+    border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 0.75rem;
+  }
+  .audio-toggle:hover { color: var(--gold); }
+
+  /* Main Canvas Area */
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    background: #251d16;
+    border-bottom: 2px solid #33271c;
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+
+  /* The Lower Deck: Purse, Table, Door */
+  .deck {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap: 14px;
+    padding: 16px 20px;
+    background: #1a140f;
+    min-height: 180px;
+  }
+  .deck-card {
+    background: #221b14;
+    border: 1px solid #3a2e21;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .deck-card h3 {
+    margin: 0 0 8px; font-size: 0.85rem; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--gold); display: flex; justify-content: space-between;
+  }
+  /* Purse Card */
+  .purse-bar {
+    height: 16px; background: #14110e; border-radius: 999px;
+    border: 1px solid #3d3022; overflow: hidden; margin-bottom: 6px;
+  }
+  .purse-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #c49132, #e8be66); transition: width 0.3s ease; }
+  .purse-stats { font-size: 0.78rem; font-family: monospace; color: var(--muted); display: flex; justify-content: space-between; }
+  .purse-cost-hint {
+    margin-top: 8px; font-size: 0.75rem; line-height: 1.35; color: var(--muted);
+    background: #18130e; padding: 6px 8px; border-radius: 6px;
+  }
+
+  /* Table / Active Work Card */
+  .work-info {
+    font-size: 0.85rem; line-height: 1.4; color: var(--paper);
+    flex-grow: 1; display: flex; flex-direction: column; justify-content: center;
+  }
+  .work-info .task-name { font-weight: bold; color: var(--gold-light); margin-bottom: 4px; }
+  .work-info .task-step { font-size: 0.78rem; color: var(--muted); }
+  .table-papers {
+    margin-top: 8px; font-size: 0.75rem; color: var(--muted);
+    border-top: 1px dashed #3a2e21; padding-top: 6px;
+  }
+
+  /* Door Card */
+  .door-card {
+    border-color: #4a3a2a;
+    transition: all 0.3s ease;
+  }
+  .door-card.active {
+    border-color: var(--gold);
+    box-shadow: 0 0 16px rgba(212, 167, 85, 0.2);
+    background: #292016;
+  }
+  .door-status { font-size: 0.82rem; line-height: 1.35; color: var(--muted); }
+  .door-actions { display: flex; gap: 8px; margin-top: 10px; }
+  button.action-btn {
+    flex: 1; padding: 8px 10px; font-family: inherit; font-size: 0.8rem; font-weight: bold;
+    border: 0; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
+  }
+  button.btn-yes { background: var(--green); color: #fff; }
+  button.btn-yes:hover { filter: brightness(1.15); }
+  button.btn-no { background: #382c20; color: var(--text); border: 1px solid #52402e; }
+  button.btn-no:hover { background: #473729; }
+  button:disabled { opacity: 0.3; cursor: not-allowed; filter: none; }
+
+  /* Bottom Controls / Experiments */
+  footer {
+    background: #14100c; border-top: 1px solid #291f16; padding: 10px 20px;
+    display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--muted);
+  }
+  .sim-controls { display: flex; gap: 8px; }
+  .sim-btn {
+    background: #221b14; border: 1px solid #3d3124; color: var(--text);
+    padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-family: inherit;
+  }
+  .sim-btn:hover { background: #2f251c; border-color: var(--gold); color: var(--gold-light); }
+  .sim-btn.active { background: var(--gold); color: #14110e; font-weight: bold; }
+
+  /* Modals / Overlays (Receipt & Dialog) */
+  #receipt-modal {
+    position: absolute; inset: 0; background: rgba(10,8,6,0.85); backdrop-filter: blur(4px);
+    display: none; place-items: center; z-index: 100; padding: 20px;
+  }
+  #receipt-modal.open { display: grid; }
+  .paper-receipt {
+    width: min(440px, 92vw); background: var(--paper); color: var(--ink);
+    border-radius: 4px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+    font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; line-height: 1.5;
+    transform: rotate(-0.5deg);
+  }
+  .paper-receipt h2 {
+    margin: 0 0 8px; font-size: 1.1rem; text-align: center; border-bottom: 2px dashed #998870;
+    padding-bottom: 8px; letter-spacing: 0.05em;
+  }
+  .paper-receipt .line { display: flex; justify-content: space-between; margin: 4px 0; }
+  .paper-receipt .note { margin: 12px 0; padding: 8px; background: #e4d8bf; border-left: 3px solid #665540; font-style: italic; }
+  .paper-receipt button {
+    width: 100%; margin-top: 14px; padding: 10px; background: #33271c; color: #fff;
+    border: 0; border-radius: 4px; font-family: inherit; cursor: pointer; font-weight: bold;
+  }
+  .paper-receipt button:hover { background: #4a3929; }
+
+  @media (max-width: 800px) {
+    .deck { grid-template-columns: 1fr; }
+    #canvas-container { height: 280px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-wrap">
+  <header>
+    <div class="title-group">
+      <h1>The House</h1>
+      <p>A week with a helper. You hand them a purse. You stand at the door.</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <div class="day-badge" id="day-badge">
+        <span>📅</span> <span id="day-text">Day 1 of 5 (Monday)</span>
+      </div>
+      <button class="audio-toggle" id="audio-toggle" onclick="toggleAudio()">🔊 Sound: ON</button>
+    </div>
+  </header>
+
+  <!-- Animated Simulation Canvas -->
+  <div id="canvas-container">
+    <canvas id="stage"></canvas>
+    
+    <!-- Receipt Overlay -->
+    <div id="receipt-modal">
+      <div class="paper-receipt">
+        <h2>NOTE ON THE TABLE</h2>
+        <div class="line"><span>Day:</span> <strong id="rec-day">Monday</strong></div>
+        <div class="line"><span>Status:</span> <strong id="rec-status">Week Complete</strong></div>
+        <div class="line"><span>Tasks Done:</span> <strong id="rec-tasks">3</strong></div>
+        <div class="line"><span>Purse Burned:</span> <strong id="rec-burn">84 coins</strong></div>
+        <div class="line"><span>Left in Purse:</span> <strong id="rec-left">16 coins</strong></div>
+        <div class="note" id="rec-note">
+          "The purse had enough for the drafts. We left the papers on the table. Nothing was sent without your hand at the door."
+        </div>
+        <button onclick="closeReceipt()">Put Receipt in Drawer & Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Three Real Objects: The Purse, The Table, The Door -->
+  <div class="deck">
+    <!-- 1. The Purse -->
+    <div class="deck-card">
+      <div>
+        <h3><span>The Purse</span> <span id="purse-num">100 coins</span></h3>
+        <div class="purse-bar">
+          <div class="purse-fill" id="purse-fill"></div>
+        </div>
+        <div class="purse-stats">
+          <span>Burned: <strong id="burned-num">0</strong></span>
+          <span>Max: <strong>100</strong></span>
+        </div>
+      </div>
+      <div class="purse-cost-hint" id="cost-hint">
+        <strong>Thinking costs:</strong><br>
+        • Lookup: 10 coins (cheap)<br>
+        • Drafting: 24 coins (standard)<br>
+        • Sending at Door: 30 coins (irreversible)
+      </div>
+    </div>
+
+    <!-- 2. The Table -->
+    <div class="deck-card">
+      <div>
+        <h3><span>The Table</span> <span id="table-badge">1 Task Active</span></h3>
+        <div class="work-info">
+          <div class="task-name" id="task-title">Investigating market suppliers...</div>
+          <div class="task-step" id="task-detail">Scout is looking up supplier prices in the city ledger.</div>
+        </div>
+      </div>
+      <div class="table-papers" id="papers-summary">
+        📄 Papers on Table: <strong>0 drafts saved</strong> | Replacing a helper loses nothing.
+      </div>
+    </div>
+
+    <!-- 3. The Door -->
+    <div class="deck-card door-card" id="door-card">
+      <div>
+        <h3><span>The Door</span> <span id="door-badge">CLEAR</span></h3>
+        <div class="door-status" id="door-status">
+          Nobody is at the door. Work on the table stays inside the house.
+        </div>
+      </div>
+      <div class="door-actions">
+        <button class="action-btn btn-yes" id="btn-allow" disabled onclick="allowSend()">Y — Send it (30)</button>
+        <button class="action-btn btn-no" id="btn-reject" disabled onclick="rejectSend()">N — Not yet (0)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Simulation Switches -->
+  <footer>
+    <div class="sim-controls">
+      <button class="sim-btn" id="btn-speed" onclick="toggleSpeed()">Speed: 1x</button>
+      <button class="sim-btn" id="btn-market" onclick="toggleMarketExperiment()">Experiment: Add Market Fee</button>
+      <button class="sim-btn" id="btn-stampede" onclick="toggleSharedScore()">Experiment: Shared Score on Wall</button>
+      <button class="sim-btn" onclick="restartWeek()">Start Week Again</button>
+    </div>
+    <div>Press [Y] or [N] when the helper knocks.</div>
+  </footer>
+</div>
+
+<script>
+/* ==========================================================================
+   THE HOUSE: SIMULATION ENGINE & PROCEDURAL AUDIO
+   ========================================================================== */
+
+// --- Audio Synthesizer (Web Audio API - Zero External Dependencies) ---
+let audioCtx = null;
+let soundEnabled = true;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+function playTone(freq, type, duration, gainLevel = 0.1) {
+  if (!soundEnabled) return;
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(gainLevel, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+function sfxCoin() { playTone(987, 'sine', 0.15, 0.08); setTimeout(() => playTone(1318, 'sine', 0.2, 0.06), 50); }
+function sfxKnock() { playTone(120, 'triangle', 0.12, 0.2); setTimeout(() => playTone(110, 'triangle', 0.14, 0.22), 110); }
+function sfxWrite() { playTone(300 + Math.random()*200, 'sawtooth', 0.06, 0.02); }
+function sfxStamp() { playTone(180, 'sine', 0.18, 0.18); setTimeout(() => playTone(90, 'triangle', 0.25, 0.2), 60); }
+function sfxHalt() { playTone(220, 'square', 0.3, 0.08); setTimeout(() => playTone(164, 'square', 0.4, 0.08), 200); }
+
+function toggleAudio() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('audio-toggle').textContent = soundEnabled ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+}
+
+// --- Simulation State ---
+const TASKS_SCHEDULE = [
+  { day: 1, name: "Investigating city supplier prices", look: 10, draft: 24, send: 30, desc: "A draft price list for flour and oil." },
+  { day: 2, name: "Drafting the merchant agreement", look: 12, draft: 26, send: 30, desc: "An agreement committing the house to weekly delivery." },
+  { day: 3, name: "Reviewing lease terms with the landlord", look: 14, draft: 28, send: 30, desc: "A formal notice accepting or rejecting a rent increase." },
+  { day: 4, name: "Settling courier contracts across town", look: 10, draft: 24, send: 30, desc: "A payment voucher authorizing bank courier transfer." },
+  { day: 5, name: "End-of-week client ledger summary", look: 16, draft: 30, send: 30, desc: "The final week account dispatch." }
+];
+
+let state = {
+  dayIndex: 0,
+  purse: 100,
+  maxPurse: 100,
+  burned: 0,
+  papersSaved: 0,
+  tasksSent: 0,
+  phase: "look", // "look", "draft", "waiting_at_door", "done", "exhausted"
+  marketFeeEnabled: false,
+  stampedeEnabled: false,
+  simSpeed: 1,
+  
+  // Actor positions and states (in Canvas coordinates)
+  actors: {
+    scout: { x: 140, y: 270, targetX: 140, targetY: 270, state: "idle", label: "Scout (Survey)" },
+    scribble: { x: 420, y: 270, targetX: 420, targetY: 270, state: "idle", label: "Scribble (Draft)" },
+    porter: { x: 680, y: 270, targetX: 680, targetY: 270, state: "idle", label: "Porter (Door)" },
+    you: { x: 860, y: 290, targetX: 860, targetY: 290, state: "standing", label: "You" }
+  },
+  
+  doorKnocked: false,
+  doorTimer: 0,
+  thoughtBubbles: []
+};
+
+// Canvas Setup
+const canvas = document.getElementById("stage");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// --- Game Logic ---
+function currentTask() {
+  return TASKS_SCHEDULE[Math.min(state.dayIndex, TASKS_SCHEDULE.length - 1)];
+}
+
+function addThought(actorKey, text, duration = 120) {
+  state.thoughtBubbles.push({
+    actorKey,
+    text,
+    timer: duration,
+    alpha: 1.0
+  });
+}
+
+function updatePurse(amount) {
+  state.purse = Math.max(0, state.purse - amount);
+  state.burned += amount;
+  sfxCoin();
+  
+  document.getElementById("purse-num").textContent = state.purse + " coins";
+  document.getElementById("burned-num").textContent = state.burned;
+  document.getElementById("purse-fill").style.width = (state.purse / state.maxPurse * 100) + "%";
+}
+
+function startDayTask() {
+  const task = currentTask();
+  document.getElementById("day-text").textContent = `Day ${state.dayIndex + 1} of 5 (${["Monday","Tuesday","Wednesday","Thursday","Friday"][state.dayIndex]})`;
+  document.getElementById("task-title").textContent = task.name;
+  document.getElementById("task-detail").textContent = "Scout is walking to the city archives to look up initial facts...";
+  
+  state.phase = "look";
+  state.actors.scout.targetX = 220;
+  state.actors.scout.state = "walking";
+  state.doorKnocked = false;
+  updateDoorCard(false);
+}
+
+function stepSimulation() {
+  if (state.phase === "waiting_at_door" || state.phase === "exhausted" || state.phase === "done") {
+    return;
+  }
+
+  const task = currentTask();
+
+  // STAMPEDE MODE (If user triggered the shared score on the wall)
+  if (state.stampedeEnabled) {
+    if (state.purse < 15) {
+      triggerExhaustion("The purse emptied while everyone chased the score on the wall.");
+      return;
+    }
+    updatePurse(15);
+    addThought("scout", "Chasing score!", 60);
+    addThought("scribble", "Competing for points!", 60);
+    addThought("porter", "Running!", 60);
+    state.actors.scout.targetX = 350 + Math.random() * 80;
+    state.actors.scribble.targetX = 400 + Math.random() * 80;
+    state.actors.porter.targetX = 450 + Math.random() * 80;
+    document.getElementById("task-detail").textContent = "STAMPEDE: All three helpers are chasing the score on the wall. The purse is burning into the race.";
+    return;
+  }
+
+  // 1. LOOK PHASE
+  if (state.phase === "look") {
+    let cost = task.look;
+    if (state.marketFeeEnabled) cost += 8; // Internal market handoff tax
+
+    if (state.purse < cost) {
+      triggerExhaustion("The purse emptied while looking up background facts.");
+      return;
+    }
+    updatePurse(cost);
+    sfxWrite();
+    addThought("scout", `Looked up data (-${cost}c)`, 90);
+    document.getElementById("task-detail").textContent = "Scout finished surveying. Handing research notes to Scribble on the table.";
+    
+    state.actors.scout.targetX = 370;
+    state.phase = "draft";
+    setTimeout(() => {
+      state.actors.scribble.state = "writing";
+    }, 600);
+    return;
+  }
+
+  // 2. DRAFT PHASE
+  if (state.phase === "draft") {
+    let cost = task.draft;
+    if (state.marketFeeEnabled) cost += 12; // Internal market assembly fee
+
+    if (state.purse < cost) {
+      triggerExhaustion("The purse ran out while writing the draft.");
+      return;
+    }
+    updatePurse(cost);
+    sfxWrite();
+    state.papersSaved += 1;
+    document.getElementById("papers-summary").innerHTML = `📄 Papers on Table: <strong>${state.papersSaved} drafts saved</strong> | Work belongs to the house.`;
+    addThought("scribble", `Draft on table (-${cost}c)`, 90);
+    document.getElementById("task-detail").textContent = "Scribble laid the draft on the oak table. Porter takes it to the door.";
+
+    state.actors.scribble.state = "idle";
+    state.actors.porter.targetX = 760;
+    state.actors.porter.state = "walking";
+    state.phase = "walk_to_door";
+    
+    setTimeout(() => {
+      state.phase = "waiting_at_door";
+      state.actors.porter.state = "standing";
+      state.doorKnocked = true;
+      sfxKnock();
+      addThought("porter", "Knocking at door...", 180);
+      updateDoorCard(true);
+    }, 1000);
+  }
+}
+
+function updateDoorCard(isActive) {
+  const card = document.getElementById("door-card");
+  const badge = document.getElementById("door-badge");
+  const status = document.getElementById("door-status");
+  const btnYes = document.getElementById("btn-allow");
+  const btnNo = document.getElementById("btn-reject");
+
+  if (isActive) {
+    card.classList.add("active");
+    badge.textContent = "HELPER WAITING";
+    badge.style.color = "var(--gold)";
+    status.innerHTML = `Porter has <strong>${currentTask().name}</strong>. Sending costs <strong>30 coins</strong>. Nothing drains while they wait.`;
+    btnYes.disabled = false;
+    btnNo.disabled = false;
+  } else {
+    card.classList.remove("active");
+    badge.textContent = "CLEAR";
+    badge.style.color = "var(--muted)";
+    status.textContent = "Nobody is at the door. Work on the table stays inside the house.";
+    btnYes.disabled = true;
+    btnNo.disabled = true;
+  }
+}
+
+// User Actions at the Door
+function allowSend() {
+  if (state.phase !== "waiting_at_door") return;
+  const sendCost = currentTask().send;
+
+  if (state.purse < sendCost) {
+    triggerExhaustion("Not enough coins in the purse to send the letter out.");
+    return;
+  }
+
+  sfxStamp();
+  updatePurse(sendCost);
+  state.tasksSent += 1;
+  state.doorKnocked = false;
+  updateDoorCard(false);
+
+  addThought("porter", "Dispatched out door!", 90);
+  addThought("you", "Authorized.", 90);
+  document.getElementById("task-detail").textContent = `Sent out into the world. You permitted it. Cost: ${sendCost} coins.`;
+
+  state.actors.porter.targetX = 640;
+  state.phase = "done";
+
+  setTimeout(() => {
+    advanceDay();
+  }, 1200);
+}
+
+function rejectSend() {
+  if (state.phase !== "waiting_at_door") return;
+  sfxStamp();
+  state.doorKnocked = false;
+  updateDoorCard(false);
+
+  addThought("you", "Not yet. Revise.", 90);
+  addThought("porter", "Returning draft to table", 90);
+  document.getElementById("task-detail").textContent = "You said no. The draft sits safely on the table. Scribble will try another draft.";
+
+  state.actors.porter.targetX = 460;
+  state.phase = "draft";
+}
+
+function advanceDay() {
+  if (state.dayIndex < 4) {
+    state.dayIndex += 1;
+    startDayTask();
+  } else {
+    // Week completed!
+    showReceiptModal(
+      "Week Completed Cleanly",
+      `All 5 days finished. You authorized ${state.tasksSent} dispatches at the door. The helpers never sent a page without your hand.`
+    );
+  }
+}
+
+function triggerExhaustion(reason) {
+  state.phase = "exhausted";
+  sfxHalt();
+  updateDoorCard(false);
+  document.getElementById("task-detail").textContent = `HALTED: ${reason} Papers stay on the table. Nobody is deleted.`;
+  showReceiptModal(
+    "Purse Empty (Runway Halted)",
+    `${reason} The helper left the papers on the oak table and left a note. You can top up or close.`
+  );
+}
+
+function showReceiptModal(title, noteText) {
+  document.getElementById("rec-day",).textContent = ["Monday","Tuesday","Wednesday","Thursday","Friday"][Math.min(4, state.dayIndex)];
+  document.getElementById("rec-status").textContent = title;
+  document.getElementById("rec-tasks").textContent = `${state.tasksSent} sent, ${state.papersSaved} drafted`;
+  document.getElementById("rec-burn").textContent = `${state.burned} coins`;
+  document.getElementById("rec-left").textContent = `${state.purse} coins`;
+  document.getElementById("rec-note").textContent = `"${noteText}"`;
+  document.getElementById("receipt-modal").classList.add("open");
+}
+
+function closeReceipt() {
+  document.getElementById("receipt-modal").classList.remove("open");
+}
+
+// Experiments
+function toggleMarketExperiment() {
+  state.marketFeeEnabled = !state.marketFeeEnabled;
+  const btn = document.getElementById("btn-market");
+  btn.classList.toggle("active", state.marketFeeEnabled);
+  btn.textContent = state.marketFeeEnabled ? "Experiment: Market Fee ON (+20c tax)" : "Experiment: Add Market Fee";
+  document.getElementById("cost-hint").innerHTML = state.marketFeeEnabled
+    ? `<strong>Internal Market Active:</strong><br>• Lookup: 18c (+8c broker fee)<br>• Draft: 36c (+12c handoff fee)<br><span style="color:#e07763">Purse is being eaten by internal rent!</span>`
+    : `<strong>Thinking costs:</strong><br>• Lookup: 10 coins (cheap)<br>• Drafting: 24 coins (standard)<br>• Sending at Door: 30 coins (irreversible)`;
+}
+
+function toggleSharedScore() {
+  state.stampedeEnabled = !state.stampedeEnabled;
+  const btn = document.getElementById("btn-stampede");
+  btn.classList.toggle("active", state.stampedeEnabled);
+  btn.textContent = state.stampedeEnabled ? "Score on Wall: ACTIVE" : "Experiment: Shared Score on Wall";
+}
+
+function toggleSpeed() {
+  state.simSpeed = state.simSpeed === 1 ? 2 : state.simSpeed === 2 ? 4 : 1;
+  document.getElementById("btn-speed").textContent = `Speed: ${state.simSpeed}x`;
+}
+
+function restartWeek() {
+  state.dayIndex = 0;
+  state.purse = 100;
+  state.burned = 0;
+  state.papersSaved = 0;
+  state.tasksSent = 0;
+  state.phase = "look";
+  state.marketFeeEnabled = false;
+  state.stampedeEnabled = false;
+  document.getElementById("btn-market").classList.remove("active");
+  document.getElementById("btn-stampede").classList.remove("active");
+  document.getElementById("btn-market").textContent = "Experiment: Add Market Fee";
+  document.getElementById("btn-stampede").textContent = "Experiment: Shared Score on Wall";
+  updatePurse(0);
+  startDayTask();
+}
+
+// --- Keyboard Controls ---
+document.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (k === "y") allowSend();
+  if (k === "n") rejectSend();
+});
+
+// --- Canvas Rendering Loop ---
+let lastTickTime = Date.now();
+
+function drawHouse(width, height) {
+  ctx.clearRect(0, 0, width, height);
+
+  // 1. Cozy Room Wallpaper & Wainscoting
+  const grad = ctx.createLinearGradient(0, 0, 0, height);
+  grad.addColorStop(0, "#2c2219");
+  grad.addColorStop(0.7, "#201811");
+  grad.addColorStop(1, "#15100b");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Bookshelf on the left (Scout's station)
+  ctx.fillStyle = "#3a2a1c";
+  ctx.fillRect(30, 80, 110, 180);
+  ctx.fillStyle = "#4f3926";
+  for (let shelf = 0; shelf < 4; shelf++) {
+    ctx.fillRect(35, 115 + shelf * 40, 100, 6);
+    // Draw book spines
+    for (let b = 0; b < 6; b++) {
+      ctx.fillStyle = ["#7a4f32", "#8b3a2b", "#3d5c48", "#a6884e"][b % 4];
+      ctx.fillRect(40 + b * 15, 88 + shelf * 40, 11, 26);
+    }
+  }
+  ctx.fillStyle = "#c2b199";
+  ctx.font = "10px serif";
+  ctx.fillText("ARCHIVES", 55, 75);
+
+  // The Door on the right
+  const doorX = width - 110;
+  ctx.fillStyle = "#4a3525";
+  ctx.fillRect(doorX, 70, 75, 190);
+  ctx.strokeStyle = state.doorKnocked ? "#f2cb7a" : "#2e2116";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(doorX, 70, 75, 190);
+  
+  // Door handle
+  ctx.fillStyle = "#d4a755";
+  ctx.beginPath();
+  ctx.arc(doorX + 16, 170, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // "THE DOOR" Plaque
+  ctx.fillStyle = state.doorKnocked ? "#f2cb7a" : "#7a6a57";
+  ctx.font = "bold 11px serif";
+  ctx.fillText("THE DOOR", doorX + 10, 60);
+
+  // The Oak Table in center
+  const tableX = width * 0.32;
+  const tableW = width * 0.36;
+  ctx.fillStyle = "#423021";
+  ctx.fillRect(tableX, 230, tableW, 26);
+  ctx.fillStyle = "#312318";
+  ctx.fillRect(tableX + 15, 256, 14, 50); // Legs
+  ctx.fillRect(tableX + tableW - 29, 256, 14, 50);
+
+  // Papers on table
+  if (state.papersSaved > 0) {
+    ctx.fillStyle = "#f0e6d2";
+    ctx.fillRect(tableX + tableW * 0.5 - 20, 222, 28, 16);
+    ctx.fillStyle = "#d8c8a8";
+    ctx.fillRect(tableX + tableW * 0.5 - 18, 220, 28, 16);
+    ctx.fillStyle = "#998870";
+    ctx.font = "9px monospace";
+    ctx.fillText("DRAFT", tableX + tableW * 0.5 - 14, 232);
+  }
+
+  // Notice board on wall (if Stampede is active)
+  if (state.stampedeEnabled) {
+    ctx.fillStyle = "#8a3324";
+    ctx.fillRect(width * 0.42, 60, 120, 45);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 11px sans-serif";
+    ctx.fillText("SCORE ON WALL", width * 0.44, 78);
+    ctx.font = "10px sans-serif";
+    ctx.fillText("Points: 9,999", width * 0.46, 94);
+  }
+
+  // Floor
+  ctx.fillStyle = "#19130d";
+  ctx.fillRect(0, height - 70, width, 70);
+  ctx.strokeStyle = "#2e2116";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, height - 70);
+  ctx.lineTo(width, height - 70);
+  ctx.stroke();
+
+  // You sitting at your desk on the right
+  drawYou(width - 65, height - 100);
+
+  // 2. Draw Helpers (Scout, Scribble, Porter)
+  drawHelper(state.actors.scout, "🐈", "#d4913b", "Scout");
+  drawHelper(state.actors.scribble, "🐈", "#7a624d", "Scribble");
+  drawHelper(state.actors.porter, "🐈", "#3e3b38", "Porter");
+
+  // 3. Draw Thought Bubbles
+  drawThoughtBubbles();
+}
+
+function drawHelper(actor, emoji, color, name) {
+  // Lerp position
+  actor.x += (actor.targetX - actor.x) * 0.08;
+  actor.y += (actor.targetY - actor.y) * 0.08;
+
+  ctx.save();
+  ctx.translate(actor.x, actor.y);
+
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.beginPath();
+  ctx.ellipse(0, 5, 16, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sprite
+  ctx.font = "28px serif";
+  ctx.textAlign = "center";
+  ctx.fillText(emoji, 0, 0);
+
+  // Name tag
+  ctx.fillStyle = "#c2b199";
+  ctx.font = "10px serif";
+  ctx.fillText(name, 0, 16);
+
+  ctx.restore();
+}
+
+function drawYou(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.font = "28px serif";
+  ctx.textAlign = "center";
+  ctx.fillText("🐁", 0, 0);
+  ctx.fillStyle = "#f2cb7a";
+  ctx.font = "bold 10px serif";
+  ctx.fillText("You (The Door)", 0, 16);
+  ctx.restore();
+}
+
+function drawThoughtBubbles() {
+  for (let i = state.thoughtBubbles.length - 1; i >= 0; i--) {
+    const b = state.thoughtBubbles[i];
+    const actor = state.actors[b.actorKey] || state.actors.scout;
+    b.timer -= 1;
+    if (b.timer < 30) b.alpha = b.timer / 30;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, b.alpha);
+    ctx.font = "11px serif";
+    const textW = ctx.measureText(b.text).width;
+    
+    // Bubble pill
+    ctx.fillStyle = "#fff8ed";
+    ctx.beginPath();
+    ctx.roundRect(actor.x - textW/2 - 8, actor.y - 44, textW + 16, 22, 6);
+    ctx.fill();
+    ctx.strokeStyle = "#3e2d1f";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Text
+    ctx.fillStyle = "#1c150e";
+    ctx.textAlign = "center";
+    ctx.fillText(b.text, actor.x, actor.y - 29);
+    ctx.restore();
+
+    if (b.timer <= 0) {
+      state.thoughtBubbles.splice(i, 1);
+    }
+  }
+}
+
+// Main Loop
+function gameLoop() {
+  const now = Date.now();
+  const dt = now - lastTickTime;
+
+  // Tick simulation according to speed
+  const stepThreshold = 1800 / state.simSpeed;
+  if (dt >= stepThreshold) {
+    stepSimulation();
+    lastTickTime = now;
+  }
+
+  drawHouse(canvas.width, canvas.height);
+  requestAnimationFrame(gameLoop);
+}
+
+// Start game
+startDayTask();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

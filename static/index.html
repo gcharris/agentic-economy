@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Citadel Bay | The Sims Living Economy Simulator</title>
+  <meta name="description" content="A playful, living virtual town simulation of money flow, shopping, savings, and deliveries.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- TOP GLOBAL HEADER & VIEW SWITCHER -->
+  <header class="top-nav" id="topNav">
+    <div class="brand-group">
+      <div class="brand-badge">
+        <span class="pulsing-dot"></span>
+        <span class="brand-tier" id="brandTag">CITADEL BAY • LIVING TOWN</span>
+      </div>
+      <h1 class="brand-title" id="pageMainTitle">🏡 Citadel Bay: The Sims Living Economy</h1>
+      <span class="brand-subtitle" id="pageSubTitle">Watch little citizens live, shop, earn, and save in a 100% closed-loop virtual town!</span>
+    </div>
+
+    <!-- Center: View Mode Switcher -->
+    <div class="view-mode-toggle-group">
+      <button class="mode-toggle-btn active" id="btnModeSims">
+        <span class="mode-icon">🎮</span>
+        <span class="mode-label">Sims Town Mode</span>
+      </button>
+      <button class="mode-toggle-btn" id="btnModeTerminal">
+        <span class="mode-icon">💼</span>
+        <span class="mode-label">Wall Street Terminal</span>
+      </button>
+    </div>
+
+    <!-- Right: Header Controls -->
+    <div class="header-controls">
+      <div class="cycle-counter-card">
+        <span class="counter-label" id="counterLabel">TOWN DAY / CYCLE</span>
+        <span class="counter-val" id="cycleStepVal">0</span>
+      </div>
+
+      <div class="button-group">
+        <button id="btnPlayPause" class="btn btn-primary" title="Toggle Auto Simulation">
+          <span class="btn-icon" id="playPauseIcon">▶</span>
+          <span id="playPauseText">Play Town</span>
+        </button>
+        <button id="btnStep" class="btn btn-secondary" title="Advance 1 Cycle">
+          <span class="btn-icon">⏯</span> +1 Step
+        </button>
+        <button id="btnFastForward" class="btn btn-secondary" title="Fast Forward 10 Cycles">
+          <span class="btn-icon">⏩</span> +10 Days
+        </button>
+        <button id="btnReset" class="btn btn-danger-outline" title="Reset Town">
+          <span class="btn-icon">↺</span> Reset
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       VIEW 1: SIMS TOWN MODE (FRIENDLY HUMAN VIEW - ACTIVE BY DEFAULT)
+       ======================================================================== -->
+  <div id="simsModeContainer" class="view-mode-container active">
+
+    <!-- Mayor Interactive Powers Bar -->
+    <section class="mayor-action-bar">
+      <div class="mayor-badge">
+        <span class="mayor-star">⭐</span>
+        <span>MAYOR'S CONTROL DECK</span>
+      </div>
+      <div class="mayor-buttons">
+        <button class="mayor-btn btn-stimulus" id="btnMayorStimulus">
+          <span class="mayor-icon">💸</span>
+          <div>
+            <div class="mayor-btn-title">Airdrop Stimulus</div>
+            <div class="mayor-btn-sub">Give $100 cash to all citizens</div>
+          </div>
+        </button>
+
+        <button class="mayor-btn btn-spree" id="btnMayorShopping">
+          <span class="mayor-icon">🛍️</span>
+          <div>
+            <div class="mayor-btn-title">Shopping Spree!</div>
+            <div class="mayor-btn-sub">Citizens rush to buy coffee &amp; tech</div>
+          </div>
+        </button>
+
+        <button class="mayor-btn btn-harvest" id="btnMayorHarvest">
+          <span class="mayor-icon">🌾</span>
+          <div>
+            <div class="mayor-btn-title">Golden Harvest</div>
+            <div class="mayor-btn-sub">Sweep savings to Piggy Bank</div>
+          </div>
+        </button>
+
+        <button class="mayor-btn btn-courier" id="btnMayorCourier">
+          <span class="mayor-icon">🚚</span>
+          <div>
+            <div class="mayor-btn-title">Dispatch Courier</div>
+            <div class="mayor-btn-sub">Drive armored delivery across town</div>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- Friendly Human KPI Ribbon -->
+    <section class="kpi-ribbon">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">TOTAL TOWN MONEY</span>
+          <span class="kpi-badge badge-green">100% Conserved!</span>
+        </div>
+        <div class="kpi-value" id="simsTotalWealth">$0.00</div>
+        <div class="kpi-footer">No money ever leaves the town</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">COMMERCE &amp; SHOPPING</span>
+          <span class="kpi-badge badge-cyan" id="simsCommerceTag">Fast Flow</span>
+        </div>
+        <div class="kpi-value" id="simsTradeVol">$0.00</div>
+        <div class="kpi-footer">Value of goods &amp; services bought</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">GOLDEN PIGGY BANK YIELD</span>
+          <span class="kpi-badge badge-gold">Growing Daily!</span>
+        </div>
+        <div class="kpi-value" id="simsYieldEarned">$0.00</div>
+        <div class="kpi-footer">Free passive interest for the town</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">CASTLE DEFENSE VAULT</span>
+          <span class="kpi-badge badge-purple">Safe &amp; Sound</span>
+        </div>
+        <div class="kpi-value" id="simsCollateral">$0.00</div>
+        <div class="kpi-footer">Backing the entire economy</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">TOWN HAPPINESS</span>
+          <span class="kpi-badge badge-green" id="simsHappinessScore">85% Happy</span>
+        </div>
+        <div class="kpi-value" id="simsProsperity">⭐⭐⭐⭐</div>
+        <div class="kpi-footer">Based on citizens' full pockets</div>
+      </div>
+    </section>
+
+    <!-- 🎓 Interactive Academy: 5 Core Lessons from "The Connective Tissue of Digital Finance" -->
+    <section class="academy-section glass-panel">
+      <div class="academy-header">
+        <div class="academy-title-group">
+          <span class="academy-badge">🎓 DIGITAL FINANCE ACADEMY</span>
+          <h2 class="academy-title">Why Token Town Matters: The 5 Core Lessons from the Report</h2>
+        </div>
+        <span class="academy-sub">Translating complex institutional infrastructure into simple human mechanics</span>
+      </div>
+
+      <!-- Lesson Tabs -->
+      <div class="lesson-tabs-row" id="lessonTabsRow">
+        <button class="lesson-tab-btn active" data-lesson="1">
+          <span class="lesson-num">1</span>
+          <span>The Broken Telephone</span>
+        </button>
+        <button class="lesson-tab-btn" data-lesson="2">
+          <span class="lesson-num">2</span>
+          <span>Saturday Night Crisis</span>
+        </button>
+        <button class="lesson-tab-btn" data-lesson="3">
+          <span class="lesson-num">3</span>
+          <span>The Idle Money Leak</span>
+        </button>
+        <button class="lesson-tab-btn" data-lesson="4">
+          <span class="lesson-num">4</span>
+          <span>Vanishing Invoices</span>
+        </button>
+        <button class="lesson-tab-btn" data-lesson="5">
+          <span class="lesson-num">5</span>
+          <span>Freeing the $36B Vault</span>
+        </button>
+      </div>
+
+      <!-- Active Lesson Box -->
+      <div class="active-lesson-box" id="activeLessonBox">
+        <div class="lesson-content-grid">
+          <div class="lesson-col">
+            <span class="lesson-col-header">📑 THE PROBLEM IN THE REPORT</span>
+            <blockquote class="lesson-quote" id="lessonQuote">
+              "The bottleneck wasn't technology or innovation. It was interoperability... The moment individual networks agreed to connect through a shared, universal routing layer, the entire industry unlocked its potential."
+            </blockquote>
+            <p class="lesson-real-world" id="lessonRealWorld">
+              Over $100B was invested in blockchains, but created isolated walled gardens that couldn't talk to each other.
+            </p>
+          </div>
+
+          <div class="lesson-col">
+            <span class="lesson-col-header">🎮 HOW TOKEN TOWN SOLVES IT</span>
+            <div class="lesson-town-box" id="lessonTownExplanation">
+              Bob's bakery is on the mainland and the flour mill is on the island. Without Flash the Skater, trade stops! Flash represents the shared routing layer connecting both sides 24/7.
+            </div>
+            <div class="lesson-action-row">
+              <button class="btn btn-primary" id="btnSimulateLesson">
+                <span class="btn-icon">⚡</span> Simulate This Lesson Live!
+              </button>
+              <span class="lesson-tech-tag" id="lessonTechTag">Swift ISO 20022 Shared Ledger</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Sims Town Layout: Canvas World + Live Story & Inspector -->
+    <div class="sims-main-grid">
+      
+      <!-- Living Town Canvas (Left) -->
+      <div class="sims-canvas-wrapper glass-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">🏘️ Citadel Bay: Interactive Town Map</h2>
+            <span class="panel-sub">Click on any citizen or building to inspect their thoughts, wallets, and stories!</span>
+          </div>
+          <div class="sims-legend">
+            <span class="legend-item"><span class="legend-color" style="background:#f43f5e"></span> Bazaar (Market)</span>
+            <span class="legend-item"><span class="legend-color" style="background:#38bdf8"></span> Town Bank</span>
+            <span class="legend-item"><span class="legend-color" style="background:#fbbf24"></span> Piggy Bank</span>
+            <span class="legend-item"><span class="legend-color" style="background:#10b981"></span> Castle Vault</span>
+          </div>
+        </div>
+
+        <div class="canvas-stage">
+          <canvas id="simsCanvas" width="820" height="520"></canvas>
+        </div>
+      </div>
+
+      <!-- Right Column: Inspector Card & Town Life Feed -->
+      <div class="sims-side-column">
+
+        <!-- Selected Citizen / Building Inspector Card -->
+        <div class="glass-panel citizen-inspector-card" id="inspectorCard">
+          <div class="inspector-header">
+            <div class="avatar-box" id="inspectAvatar">👩‍🦰</div>
+            <div>
+              <h3 class="inspector-name" id="inspectName">Alice (Coffee Fan)</h3>
+              <span class="inspector-role" id="inspectRole">Town Citizen • Hangs out at the Cafe</span>
+            </div>
+          </div>
+
+          <div class="inspector-thought-bubble">
+            <span class="thought-quote">💬</span>
+            <p id="inspectThought">"Just stopped by the Cyber Cafe for an iced latte! Love having pocket cash to spend."</p>
+          </div>
+
+          <div class="inspector-wallets-grid">
+            <div class="wallet-item">
+              <span class="wallet-label">🪙 POCKET CASH</span>
+              <span class="wallet-val val-green" id="inspectPocket">$1,200.00</span>
+              <span class="wallet-sub">For snacks &amp; gadgets</span>
+            </div>
+            <div class="wallet-item">
+              <span class="wallet-label">🏦 BANK ACCOUNT</span>
+              <span class="wallet-val val-blue" id="inspectBank">$0.00</span>
+              <span class="wallet-sub">Business deposits</span>
+            </div>
+            <div class="wallet-item">
+              <span class="wallet-label">🌾 PIGGY BANK</span>
+              <span class="wallet-val val-gold" id="inspectPiggy">$0.00</span>
+              <span class="wallet-sub">Yield-bearing savings</span>
+            </div>
+            <div class="wallet-item">
+              <span class="wallet-label">⭐ HAPPINESS</span>
+              <span class="wallet-val val-purple" id="inspectMood">Thrilled 😊</span>
+              <span class="wallet-sub">Well-funded citizen</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Town Life Feed -->
+        <div class="glass-panel town-feed-card">
+          <div class="panel-header">
+            <h3 class="panel-title" style="font-size:14px;">📜 Daily Town Chronicles</h3>
+            <span class="panel-sub">Live events</span>
+          </div>
+          <div class="town-feed-list" id="simsFeedList">
+            <div class="feed-item">
+              <div class="feed-body">Town woke up! The sun is rising over Citadel Bay. 🌅</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ========================================================================
+       VIEW 2: WALL STREET TERMINAL (INSTITUTIONAL MODE)
+       ======================================================================== -->
+  <div id="terminalModeContainer" class="view-mode-container">
+    
+    <!-- Sub-Nav for Institutional Tabs -->
+    <div class="sub-nav-bar">
+      <div class="scenario-selector">
+        <span class="scenario-label">SCENARIO REGIME:</span>
+        <button class="scenario-btn active" data-scenario="baseline">Baseline Equilibrium</button>
+        <button class="scenario-btn" data-scenario="high_yield_rush">High-Yield MMF Rush</button>
+        <button class="scenario-btn" data-scenario="network_congestion">Swift Rail Congestion</button>
+        <button class="scenario-btn" data-scenario="collateral_crisis">Collateral Squeeze</button>
+      </div>
+
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="tab-overview">Stack Control Room</button>
+        <button class="tab-btn" data-tab="tab-ledger-radar">Interoperability Radar</button>
+        <button class="tab-btn" data-tab="tab-agents">24 Agent Nodes</button>
+        <button class="tab-btn" data-tab="tab-messages">ISO 20022 Inspector</button>
+        <button class="tab-btn" data-tab="tab-config">Engine Parameters</button>
+      </div>
+    </div>
+
+    <!-- Main Terminal Viewport -->
+    <main class="main-viewport">
+      
+      <!-- TAB 1: STACK CONTROL ROOM -->
+      <div class="tab-pane active" id="tab-overview">
+        <div class="grid-2-col">
+          
+          <section class="panel glass-panel">
+            <div class="panel-header">
+              <div class="panel-title-group">
+                <span class="panel-tag tag-layer1">LAYER 1</span>
+                <h2 class="panel-title">Three-Tier Cash Asset Liquidity Rotation</h2>
+              </div>
+              <span class="panel-sub">GENIUS Stablecoin • Tokenized Deposit • Wholesale CBDC • Tokenized MMF</span>
+            </div>
+
+            <div class="asset-pills-row">
+              <div class="asset-pill pill-stablecoin">
+                <span class="pill-dot"></span>
+                <span class="pill-name">GENIUS Stablecoins</span>
+                <span class="pill-val" id="pillStablecoinVal">$0</span>
+              </div>
+              <div class="asset-pill pill-deposit">
+                <span class="pill-dot"></span>
+                <span class="pill-name">Tokenized Deposits</span>
+                <span class="pill-val" id="pillDepositVal">$0</span>
+              </div>
+              <div class="asset-pill pill-mmf">
+                <span class="pill-dot"></span>
+                <span class="pill-name">Tokenized MMF</span>
+                <span class="pill-val" id="pillMMFVal">$0</span>
+              </div>
+              <div class="asset-pill pill-cbdc">
+                <span class="pill-dot"></span>
+                <span class="pill-name">Wholesale CBDC</span>
+                <span class="pill-val" id="pillCBDCVal">$0</span>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="chartLiquidityRotation" width="700" height="240"></canvas>
+            </div>
+
+            <div class="dual-chart-row">
+              <div class="sub-chart-box">
+                <div class="sub-chart-title">Programmable Yield Accumulation</div>
+                <canvas id="chartYieldAccumulation" width="340" height="130"></canvas>
+              </div>
+              <div class="sub-chart-box">
+                <div class="sub-chart-title">Payment Velocity vs Conserved Capital</div>
+                <canvas id="chartVelocityCapital" width="340" height="130"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel glass-panel">
+            <div class="panel-header">
+              <div class="panel-title-group">
+                <span class="panel-tag tag-layer3">LAYER 3</span>
+                <h2 class="panel-title">Multi-Asset Workflows Live Stream</h2>
+              </div>
+              <div class="feed-filters">
+                <button class="filter-chip active" data-filter="ALL">All</button>
+                <button class="filter-chip" data-filter="ATOMIC_DVP_SPLIT">DvP Splits</button>
+                <button class="filter-chip" data-filter="PROGRAMMABLE_MMF_SWEEP">MMF Sweeps</button>
+                <button class="filter-chip" data-filter="CROSS_LEDGER_ARBITRAGE">Arbitrage</button>
+              </div>
+            </div>
+
+            <div class="workflow-feed-list" id="workflowFeedList">
+              <div class="empty-state">Waiting for first settlement cycle...</div>
+            </div>
+          </section>
+
+        </div>
+
+        <section class="ledger-zones-overview">
+          <div class="ledger-zone-card card-citadel">
+            <div class="zone-icon">🏦</div>
+            <div class="zone-info">
+              <div class="zone-label">CITADEL PRIVATE BANK</div>
+              <div class="zone-sub">Regulated Tokenized Deposits</div>
+              <div class="zone-balance" id="zoneCitadelBal">$0.00</div>
+            </div>
+            <div class="zone-badge">8 Agents</div>
+          </div>
+
+          <div class="ledger-zone-card card-bazaar">
+            <div class="zone-icon">⚡</div>
+            <div class="zone-info">
+              <div class="zone-label">BAZAAR PUBLIC DEX</div>
+              <div class="zone-sub">GENIUS Stablecoin Velocity Rail</div>
+              <div class="zone-balance" id="zoneBazaarBal">$0.00</div>
+            </div>
+            <div class="zone-badge">12 Agents</div>
+          </div>
+
+          <div class="ledger-zone-card card-core">
+            <div class="zone-icon">🏛️</div>
+            <div class="zone-info">
+              <div class="zone-label">CORE CBDC SETTLEMENT</div>
+              <div class="zone-sub">Central Bank Base Money</div>
+              <div class="zone-balance" id="zoneCoreBal">$0.00</div>
+            </div>
+            <div class="zone-badge">4 Agents</div>
+          </div>
+
+          <div class="ledger-zone-card card-dtcc">
+            <div class="zone-icon">⛓️</div>
+            <div class="zone-info">
+              <div class="zone-label">DTCC COLLATERAL APPCHAIN</div>
+              <div class="zone-sub">Collateral Mobility Unlock</div>
+              <div class="zone-balance" id="zoneDTCCBal">$0.00 Unlocked</div>
+            </div>
+            <div class="zone-badge">Active Rail</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 2: INTEROPERABILITY RADAR -->
+      <div class="tab-pane" id="tab-ledger-radar">
+        <div class="radar-container glass-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <span class="panel-tag tag-layer2">LAYER 2</span>
+              <h2 class="panel-title">Cross-Ledger ISO 20022 Network Radar</h2>
+            </div>
+            <span class="panel-sub">Simulating Swift pacs.008 message latency, packet drops, and finality</span>
+          </div>
+
+          <div class="radar-layout">
+            <div class="radar-canvas-box">
+              <canvas id="radarCanvas" width="760" height="480"></canvas>
+            </div>
+            <div class="radar-queue-box">
+              <div class="queue-header">
+                <h3>Active In-Transit Messages (<span id="inTransitCount">0</span>)</h3>
+                <span class="queue-sub">Simulating routing delay</span>
+              </div>
+              <div class="queue-list" id="inTransitList">
+                <div class="empty-state">No messages currently in transit.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: 24 INSTITUTIONAL AGENTS -->
+      <div class="tab-pane" id="tab-agents">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <span class="panel-tag tag-layer4">LAYER 4</span>
+              <h2 class="panel-title">Institutional Agent Fleet (24 Nodes)</h2>
+            </div>
+            <div class="agent-role-filters">
+              <button class="role-filter-btn active" data-role="ALL">All Roles (24)</button>
+              <button class="role-filter-btn" data-role="Corporate_Treasurer">Treasurers (4)</button>
+              <button class="role-filter-btn" data-role="Compute_Producer">Producers (4)</button>
+              <button class="role-filter-btn" data-role="Interop_Arbitrageur">Arbitrageurs (4)</button>
+              <button class="role-filter-btn" data-role="Citizen_Consumer">Consumers (8)</button>
+              <button class="role-filter-btn" data-role="Custodian_CSD">Custodians (4)</button>
+            </div>
+          </div>
+          <div class="agents-grid" id="agentsGrid"></div>
+        </div>
+      </div>
+
+      <!-- TAB 4: ISO 20022 INSPECTOR -->
+      <div class="tab-pane" id="tab-messages">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <span class="panel-tag tag-layer2">LAYER 2 RAILS</span>
+              <h2 class="panel-title">Swift pacs.008.001.10 Financial Message Audit Log</h2>
+            </div>
+            <span class="panel-sub">Click any message row to inspect full ISO 20022 XML payload</span>
+          </div>
+
+          <div class="table-container">
+            <table class="messages-table">
+              <thead>
+                <tr>
+                  <th>Msg ID</th><th>Standard</th><th>Sender</th><th>Receiver</th><th>Amount</th><th>Asset Tier</th><th>Route</th><th>Cycles</th><th>Status</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="messagesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: ENGINE CONFIGURATION -->
+      <div class="tab-pane" id="tab-config">
+        <div class="glass-panel config-panel">
+          <div class="panel-header">
+            <div class="panel-title-group">
+              <span class="panel-tag tag-config">CONFIGURATION</span>
+              <h2 class="panel-title">Live Economic Parameters &amp; Sliders</h2>
+            </div>
+            <span class="panel-sub">Real-time parameters</span>
+          </div>
+
+          <div class="config-grid">
+            <div class="config-group">
+              <h3>Layer 2 Interoperability</h3>
+              <div class="slider-field">
+                <div class="slider-label-row"><label for="inputBridgeLatency">Bridge Latency (Cycles):</label><span class="slider-val" id="valBridgeLatencyDisplay">2 cycles</span></div>
+                <input type="range" id="inputBridgeLatency" min="1" max="10" step="1" value="2">
+              </div>
+              <div class="slider-field">
+                <div class="slider-label-row"><label for="inputFailureRate">Packet Failure Rate (%):</label><span class="slider-val" id="valFailureRateDisplay">2.0%</span></div>
+                <input type="range" id="inputFailureRate" min="0" max="25" step="0.5" value="2.0">
+              </div>
+            </div>
+
+            <div class="config-group">
+              <h3>Layer 3 Treasury Programmable Yield</h3>
+              <div class="slider-field">
+                <div class="slider-label-row"><label for="inputAnnualYield">MMF Annual Yield (% APR):</label><span class="slider-val" id="valAnnualYieldDisplay">4.50%</span></div>
+                <input type="range" id="inputAnnualYield" min="0.0" max="20.0" step="0.25" value="4.50">
+              </div>
+              <div class="slider-field">
+                <div class="slider-label-row"><label for="inputSweepThreshold">Sweep Trigger Threshold ($):</label><span class="slider-val" id="valSweepThresholdDisplay">$1,000</span></div>
+                <input type="range" id="inputSweepThreshold" min="500" max="3000" step="50" value="1000">
+              </div>
+            </div>
+
+            <div class="config-group">
+              <h3>Atomic DvP Smart Contract Split</h3>
+              <div class="slider-field">
+                <div class="slider-label-row"><label for="inputProducerSplit">Producer Share (%):</label><span class="slider-val" id="valProducerSplitDisplay">80%</span></div>
+                <input type="range" id="inputProducerSplit" min="50" max="95" step="1" value="80">
+              </div>
+              <div class="slider-field">
+                <div class="slider-label-row"><label for="inputTreasurySplit">Treasury Fee (%):</label><span class="slider-val" id="valTreasurySplitDisplay">15%</span></div>
+                <input type="range" id="inputTreasurySplit" min="1" max="30" step="1" value="15">
+              </div>
+            </div>
+          </div>
+
+          <div class="config-actions">
+            <button id="btnApplyConfig" class="btn btn-primary">Apply Parameters</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ISO 20022 XML PAYLOAD INSPECTOR MODAL -->
+  <div class="modal-overlay" id="xmlModalOverlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">ISO 20022 pacs.008.001.10</span>
+          <h3 id="modalMsgId">pacs.008.XXX</h3>
+        </div>
+        <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-metadata-grid" id="modalMetadataGrid"></div>
+        <div class="code-view-container">
+          <div class="code-header">
+            <span>Raw Financial XML Payload</span>
+            <button class="copy-btn" id="btnCopyXml">Copy XML</button>
+          </div>
+          <pre><code class="language-xml" id="modalXmlCode">Loading XML...</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/charts.js"></script>
+  <script src="/js/visualizer.js"></script>
+  <script src="/js/sims_game.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

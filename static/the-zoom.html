@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Agentic Economy — Powers of Ten Zoom</title>
+<style>
+  :root {
+    --bg: #0f0d0b;
+    --card: #1c1712;
+    --border: #382c20;
+    --gold: #d4a755;
+    --gold-bright: #f5cf7d;
+    --text: #ede4d6;
+    --muted: #9e8e79;
+    --cyan: #56b6c2;
+    --green: #4da662;
+    --red: #c95140;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: Palatino, Georgia, "Times New Roman", serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; overflow-x: hidden;
+  }
+  #app {
+    width: min(1000px, 98vw);
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  header {
+    background: #15110d; border-bottom: 2px solid var(--border);
+    padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .header-titles h1 {
+    margin: 0; font-size: 1.35rem; font-weight: 600; color: var(--gold-bright);
+    letter-spacing: 0.02em;
+  }
+  .header-titles p { margin: 2px 0 0; font-size: 0.8rem; color: var(--muted); }
+  
+  /* Zoom Breadcrumb Navigator */
+  .nav-bar {
+    display: flex; background: #18130e; border-bottom: 1px solid var(--border);
+    padding: 8px 16px; gap: 6px; align-items: center; overflow-x: auto;
+  }
+  .nav-step {
+    padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+    color: var(--muted); cursor: pointer; transition: all 0.2s ease;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .nav-step:hover { color: var(--text); background: #251e17; }
+  .nav-step.active {
+    background: var(--gold); color: #120e0a; border-color: var(--gold); font-weight: bold;
+  }
+  .nav-sep { color: var(--border); font-size: 0.8rem; }
+
+  /* Canvas Stage */
+  #viewport {
+    position: relative; width: 100%; height: 440px;
+    background: #110e0b; overflow: hidden;
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+
+  /* Overlay HUD / Telemetry info */
+  .hud-overlay {
+    position: absolute; bottom: 12px; left: 14px; right: 14px;
+    background: rgba(22, 17, 13, 0.9); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px; backdrop-filter: blur(4px);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.82rem;
+  }
+  .hud-left strong { color: var(--gold); font-size: 0.95rem; }
+  .hud-left span { color: var(--muted); margin-left: 8px; }
+  .hud-right { font-family: ui-monospace, Menlo, monospace; color: var(--cyan); font-size: 0.78rem; }
+
+  /* Controls Footer */
+  footer {
+    background: #15110d; border-top: 1px solid var(--border);
+    padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .zoom-btns { display: flex; gap: 8px; }
+  button.btn {
+    font: inherit; font-size: 0.82rem; font-weight: 600; padding: 7px 16px;
+    border-radius: 999px; border: 1px solid var(--border); background: #231b14;
+    color: var(--text); cursor: pointer; transition: all 0.15s ease;
+  }
+  button.btn:hover { background: #32271d; border-color: var(--gold); color: var(--gold-bright); }
+  button.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .hint { font-size: 0.78rem; color: var(--muted); }
+
+  @media (max-width: 700px) {
+    #viewport { height: 340px; }
+    .hud-overlay { flex-direction: column; align-items: flex-start; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="header-titles">
+      <h1>The Agentic Economy: Powers of Ten</h1>
+      <p>From the planetary cryptographic rails all the way into the quiet room with the oak table.</p>
+    </div>
+    <div style="font-size:0.85rem; color:var(--gold); font-weight:bold;">
+      Click on map or use controls to Zoom
+    </div>
+  </header>
+
+  <!-- Step Navigator -->
+  <div class="nav-bar">
+    <div class="nav-step" id="step-5" onclick="setZoom(5)">🌍 Stage 5: The World</div>
+    <span class="nav-sep">›</span>
+    <div class="nav-step" id="step-4" onclick="setZoom(4)">🏛️ Stage 4: The Country</div>
+    <span class="nav-sep">›</span>
+    <div class="nav-step" id="step-3" onclick="setZoom(3)">🏙️ Stage 3: The City</div>
+    <span class="nav-sep">›</span>
+    <div class="nav-step" id="step-2" onclick="setZoom(2)">🏘️ Stage 2: The Neighborhood</div>
+    <span class="nav-sep">›</span>
+    <div class="nav-step active" id="step-1" onclick="setZoom(1)">🏡 Stage 1: The House</div>
+  </div>
+
+  <!-- Interactive Graphic Viewport -->
+  <div id="viewport">
+    <canvas id="view-canvas"></canvas>
+    
+    <div class="hud-overlay">
+      <div class="hud-left">
+        <strong id="hud-title">Stage 1: The House</strong>
+        <span id="hud-sub">One person, one helper, the oak table, the purse, and the door.</span>
+      </div>
+      <div class="hud-right" id="hud-stats">
+        Rule: Thought is free to look; the send waits at the door.
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Navigation -->
+  <footer>
+    <div class="zoom-btns">
+      <button class="btn" id="btn-zoom-out" onclick="zoomOut()">◀ Zoom Out (Larger Scale)</button>
+      <button class="btn" id="btn-zoom-in" onclick="zoomIn()">Zoom In (Deeper Scale) ▶</button>
+    </div>
+    <div class="hint">Click anywhere inside the view to drill deeper.</div>
+  </footer>
+</div>
+
+<script>
+const canvas = document.getElementById("view-canvas");
+const ctx = canvas.getContext("2d");
+
+let currentZoom = 1; // 1: House, 2: Neighborhood, 3: City, 4: Country, 5: World
+let animProgress = 1.0;
+let targetZoom = 1;
+let prevZoom = 1;
+
+const STAGE_META = {
+  1: {
+    title: "Stage 1: The House (The Room)",
+    sub: "One helper, one purse, the oak table, and the door.",
+    stats: "Sovereignty: In the human hand • Burn: 100 coins • Idle Leak: 0.0%",
+    law: "The work belongs to the house. The irreversible commit stops at the Door."
+  },
+  2: {
+    title: "Stage 2: The Neighborhood (The Street)",
+    sub: "Bilateral trade between houses. Couriers, letter slots, and atomic swaps.",
+    stats: "Connective Tissue: Atomic DvP (curb swap) • Policy: Letter Slot",
+    law: "Houses do not dissolve their walls. They meet at the curb or not at all."
+  },
+  3: {
+    title: "Stage 3: The City (Shared Utilities & Foundries)",
+    sub: "Compute foundries, centralized clearinghouse, and automated yield sweeps.",
+    stats: "Utilities: Wholesale FLOPs • Clearing: Swift/DTCC hub • Sweeps: Penny (MMF)",
+    law: "Infrastructure scales up so houses do not need 500 bilateral couriers."
+  },
+  4: {
+    title: "Stage 4: The Country (Sovereign Ballast & The Law)",
+    sub: "Three-tier cash (Stablecoins, Tokenized Deposits, Wholesale CBDC) & Courts.",
+    stats: "Anchor: Sovereign Central Bank CBDC • Stop Line: Constitutional Court",
+    law: "Deterministic software rests on the physical monopoly of sovereign law."
+  },
+  5: {
+    title: "Stage 5: The World (The Cryptographic World Computer)",
+    sub: "Recursive STARKs, 24/7 cross-border liquidity, planetary energy arbitrage.",
+    stats: "Finality: 8-32 seconds • Proofs: Recursive STARKs • Scope: Planetary",
+    law: "Nations verify proofs without trusting foreign servers. The Door scales globally."
+  }
+};
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+}
+window.addEventListener("resize", resize);
+resize();
+
+function setZoom(lvl) {
+  if (lvl < 1 || lvl > 5 || lvl === currentZoom) return;
+  prevZoom = currentZoom;
+  currentZoom = lvl;
+  animProgress = 0.0;
+  
+  // Update buttons & nav
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById(`step-${i}`).classList.toggle("active", i === currentZoom);
+  }
+  document.getElementById("btn-zoom-in").disabled = (currentZoom === 1);
+  document.getElementById("btn-zoom-out").disabled = (currentZoom === 5);
+
+  const m = STAGE_META[currentZoom];
+  document.getElementById("hud-title").textContent = m.title;
+  document.getElementById("hud-sub").textContent = m.sub;
+  document.getElementById("hud-stats").textContent = m.stats;
+}
+
+function zoomIn() { setZoom(currentZoom - 1); }
+function zoomOut() { setZoom(currentZoom + 1); }
+
+canvas.addEventListener("click", () => {
+  if (currentZoom > 1) {
+    zoomIn();
+  } else {
+    setZoom(5); // Cycle back to world
+  }
+});
+
+// --- RENDERERS FOR EACH ZOOM LEVEL ---
+
+let tick = 0;
+
+function draw(w, h) {
+  tick++;
+  ctx.clearRect(0, 0, w, h);
+
+  if (currentZoom === 1) drawStage1House(w, h);
+  else if (currentZoom === 2) drawStage2Neighborhood(w, h);
+  else if (currentZoom === 3) drawStage3City(w, h);
+  else if (currentZoom === 4) drawStage4Country(w, h);
+  else if (currentZoom === 5) drawStage5World(w, h);
+}
+
+// STAGE 1: THE HOUSE (Inside the Room)
+function drawStage1House(w, h) {
+  // Cozy dark room gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, "#231b14");
+  grad.addColorStop(1, "#140f0b");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Bookshelf (Archives) on the left
+  ctx.fillStyle = "#3a2a1c";
+  ctx.fillRect(40, 80, 110, 220);
+  ctx.fillStyle = "#5c432d";
+  for (let i = 0; i < 4; i++) {
+    ctx.fillRect(45, 120 + i * 50, 100, 6);
+    // books
+    for (let b = 0; b < 6; b++) {
+      ctx.fillStyle = ["#8a3a2b", "#3d5c48", "#a6884e", "#634735"][b % 4];
+      ctx.fillRect(50 + b * 15, 95 + i * 50, 11, 25);
+    }
+  }
+  ctx.fillStyle = "#c2b199"; ctx.font = "11px serif";
+  ctx.fillText("ARCHIVES (Look)", 48, 70);
+
+  // The Oak Table in center
+  const tX = w * 0.35, tW = w * 0.32;
+  ctx.fillStyle = "#4a3525";
+  ctx.fillRect(tX, 230, tW, 30);
+  ctx.fillStyle = "#332419";
+  ctx.fillRect(tX + 15, 260, 14, 80);
+  ctx.fillRect(tX + tW - 29, 260, 14, 80);
+
+  // Papers on table
+  ctx.fillStyle = "#f0e6d2";
+  ctx.fillRect(tX + tW * 0.5 - 24, 218, 32, 20);
+  ctx.fillStyle = "#d8c8a8";
+  ctx.fillRect(tX + tW * 0.5 - 20, 214, 32, 20);
+  ctx.fillStyle = "#332419"; ctx.font = "9px monospace";
+  ctx.fillText("DRAFT", tX + tW * 0.5 - 14, 227);
+
+  // The Door on the right
+  const dX = w - 130;
+  ctx.fillStyle = "#5c412c";
+  ctx.fillRect(dX, 80, 85, 240);
+  ctx.strokeStyle = "#d4a755"; ctx.lineWidth = 3;
+  ctx.strokeRect(dX, 80, 85, 240);
+  ctx.fillStyle = "#d4a755";
+  ctx.beginPath(); ctx.arc(dX + 20, 200, 6, 0, Math.PI*2); ctx.fill(); // knob
+  ctx.fillStyle = "#f5cf7d"; ctx.font = "bold 12px serif";
+  ctx.fillText("THE DOOR", dX + 10, 70);
+
+  // Floor
+  ctx.fillStyle = "#16110c";
+  ctx.fillRect(0, h - 80, w, 80);
+
+  // Characters
+  drawSprite("🐈", 160 + Math.sin(tick*0.04)*8, 280, "Scout (Survey)");
+  drawSprite("🐈", tX + tW*0.5, 280, "Scribble (Draft)");
+  drawSprite("🐈", dX - 30, 280, "Porter (Waiting)");
+  drawSprite("🐁", dX + 40, h - 45, "You (Door Latch)");
+
+  // Label banner
+  drawBanner(w*0.5, 36, "STAGE 1: INSIDE THE ROOM", "The Oak Table holds the work. The Purse burns on thinking. The Door halts the spend.");
+}
+
+// STAGE 2: THE NEIGHBORHOOD (The Street)
+function drawStage2Neighborhood(w, h) {
+  ctx.fillStyle = "#181410";
+  ctx.fillRect(0, 0, w, h);
+
+  // Night sky & stars
+  drawStars(w, h);
+
+  // The Street in the middle
+  const streetY = h * 0.56;
+  ctx.fillStyle = "#221c16";
+  ctx.fillRect(0, streetY, w, 90);
+  ctx.strokeStyle = "#382e24"; ctx.lineWidth = 2;
+  ctx.strokeRect(0, streetY, w, 90);
+  
+  // Dash lines in street
+  ctx.strokeStyle = "#4a3c2e"; ctx.setLineDash([16, 16]);
+  ctx.beginPath(); ctx.moveTo(0, streetY + 45); ctx.lineTo(w, streetY + 45); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 4 Houses along the street
+  const houses = [
+    { name: "House A (Your Study)", icon: "🏡", x: w * 0.15 },
+    { name: "House B (The Bakery)", icon: "🥖", x: w * 0.38 },
+    { name: "House C (The Clinic)", icon: "🏥", x: w * 0.62 },
+    { name: "House D (Law Office)", icon: "⚖️", x: w * 0.85 }
+  ];
+
+  houses.forEach(house => {
+    // House building
+    ctx.fillStyle = "#2b221a";
+    ctx.fillRect(house.x - 55, streetY - 110, 110, 110);
+    ctx.strokeStyle = "#5a432f"; ctx.lineWidth = 2;
+    ctx.strokeRect(house.x - 55, streetY - 110, 110, 110);
+
+    // Roof
+    ctx.fillStyle = "#4a2d1d";
+    ctx.beginPath();
+    ctx.moveTo(house.x - 65, streetY - 110);
+    ctx.lineTo(house.x, streetY - 155);
+    ctx.lineTo(house.x + 65, streetY - 110);
+    ctx.fill();
+
+    // Door with glowing threshold
+    ctx.fillStyle = "#16110c";
+    ctx.fillRect(house.x - 14, streetY - 45, 28, 45);
+    ctx.strokeStyle = "#d4a755"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(house.x - 14, streetY - 45, 28, 45);
+
+    // Label
+    ctx.fillStyle = "#e8ded0"; ctx.font = "bold 11px serif"; ctx.textAlign = "center";
+    ctx.fillText(house.name, house.x, streetY - 165);
+    ctx.font = "20px serif"; ctx.fillText(house.icon, house.x, streetY - 65);
+  });
+
+  // Animated Couriers riding between doors (Atomic swaps)
+  const courierX = ((tick * 2.2) % (w * 0.8)) + (w * 0.1);
+  drawCourier(courierX, streetY + 30, "📦 Courier (Atomic Swap)");
+
+  // Spark at threshold (DvP swap)
+  if (Math.floor(tick / 40) % 2 === 0) {
+    ctx.fillStyle = "#56b6c2";
+    ctx.beginPath();
+    ctx.arc(houses[1].x, streetY - 5, 8, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "#56b6c2"; ctx.font = "10px monospace";
+    ctx.fillText("⚡ ATOMIC DVP CURB SWAP", houses[1].x, streetY + 20);
+  }
+
+  drawBanner(w*0.5, 36, "STAGE 2: THE NEIGHBORHOOD (THE STREET)", "Houses do not dissolve their walls. Envelopes swap atomically at the curb.");
+}
+
+// STAGE 3: THE CITY (Foundries & Clearinghouse)
+function drawStage3City(w, h) {
+  ctx.fillStyle = "#120f0c";
+  ctx.fillRect(0, 0, w, h);
+  drawStars(w, h);
+
+  // Isometric / grid city layout
+  const cy = h * 0.52;
+  
+  // Power & Compute Foundry on left
+  drawBuildingBlock(w * 0.2, cy, 140, 160, "🏭 Compute Foundry", "Bob's Oven at Scale (Wholesale FLOPs & Energy)", "#c95140");
+
+  // Central Municipal Clearinghouse in center
+  drawBuildingBlock(w * 0.5, cy - 20, 160, 200, "🏛️ City Clearinghouse", "Shared Inter-House Registry (Swift/DTCC rails)", "#d4a755");
+
+  // High-Yield Liquidity Vault on right
+  drawBuildingBlock(w * 0.8, cy, 140, 160, "🏦 Penny's Vault (MMF)", "Automated Liquidity Sweeps (0% idle cash)", "#4da662");
+
+  // Golden pipelines connecting them
+  ctx.strokeStyle = "#e8be66"; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.2 + 70, cy + 80);
+  ctx.lineTo(w * 0.5 - 80, cy + 80);
+  ctx.moveTo(w * 0.5 + 80, cy + 80);
+  ctx.lineTo(w * 0.8 - 70, cy + 80);
+  ctx.stroke();
+
+  // Floating token pulses along pipe
+  const pulseX = (tick * 3) % (w * 0.6) + (w * 0.2);
+  ctx.fillStyle = "#f5cf7d"; ctx.beginPath(); ctx.arc(pulseX, cy + 80, 5, 0, Math.PI*2); ctx.fill();
+
+  drawBanner(w*0.5, 36, "STAGE 3: THE CITY (MUNICIPAL UTILITIES)", "Houses connect through shared compute foundries and automated clearing hubs.");
+}
+
+// STAGE 4: THE COUNTRY (Three-Tier Cash & High Court)
+function drawStage4Country(w, h) {
+  ctx.fillStyle = "#100d0a";
+  ctx.fillRect(0, 0, w, h);
+
+  // Three Tiers of Sovereign Money (The Connective Tissue Report)
+  const tY = h * 0.32;
+  const colW = w * 0.26;
+
+  // Tier 1: Stablecoins
+  drawTierColumn(w*0.2, tY, colW, 190, "TIER 1: POCKET CASH", "Fast Stablecoins", "• 0% yield (GENIUS Act)\n• Sub-second point of sale\n• Frictionless velocity", "#56b6c2");
+
+  // Tier 2: Tokenized Deposits
+  drawTierColumn(w*0.5, tY, colW, 190, "TIER 2: BANK DEPOSITS", "Tokenized Bank Money", "• Commercial credit creation\n• 24/7 USD clearing\n• Yield-bearing treasuries", "#d4a755");
+
+  // Tier 3: Wholesale CBDC
+  drawTierColumn(w*0.8, tY, colW, 190, "TIER 3: CENTRAL BANK", "Wholesale CBDC", "• Sovereign risk-free ballast\n• Trapped collateral unlock\n• Final settlement court", "#c95140");
+
+  // High Court Stop-Line
+  ctx.fillStyle = "#1e1610";
+  ctx.fillRect(w * 0.1, h - 85, w * 0.8, 45);
+  ctx.strokeStyle = "#5a432f"; ctx.lineWidth = 1.5;
+  ctx.strokeRect(w * 0.1, h - 85, w * 0.8, 45);
+  ctx.fillStyle = "#f5cf7d"; ctx.font = "bold 12px serif"; ctx.textAlign = "center";
+  ctx.fillText("⚖️ THE SOVEREIGN STOP-LINE: National Laws & Constitutional Courts", w * 0.5, h - 65);
+  ctx.fillStyle = "#a89a80"; ctx.font = "10px sans-serif";
+  ctx.fillText("Software is deterministic, but the state holds the human monopoly on physical law.", w * 0.5, h - 48);
+
+  drawBanner(w*0.5, 36, "STAGE 4: THE COUNTRY (SOVEREIGN ANCHOR)", "The three-tier cash leg backs the economy; national courts provide the final stop.");
+}
+
+// STAGE 5: THE WORLD (The Cryptographic World Computer)
+function drawStage5World(w, h) {
+  ctx.fillStyle = "#0a0806";
+  ctx.fillRect(0, 0, w, h);
+  drawStars(w, h);
+
+  // Globe in center
+  const gX = w * 0.5, gY = h * 0.54, rad = 110;
+  
+  // Glowing atmosphere
+  const glow = ctx.createRadialGradient(gX, gY, rad * 0.7, gX, gY, rad * 1.3);
+  glow.addColorStop(0, "rgba(86, 182, 194, 0.2)");
+  glow.addColorStop(1, "transparent");
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(gX, gY, rad*1.3, 0, Math.PI*2); ctx.fill();
+
+  // Globe body
+  ctx.fillStyle = "#141d24";
+  ctx.beginPath(); ctx.arc(gX, gY, rad, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#385b66"; ctx.lineWidth = 2; ctx.stroke();
+
+  // Continents / Nodes
+  drawGlobeNode(gX - 45, gY - 20, "Tokyo (Green Geo)");
+  drawGlobeNode(gX + 40, gY - 30, "London (Clearing)");
+  drawGlobeNode(gX - 10, gY + 40, "New York (Liquid)");
+
+  // Planetary laser rails (Recursive STARKs)
+  ctx.strokeStyle = "#56b6c2"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.arc(gX, gY, rad + 18, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Data satellites
+  const satAngle = tick * 0.02;
+  const satX = gX + Math.cos(satAngle) * (rad + 18);
+  const satY = gY + Math.sin(satAngle) * (rad + 18);
+  ctx.fillStyle = "#f5cf7d"; ctx.beginPath(); ctx.arc(satX, satY, 4, 0, Math.PI*2); ctx.fill();
+
+  // Orbiting STARK proof badge
+  ctx.fillStyle = "#1e1610";
+  ctx.fillRect(gX - 120, gY + rad + 25, 240, 26);
+  ctx.strokeStyle = "#56b6c2"; ctx.strokeRect(gX - 120, gY + rad + 25, 240, 26);
+  ctx.fillStyle = "#56b6c2"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+  ctx.fillText("⚡ RECURSIVE STARK: Verified in 8s", gX, gY + rad + 42);
+
+  drawBanner(w*0.5, 36, "STAGE 5: THE WORLD (CRYPTOGRAPHIC COMPUTER)", "Planetary 24/7 liquidity and recursive proofs route energy across time zones.");
+}
+
+// --- HELPER DRAWING PRIMITIVES ---
+
+function drawBanner(x, y, title, subtitle) {
+  ctx.fillStyle = "#f5cf7d"; ctx.font = "bold 13px serif"; ctx.textAlign = "center";
+  ctx.fillText(title, x, y);
+  ctx.fillStyle = "#9e8e79"; ctx.font = "11px sans-serif";
+  ctx.fillText(subtitle, x, y + 16);
+}
+
+function drawSprite(emoji, x, y, label) {
+  ctx.font = "26px serif"; ctx.textAlign = "center";
+  ctx.fillText(emoji, x, y);
+  ctx.fillStyle = "#d4a755"; ctx.font = "10px serif";
+  ctx.fillText(label, x, y + 16);
+}
+
+function drawCourier(x, y, label) {
+  ctx.font = "22px serif"; ctx.textAlign = "center";
+  ctx.fillText("🛹", x, y);
+  ctx.fillStyle = "#56b6c2"; ctx.font = "bold 10px sans-serif";
+  ctx.fillText(label, x, y + 14);
+}
+
+function drawBuildingBlock(x, y, w, h, title, desc, color) {
+  ctx.fillStyle = "#1f1711";
+  ctx.fillRect(x - w*0.5, y - h*0.5, w, h);
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.strokeRect(x - w*0.5, y - h*0.5, w, h);
+
+  ctx.fillStyle = "#ede4d6"; ctx.font = "bold 12px serif"; ctx.textAlign = "center";
+  ctx.fillText(title, x, y - h*0.5 + 24);
+  
+  ctx.fillStyle = "#9e8e79"; ctx.font = "10px sans-serif";
+  ctx.fillText(desc, x, y - h*0.5 + 44);
+}
+
+function drawTierColumn(x, y, w, h, header, title, bullets, color) {
+  ctx.fillStyle = "#1c150e";
+  ctx.fillRect(x - w*0.5, y, w, h);
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.strokeRect(x - w*0.5, y, w, h);
+
+  ctx.fillStyle = color; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText(header, x, y + 20);
+  ctx.fillStyle = "#ede4d6"; ctx.font = "bold 12px serif";
+  ctx.fillText(title, x, y + 38);
+
+  ctx.fillStyle = "#a89a80"; ctx.font = "11px sans-serif"; ctx.textAlign = "left";
+  const lines = bullets.split("\n");
+  lines.forEach((l, idx) => {
+    ctx.fillText(l, x - w*0.42, y + 68 + idx * 20);
+  });
+}
+
+function drawGlobeNode(x, y, label) {
+  ctx.fillStyle = "#56b6c2";
+  ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#ede4d6"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText(label, x, y + 14);
+}
+
+function drawStars(w, h) {
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  for (let i = 0; i < 30; i++) {
+    const sx = (i * 73) % w;
+    const sy = (i * 47) % (h * 0.45);
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+}
+
+function loop() {
+  draw(canvas.width, canvas.height);
+  requestAnimationFrame(loop);
+}
+
+// Start on Stage 1
+setZoom(1);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

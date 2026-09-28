@@ -1,0 +1,609 @@
+<style>
+  .multi { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .multi { grid-template-columns: 1fr; } }
+  .multi .mt { font-size: 0.78rem; color: var(--ink-3); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+  .hit { fill: transparent; cursor: crosshair; }
+  .hit:focus { outline: none; }
+</style>
+<script>
+(() => {
+'use strict';
+const WASM_B64 = "/*__WASM_B64__*/";
+const TRACE = /*__TRACE_JSON__*/;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const SVG = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs = {}, parent) => { const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const txt = (parent, x, y, s, attrs = {}) => { const t = svgEl('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const C = { gold: '#b98626', goldHi: '#d4a755', cyan: '#2aa5b8', dim: '#7a6c5c', surface: '#1e1710', ground: '#16110c', ember: '#c95140', sage: '#6a9a6e', ink: '#ece2cf' };
+const fmt1 = n => (Math.round(n * 10) / 10).toFixed(1);
+const short = (kind, id) => kind + ':' + (Number(id) % 4294967296).toString(16).padStart(8, '0');
+const GATE = { House: 'The Door', Street: 'The Letter Slot', City: 'The Clearinghouse', Country: 'Statutory Law', World: 'Recursive STARKs' };
+const LEVEL = { House: 1, Street: 2, City: 3, Country: 4, World: 5 };
+
+/* ───────────────────────────── the record ───────────────────────────── */
+const RECORD = {
+  coasean: [
+    { name: 'House staff', tasks: 15, burned: 788.2, coord: 0.0, coordPct: 0.0, phi: 66.3, halted: false },
+    { name: 'Coasean market', tasks: 5, burned: 800.0, coord: 159.9, coordPct: 19.99, phi: 83.2, halted: true },
+    { name: 'Federated guild', tasks: 15, burned: 431.2, coord: 0.0, coordPct: 0.0, phi: 67.2, halted: false },
+  ],
+  drift: {
+    uncal: [0.9764, 0.9706, 0.9134, 0.8918, 0.8866, 0.8342, 0.8146, 0.8098, 0.762, 0.744, 0.7396, 0.696, 0.6795, 0.6755, 0.6357, 0.6207, 0.617, 0.5806, 0.5669, 0.5636],
+    cal: [0.9764, 0.9706, 0.9134, 0.8918, 1.0, 0.941, 0.9188, 0.9134, 0.8595, 1.0, 0.9941, 0.9354, 0.9134, 0.908, 1.0, 0.9764, 0.9706, 0.9134, 0.8918, 1.0],
+    tier: g => ['fast_quantized', 'balanced_staff', 'frontier_deep'][g % 3],
+  },
+};
+
+/* ───────────────────────────── tooltip ───────────────────────────── */
+const tip = $('#tip');
+function showTip(html, x, y) { tip.innerHTML = html; tip.style.left = x + 'px'; tip.style.top = y + 'px'; tip.classList.add('show'); }
+function hideTip() { tip.classList.remove('show'); }
+function pagePos(el) { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }; }
+
+/* ───────────────────────────── benchmark 1 ───────────────────────────── */
+function drawCoasean(container) {
+  container.classList.add('multi');
+  const panels = [
+    { title: 'Tasks completed · of 15', key: 'tasks', max: 15, label: d => d.tasks + ' / 15' },
+    { title: 'Budget spent on coordination', key: 'coordPct', max: 25, label: d => d.coordPct.toFixed(d.coordPct ? 2 : 1) + '%' },
+  ];
+  for (const p of panels) {
+    const wrap = document.createElement('div');
+    const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = p.title; wrap.appendChild(mt);
+    const W = 300, rowH = 34, H = rowH * 3 + 8, x0 = 118, x1 = 250;
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': p.title }, wrap);
+    svgEl('line', { x1: x0, y1: 0, x2: x0, y2: H, class: 'axis' }, svg).setAttribute('stroke', 'var(--line)');
+    RECORD.coasean.forEach((d, i) => {
+      const y = i * rowH + 8, v = d[p.key], w = Math.max(0, (v / p.max) * (x1 - x0));
+      const color = d.halted ? C.gold : C.dim;
+      txt(svg, x0 - 8, y + 13, d.name, { 'text-anchor': 'end', class: 'label small' });
+      if (w > 0) {
+        svgEl('rect', { x: x0, y, width: w, height: 18, rx: 4, fill: color }, svg);
+        svgEl('rect', { x: x0, y, width: Math.min(6, w), height: 18, fill: color }, svg); // square at the baseline
+      }
+      txt(svg, x0 + w + 8, y + 13, p.label(d), { class: 'label' });
+      const hit = svgEl('rect', { x: 0, y: y - 6, width: W, height: rowH, class: 'hit', tabindex: 0 }, svg);
+      const html = `<b>${d.name}</b><br>${d.tasks} of 15 tasks · ${fmt1(d.burned)} cr burned<br>coordination ${fmt1(d.coord)} cr (${d.coordPct}%) · final Φ ${d.phi}%${d.halted ? '<br><small>halted at task 6</small>' : ''}`;
+      const at = () => { const r = pagePos(hit); showTip(html, r.x + r.w / 2, r.y); };
+      hit.addEventListener('mouseenter', at); hit.addEventListener('focus', at); hit.addEventListener('mouseleave', hideTip); hit.addEventListener('blur', hideTip);
+    });
+    container.appendChild(wrap);
+  }
+}
+
+/* ───────────────────────────── benchmark 2 ───────────────────────────── */
+function drawDrift(container) {
+  const W = 560, H = 250, L = 44, R = 70, T = 16, B = 32;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Confidence over twenty generations: uncalibrated falls to 56.4 percent; with an oracle every five generations it returns to 100 percent' }, container);
+  const x = g => L + ((g - 1) / 19) * (W - L - R);
+  const y = v => T + (1 - (v - 0.5) / 0.5) * (H - T - B);
+  const grid = svgEl('g', { class: 'grid' }, svg);
+  for (const v of [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]) { svgEl('line', { x1: L, y1: y(v), x2: W - R, y2: y(v) }, grid); txt(svg, L - 8, y(v) + 4, Math.round(v * 100) + '%', { 'text-anchor': 'end', class: 'axis' }).setAttribute('class', 'axis'); }
+  const ax = svgEl('g', { class: 'axis' }, svg);
+  for (const g of [1, 5, 10, 15, 20]) { txt(ax, x(g), H - B + 18, 'gen ' + g, { 'text-anchor': 'middle' }); }
+  svgEl('line', { x1: L, y1: y(0.5), x2: W - R, y2: y(0.5) }, ax);
+  const path = (arr) => arr.map((v, i) => (i ? 'L' : 'M') + x(i + 1).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+  svgEl('path', { d: path(RECORD.drift.uncal) + ` L${x(20)} ${y(0.5)} L${x(1)} ${y(0.5)} Z`, fill: C.gold, opacity: 0.10 }, svg);
+  svgEl('path', { d: path(RECORD.drift.cal), fill: 'none', stroke: C.cyan, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+  svgEl('path', { d: path(RECORD.drift.uncal), fill: 'none', stroke: C.gold, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+  for (const g of [5, 10, 15, 20]) { svgEl('circle', { cx: x(g), cy: y(1), r: 6.5, fill: C.surface }, svg); svgEl('circle', { cx: x(g), cy: y(1), r: 4.5, fill: C.cyan }, svg); }
+  svgEl('circle', { cx: x(20), cy: y(0.5636), r: 6.5, fill: C.surface }, svg); svgEl('circle', { cx: x(20), cy: y(0.5636), r: 4.5, fill: C.gold }, svg);
+  txt(svg, x(20) + 12, y(0.5636) + 4, '56.4%', { class: 'label' });
+  txt(svg, x(20) + 12, y(1) + 4, '100%', { class: 'label' });
+  txt(svg, x(20) + 12, y(1) + 17, '60 cr of oracles', { class: 'label small' });
+  // crosshair
+  const cross = svgEl('g', { visibility: 'hidden' }, svg);
+  const vline = svgEl('line', { y1: T, y2: H - B, stroke: 'var(--line-2)', 'stroke-width': 1 }, cross);
+  const d1 = svgEl('circle', { r: 4, fill: C.gold, stroke: C.surface, 'stroke-width': 2 }, cross);
+  const d2 = svgEl('circle', { r: 4, fill: C.cyan, stroke: C.surface, 'stroke-width': 2 }, cross);
+  const hit = svgEl('rect', { x: L, y: T, width: W - L - R, height: H - T - B, class: 'hit', tabindex: 0, 'aria-label': 'Use the arrow keys to read each generation' }, svg);
+  let cur = 20;
+  const show = (g) => {
+    cur = g; const u = RECORD.drift.uncal[g - 1], c = RECORD.drift.cal[g - 1];
+    vline.setAttribute('x1', x(g)); vline.setAttribute('x2', x(g)); d1.setAttribute('cx', x(g)); d1.setAttribute('cy', y(u)); d2.setAttribute('cx', x(g)); d2.setAttribute('cy', y(c));
+    cross.setAttribute('visibility', 'visible');
+    const r = pagePos(svg); const sx = r.w / W;
+    const cal = [5, 10, 15, 20].includes(g);
+    showTip(`<b>Generation ${g}</b> · ${RECORD.drift.tier(g).replace('_', ' ')}<br>uncalibrated ${(u * 100).toFixed(1)}%<br>with oracle ${(c * 100).toFixed(1)}%${cal ? ' <small>· oracle paid, 15 cr</small>' : ''}`, r.x + x(g) * sx, r.y + Math.min(y(u), y(c)) * sx);
+  };
+  hit.addEventListener('mousemove', e => { const r = hit.getBoundingClientRect(); const g = Math.max(1, Math.min(20, Math.round(1 + ((e.clientX - r.left) / r.width) * 19))); show(g); });
+  hit.addEventListener('mouseleave', () => { cross.setAttribute('visibility', 'hidden'); hideTip(); });
+  hit.addEventListener('focus', () => show(cur)); hit.addEventListener('blur', () => { cross.setAttribute('visibility', 'hidden'); hideTip(); });
+  hit.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') { show(Math.max(1, cur - 1)); e.preventDefault(); } if (e.key === 'ArrowRight') { show(Math.min(20, cur + 1)); e.preventDefault(); } });
+  const tb = $('[data-table="drift"]');
+  RECORD.drift.uncal.forEach((u, i) => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${i + 1}</td><td>${RECORD.drift.tier(i + 1)}</td><td>${(u * 100).toFixed(2)}%</td><td>${(RECORD.drift.cal[i] * 100).toFixed(2)}%${[5, 10, 15, 20].includes(i + 1) ? ' ·' : ''}</td>`; tb.appendChild(tr); });
+}
+
+/* ───────────────────────────── code ───────────────────────────── */
+const CODE = {};
+CODE.draftcontext = `/// **The Golden Invariant, as a type.**
+///
+/// A draft runs against this and nothing else. It is owned, Send, and
+/// 'static: it cannot hold a reference to the engine, another node, or the
+/// Sovereign Graph, because there is no lifetime parameter through which
+/// such a reference could enter. A seat can burn the purse copy, read the
+/// Oak Table copy, leave papers, and propose envelopes. That is all.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DraftContext {
+    pub node_id: NodeId,
+    pub stage: Stage,
+    pub tick: u64,
+    /// A copy of the purse. Reconciled against the real one in Collect.
+    pub purse: Purse,
+    /// A copy of the table, frozen at this tick.
+    pub oak: OakSnapshot,
+    pub epistemics: Epistemics,
+    pub task: Option<Task>,
+    pub rng: Rng,
+    pub cost_visible: bool,
+    // outputs
+    pub papers: Vec<Paper>,
+    pub burned: f64,
+    pub proposals: Vec<ProposalDraft>,
+    pub halted_doing: Option<String>,
+}
+
+fn assert_send_static<T: Send + 'static>() {}
+/// Compile-time proof of law 1.
+pub const GOLDEN_INVARIANT_LAW_1: fn() = assert_send_static::<DraftContext>;
+
+/// A seat at the oak table. Receives the context by value, returns it by value.
+pub trait Agent: Send + Sync {
+    fn seat(&self) -> &str;
+    fn tier(&self) -> ModelTier;
+    fn draft(&self, ctx: DraftContext) -> DraftFuture;
+}`;
+CODE.tick = `/// One temporal block. (Condensed; the full function is 60 lines.)
+pub async fn tick(&mut self) -> TickReport {
+    self.tick += 1;
+    let tick = self.tick;
+    let mut report = TickReport { tick, ..Default::default() };
+
+    // ── Phase 1: DRAFT. Off-chain, parallel, isolated. ──
+    let mut jobs = Vec::new();
+    for node in self.nodes.values_mut() {
+        if !node.is_draftable() { continue; }      // at the door: zero idle burn
+        let ctx = node.draft_context(tick, seed, cost_visible);
+        jobs.push(DraftJob { ctx, seats: staff.clone() });
+    }
+    let results = self.executor.run(jobs).await;   // Tokio on native, in order on wasm
+
+    // ── Phase 2: COLLECT. Reconcile burns, mint envelopes, tax, courier rule. ──
+    for ctx in results { self.collect(ctx, tick, &mut report); }
+
+    // ── Phase 3: VERIFY. The gates. ──
+    self.verify(tick, &mut report);
+
+    // ── Phase 4: COMMIT. The one write path into the Sovereign Graph. ──
+    self.commit(tick, &mut report);
+
+    self.decay_idle(&drafted);                    // the world moved; idle caches did not
+    report.packed_groups = self.macro_ticks();    // O(1) stasis for packed groups
+    report.root = self.graph.snapshot(tick);      // the block's root
+    if tick % self.config.stark_period == 0 { self.heartbeat(tick); }
+    report
+}`;
+CODE.strategy = `pub trait VerificationStrategy: Send + Sync {
+    fn stage(&self) -> Stage;
+    fn verify(&mut self, env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Verdict;
+    /// Batch hook. Stage 3 overrides it with netting.
+    fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {
+        envs.iter().map(|e| self.verify(e, view)).collect()
+    }
+}
+
+pub enum Verdict {
+    Approved,
+    Rejected { reason: String },              // destroyed; nothing refunded
+    Held { reason: HoldReason },              // parked at the gate; zero idle burn
+    Slashed { amount: f64, reason: String },
+}
+
+impl VerificationStrategy for Stage1Door {
+    fn verify(&mut self, env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Verdict {
+        if let Some(v) = preflight(env, view) { return v; }
+        if !env.payload.needs_signature_at_house() {
+            return Verdict::Approved;             // looking is free of the door
+        }
+        match view.decisions.get(env.id) {
+            Some(HumanDecision::Approve) => Verdict::Approved,
+            Some(HumanDecision::Reject)  => Verdict::Rejected { reason: "the person said no at the door".into() },
+            None => Verdict::Held { reason: HoldReason::AwaitingHumanSignature },
+        }
+    }
+}`;
+CODE.node = `/// The SovereignNode: the one unit of the simulation. A house, a street, a
+/// city, a country and the world are the same struct at a different
+/// scale_level. The node never executes. It *is* the house. The seats are
+/// the staff, and they can be replaced without losing the papers.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SovereignNode {
+    pub id: NodeId,
+    pub name: String,
+    /// 1 = House … 5 = World.
+    pub scale_level: Stage,
+    pub parent: Option<NodeId>,
+    /// Internal sub-nodes, for fractal expansion.
+    pub children: Vec<NodeId>,
+
+    // ── The Purse ──
+    pub purse: Purse,                   // compute_reserves · liquidity_reserves (belief)
+
+    // ── The Oak Table ──
+    pub oak_table: OakTable,            // local_cache: Merkle-rooted, owner-only
+
+    // ── Epistemics ──
+    pub epistemics: Epistemics,         // last_sync_tick · epistemic_confidence
+
+    // ── The Door ──
+    pub boundary_rules: BoundaryPolicy,
+
+    // ── Runtime ──
+    pub status: NodeStatus,             // Active · WaitingAtDoor · Halted · Packed · Partitioned
+    pub tasks: Vec<Task>,
+    pub held_at_door: Vec<ProposalEnvelope>,
+    pub packed: Option<PackedStatisticalState>,
+    pub note: Option<Note>,
+    pub known_peers: Vec<NodeId>,       // local knowledge, not a directory
+    pub secret: u64,
+    pub receipts: Vec<SeatReceipt>,
+}
+
+impl SovereignNode {
+    /// The one and only view a draft ever gets of this node: an owned snapshot.
+    pub fn draft_context(&mut self, tick: u64, seed: u64, cost_visible: bool) -> DraftContext { /* … */ }
+
+    /// Stop cleanly. Nothing is deleted. The note goes on the table.
+    pub fn halt(&mut self, tick: u64, doing: impl Into<String>, reason: HaltReason) -> Note { /* … */ }
+
+    /// The person puts more in the purse. A halted house continues.
+    pub fn top_up(&mut self, credits: f64) { /* … */ }
+}`;
+CODE.run = `cd engine
+cargo test                                             # __TESTS__ tests, all green
+cargo run --release --bin house -- --door interactive  # you, at the door
+cargo run --release --bin house -- --hidden-cost --budget 300 --tasks 10
+cargo run --release --bin house -- --scenario street --ticks 30
+cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown`;
+
+const KW = /\b(pub|struct|enum|impl|fn|let|mut|async|await|match|for|in|if|else|return|use|mod|trait|type|const|where|self|Self|dyn|move|ref|as|loop|while|break|continue)\b/g;
+function hl(src, lang) {
+  const esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (lang === 'sh') return esc.replace(/(#.*)$/gm, '<span class="c">$1</span>').replace(/^(cargo|cd)\b/gm, '<span class="k">$1</span>').replace(/(--[a-z-]+)/g, '<span class="t">$1</span>');
+  return esc.split('\n').map(line => {
+    const m = line.match(/^(\s*)(\/\/.*)$/);
+    if (m) return m[1] + `<span class="c">${m[2]}</span>`;
+    let code = line, comment = '';
+    const ci = line.indexOf('//');
+    if (ci >= 0 && !/["']/.test(line.slice(0, ci))) { code = line.slice(0, ci); comment = `<span class="c">${line.slice(ci)}</span>`; }
+    code = code.replace(/(#\[[^\]]*\])/g, '<span class="a">$1</span>')
+      .replace(/("[^"]*")/g, '<span class="s">$1</span>')
+      .replace(KW, '<span class="k">$1</span>')
+      .replace(/\b([A-Z][A-Za-z0-9_]*)\b/g, '<span class="t">$1</span>')
+      .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="n">$1</span>');
+    return code + comment;
+  }).join('\n');
+}
+
+const FILES = [
+  ['Cargo.toml', 'one crate, two hosts: native (tokio) and wasm'],
+  ['src/lib.rs', 'the Golden Invariant, stated as law'],
+  ['src/node.rs', 'SovereignNode · DraftContext · Agent'],
+  ['src/tick.rs', 'the Engine and the four-phase tick'],
+  ['src/boundary.rs', 'five gates, one trait'],
+  ['src/envelope.rs', 'ProposalEnvelope · Payload · AtomicDvP'],
+  ['src/mempool.rs', 'the courier network'],
+  ['src/graph.rs', 'the Sovereign Graph · snapshots · rollback'],
+  ['src/oak_table.rs', 'local Merkle-rooted state'],
+  ['src/epistemics.rs', 'drift, calibrated to the record'],
+  ['src/resources.rs', 'the purse and the burn kernel'],
+  ['src/tax.rs', 'the coordination tax'],
+  ['src/lod.rs', 'pack · unpack · stochastic stasis'],
+  ['src/executor.rs', 'Tokio fan-out · sequential · block_on'],
+  ['src/receipt.rs', 'the note and the receipts'],
+  ['src/events.rs', 'what the frontend is allowed to see'],
+  ['src/agents/statistical.rs', 'Scout · Scribble · Inspector · Penny · Porter'],
+  ['src/agents/llm.rs', 'the LLM seat: same trait, a network call inside'],
+  ['src/scenarios/', 'house · street · city · world'],
+  ['src/wasm_abi.rs', 'raw C ABI for the browser'],
+  ['src/bin/house.rs', 'a week with a helper, in the terminal'],
+  ['tests/golden_invariant.rs', 'the four laws, as tests'],
+];
+const PROOFS = [
+  ['law_1_drafts_are_isolated_by_type', 'a seat can reach only copies it owns; the proof is a compile-time const'],
+  ['law_2_oak_table_is_local', 'another node\'s table changes only when an approved envelope is delivered'],
+  ['law_3_graph_moves_only_through_a_gate', 'the sovereign root is unchanged until a verdict is Approved'],
+  ['law_4_the_door_holds_at_zero_burn', 'benchmark 3 inside the engine: 100 ticks at the door, 0.0 credits, truth still decaying'],
+  ['rejection_is_sunk_cost', 'no refund, no send fee, the envelope destroyed'],
+  ['exhaustion_leaves_a_note_and_keeps_the_papers', 'the note is on the table; a top-up continues the week'],
+  ['crossings_pay_the_coordination_tax', 'a same-parent crossing pays 1.25×, exactly'],
+  ['the_oracle_is_paid_and_resets_truth', 'fifteen credits, Φ back to one'],
+  ['pack_and_unpack_conserve_compute', 'stasis mints nothing; the macro burn lands exactly'],
+  ['replay_is_exact', 'same seed, same roots, tick for tick'],
+  ['tokio_executor_matches_sequential', 'ten cores or one, identical sovereign roots'],
+  ['twenty_handovers_land_on_the_laboratory_record', '0.9764, 0.8866, 0.7440 … 0.5636, to four decimals'],
+  ['there_is_no_leaderboard', 'no score, no rank, no reputation field anywhere in the state view'],
+];
+const STACK = {
+  backend: [
+    ['Language', '<strong>Rust 1.85+</strong>, edition 2021. Ownership makes law 1 a compile error rather than a code review.'],
+    ['Async', '<strong>Tokio</strong> multi-thread runtime for the Draft fan-out; a runtime-free <code>block_on</code> for the browser. The executor is a trait, and a test proves the results do not depend on it.'],
+    ['State', 'In-memory <strong>Sovereign Graph</strong> with SHA-256 Merkle roots and a ring buffer of snapshots for O(1) rollback; an append-only tick journal for persistence.'],
+    ['Transport', 'Per-tick delta stream: <strong>SSE</strong> from the dependency-free <code>serve</code> binary now, WebSocket when the frontend needs a back channel richer than POST. JSON today, CBOR when the city has 10k houses.'],
+    ['Agents', 'One <code>Agent</code> trait. Statistical seats priced by the laboratory kernel; an <code>LlmSeat</code> adapter over an <code>InferenceBackend</code> for real model calls, concurrent under Tokio, each burn accounted.'],
+    ['Browser', 'The same crate as a <strong>wasm32</strong> cdylib with a raw C ABI: <span class="num">__WASM_KB__</span> KB, zero imports, no bindgen. That is what is running on this page.'],
+  ],
+  frontend: [
+    ['Language', '<strong>TypeScript</strong> with Vite. One language for the client, testable without a GPU through the engine\'s JSON state.'],
+    ['Renderer', '<strong>Three.js</strong> on WebGL2, with the WebGPU renderer as an opt-in. InstancedMesh for the hex city: one draw call, per-instance attributes for Φ, burn and status.'],
+    ['Camera', 'One orthographic isometric rig for Stages 1–4 with a tweened zoom that fires the engine\'s pack and unpack; a perspective orbital camera for the planetary view at Stage 5.'],
+    ['Fog of war', 'A GLSL value-noise material driven by <code>1 − Φ</code> per tile; a cascading light sweep on <code>StateSync</code>; radar pulses on gate verdicts.'],
+    ['State', 'Renders only the Sovereign Graph and the event stream. Never reaches into a node. Offline from the wasm ABI, online from SSE.'],
+    ['Recording', 'Deterministic seeds make every take reproducible: the same seed produces the same city, so a shot can be re-run frame for frame.'],
+  ],
+};
+
+/* ───────────────────────────── the engine adapter ───────────────────────────── */
+const Eng = {
+  mode: 'loading', x: null, rp: { frames: [], i: 0 },
+  async init() {
+    try {
+      const bin = Uint8Array.from(atob(WASM_B64), c => c.charCodeAt(0));
+      const { instance } = await WebAssembly.instantiate(bin, {});
+      this.x = instance.exports; this.mode = 'wasm';
+    } catch (e) { console.warn('WebAssembly unavailable here:', e); this.mode = TRACE ? 'replay' : 'none'; }
+  },
+  read(len) { return new TextDecoder().decode(new Uint8Array(this.x.memory.buffer, this.x.engine_out_ptr(), len)); },
+  version() { return this.mode === 'wasm' ? this.read(this.x.engine_version()) : ((TRACE && TRACE.version) || 'context-engine (recorded)'); },
+  live() { return this.mode === 'wasm'; },
+  create(cfg) {
+    if (this.live()) { this.x.engine_new(cfg.scenario === 'street' ? 2 : 1, BigInt(cfg.seed), cfg.budget, cfg.tasks, cfg.costVisible ? 1 : 0); return; }
+    const key = cfg.scenario === 'street' ? 'street' : (cfg.costVisible ? 'house' : 'house_hidden_cost');
+    this.rp = { frames: (TRACE && TRACE[key]) || [], i: 0 };
+  },
+  tick() {
+    if (this.live()) {
+      const t = Number(this.x.engine_tick());
+      const state = JSON.parse(this.read(this.x.engine_state()));
+      const events = JSON.parse(this.read(this.x.engine_events()));
+      return { tick: t, state, events, decisions: [] };
+    }
+    const f = this.rp.frames[this.rp.i]; if (!f) return null; this.rp.i++; return f;
+  },
+  authorize(id) { if (this.live()) this.x.engine_authorize(BigInt(id)); },
+  reject(id) { if (this.live()) this.x.engine_reject(BigInt(id)); },
+  topUp(node, cr) { if (this.live()) this.x.engine_top_up(BigInt(node), cr); },
+  zoom(n) { if (this.live()) this.x.engine_zoom(n); },
+  setTruth(p) { if (this.live() && this.x.engine_set_truth_price) this.x.engine_set_truth_price(p); },
+};
+
+/* ───────────────────────────── the console ───────────────────────────── */
+const UI = {
+  cfg: { scenario: 'house', budget: 800, tasks: 15, seed: 7, costVisible: true, camera: 1 },
+  running: false, timer: null, frame: null, purse: [], phi: [], hold: null, announced: new Set(), seatTimers: {},
+};
+const el = {
+  room: $('#room'), title: $('#room-title'), id: $('#room-id'), gate: $('#room-gate'), status: $('#room-status'), tick: $('#room-tick'),
+  purse: $('#m-purse'), purseFill: $('#m-purse-fill'), purseBurn: $('#m-purse-burn'), purseAlloc: $('#m-purse-alloc'),
+  phi: $('#m-phi'), phiFill: $('#m-phi-fill'), phiGen: $('#m-phi-gen'), phiFog: $('#m-phi-fog'), fog: $('#fog'),
+  thoughts: $('#thoughts'), door: $('#door'), doorTitle: $('#door-title'), doorDesc: $('#door-desc'), doorProof: $('#door-proof'), doorYes: $('#door-yes'), doorNo: $('#door-no'), doorReplay: $('#door-replay'),
+  note: $('#note'), noteText: $('#note-text'), topup: $('#btn-topup'), street: $('#street'), streetActions: $('#street-actions'), truth: $('#btn-truth'), truthNote: $('#truth-note'),
+  badge: $('#mode-badge'), banner: $('#mode-banner'), root: $('#k-root'), mempool: $('#k-mempool'), exec: $('#k-exec'), tax: $('#k-tax'), approved: $('#k-approved'), rejected: $('#k-rejected'),
+  spPurse: $('#sp-purse'), spPhi: $('#sp-phi'), log: $('#log'), gates: $('#gate-lines'),
+  run: $('#btn-run'), step: $('#btn-step'), reset: $('#btn-reset'), speed: $('#speed'), budget: $('#budget'), tasks: $('#tasks'), seed: $('#seed'), cost: $('#cost-visible'),
+};
+const houses = st => st.nodes.filter(n => n.stage === 'House');
+const primary = st => { const h = houses(st); return h.find(n => n.status === 'waiting_at_door') || h.find(n => n.status === 'active') || h[0]; };
+const statusPill = s => ({ active: ['good', 'active'], waiting_at_door: ['warn', 'waiting at the door · 0.0 cr idle burn'], halted: ['bad', 'halted · the note is on the table'], packed: ['', 'packed · statistical stasis'], partitioned: ['bad', 'partitioned'] }[s] || ['', s]);
+
+function noteLine(n) {
+  const status = { runway_exhausted: 'Runway exhausted. A person must top up or close.', closed: 'Closed by the person. The week is over.', slashed: 'Slashed by the High Court. Reserves seized.', partitioned: 'Partitioned from the global rails until the root resolves.' }[n.reason.kind] || n.reason.kind;
+  return `[HALTED] What it was doing: ${n.doing} | Total cost burned: ${fmt1(n.compute_burned_total)} credits (${n.joules_burned_total.toFixed(2)} J) | Papers left on the table: ${n.papers_on_table} | Local state saved: ${n.saved_state} | Status: ${status}`;
+}
+
+function lightSeat(name) {
+  const s = $(`.seat[data-seat="${name}"]`); if (!s) return;
+  s.classList.add('lit'); clearTimeout(UI.seatTimers[name]); UI.seatTimers[name] = setTimeout(() => s.classList.remove('lit'), 1100);
+}
+
+function logLine(tick, phase, cls, text) {
+  const d = document.createElement('div'); d.innerHTML = `<span class="tk">t${String(tick).padStart(2, '0')}</span><span class="ph ${cls}">${phase}</span><span>${text}</span>`;
+  el.log.appendChild(d); while (el.log.children.length > 90) el.log.removeChild(el.log.firstChild); el.log.scrollTop = el.log.scrollHeight;
+}
+
+function drawSpark(svg, series, max, color) {
+  svg.innerHTML = '';
+  if (series.length < 1) return;
+  const W = 300, H = 54, n = Math.max(series.length, 2);
+  const x = i => (i / (n - 1)) * W, y = v => H - 4 - (Math.max(0, Math.min(v, max)) / max) * (H - 8);
+  svgEl('line', { x1: 0, y1: H - 4, x2: W, y2: H - 4, stroke: '#3a2f24', 'stroke-width': 1 }, svg);
+  const pts = series.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  svgEl('path', { d: 'M' + pts.join(' L') + ` L${x(series.length - 1).toFixed(1)},${H - 4} L0,${H - 4} Z`, fill: color, opacity: 0.10 }, svg);
+  svgEl('polyline', { points: pts.join(' '), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke' }, svg);
+  const lx = x(series.length - 1), ly = y(series[series.length - 1]);
+  svgEl('circle', { cx: lx, cy: ly, r: 4.5, fill: color, stroke: C.ground, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' }, svg);
+}
+
+/* fog: value noise over the truth meter, opacity = 1 − Φ */
+const noise = (() => { let s = 12345; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; const N = 24; const g = Array.from({ length: N * N }, rnd); return { N, g }; })();
+function drawFog(fog, t) {
+  const cv = el.fog, ctx = cv.getContext('2d'); if (!ctx) return;
+  const w = cv.width, h = cv.height, N = noise.N, img = ctx.createImageData(w, h);
+  const ox = t * 0.7, oy = t * 0.3;
+  for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+    const fx = ((px / w) * (N - 1) + ox) % (N - 1), fy = ((py / h) * (N - 1) + oy) % (N - 1);
+    const x0 = Math.floor(fx), y0 = Math.floor(fy), x1 = (x0 + 1) % N, y1 = (y0 + 1) % N, tx = fx - x0, ty = fy - y0;
+    const v = noise.g[y0 * N + x0] * (1 - tx) * (1 - ty) + noise.g[y0 * N + x1] * tx * (1 - ty) + noise.g[y1 * N + x0] * (1 - tx) * ty + noise.g[y1 * N + x1] * tx * ty;
+    const i = (py * w + px) * 4; img.data[i] = 236; img.data[i + 1] = 226; img.data[i + 2] = 207; img.data[i + 3] = Math.max(0, (v - 0.35)) * 255 * fog * 1.4;
+  }
+  ctx.putImageData(img, 0, 0);
+  cv.style.opacity = fog > 0.02 ? 1 : 0;
+}
+let fogT = 0, fogLevel = 0;
+(function fogLoop() { if (fogLevel > 0.02 && !reduced) { fogT += 0.05; drawFog(fogLevel, fogT); } requestAnimationFrame(() => setTimeout(fogLoop, 90)); })();
+
+function render(frame) {
+  const st = frame.state, house = primary(st), tick = frame.tick, hs = houses(st);
+  UI.frame = frame;
+  el.tick.textContent = 't' + String(tick).padStart(2, '0');
+  const streetMode = UI.cfg.scenario === 'street';
+  el.title.firstChild.textContent = streetMode ? 'Elm Street ' : (house ? house.name + ' ' : 'The House ');
+  el.id.textContent = streetMode ? `${hs.length} houses` : (house ? short('node', house.id) : '');
+  const gateName = house ? GATE[house.gate] : GATE.House;
+  el.gate.textContent = 'gate · ' + gateName;
+  const compute = streetMode ? hs.reduce((a, n) => a + n.compute, 0) : (house ? house.compute : 0);
+  const alloc = streetMode ? hs.reduce((a, n) => a + n.compute_allocated, 0) : (house ? house.compute_allocated : 1);
+  const burned = streetMode ? hs.reduce((a, n) => a + n.compute_burned, 0) : (house ? house.compute_burned : 0);
+  const joules = streetMode ? hs.reduce((a, n) => a + n.joules_burned, 0) : (house ? house.joules_burned : 0);
+  const phi = streetMode ? hs.reduce((a, n) => a + n.confidence, 0) / Math.max(1, hs.length) : (house ? house.confidence : 1);
+  const [cls, label] = statusPill(house ? house.status : 'active');
+  el.status.className = 'status ' + cls; el.status.textContent = streetMode ? `${hs.filter(n => n.status === 'active').length} active · ${hs.filter(n => n.status === 'halted').length} halted` : label;
+  el.purse.textContent = fmt1(compute) + ' cr'; el.purseFill.style.width = Math.max(0, Math.min(100, (compute / alloc) * 100)) + '%';
+  el.purseBurn.textContent = `burned ${fmt1(burned)} · ${joules.toFixed(2)} J`; el.purseAlloc.textContent = `of ${fmt1(alloc)}`;
+  el.phi.textContent = (phi * 100).toFixed(1) + '%'; el.phiFill.style.width = (phi * 100) + '%';
+  el.phiGen.textContent = streetMode ? `mean over ${hs.length} houses` : (house ? `${house.generation} handovers · ${house.calibrations} oracle call${house.calibrations === 1 ? '' : 's'}` : '');
+  const fog = 1 - phi; el.phiFog.textContent = `fog ${Math.round(fog * 100)}%`; fogLevel = fog; if (reduced || fogLevel <= 0.02) drawFog(fog, fogT);
+  if (house) { UI.purse.push(compute); UI.phi.push(phi * 100); }
+  drawSpark(el.spPurse, UI.purse, alloc || 1, C.gold); drawSpark(el.spPhi, UI.phi, 100, C.cyan);
+  // thoughts and seats
+  const thoughts = frame.events.filter(e => e.type === 'THOUGHT');
+  for (const e of frame.events) { if (e.type === 'BURN') lightSeat(e.seat); if (e.type === 'THOUGHT') lightSeat(e.seat); }
+  if (thoughts.length) { el.thoughts.innerHTML = thoughts.slice(-6).map(e => `<div class="thought"><b>${e.seat}</b><span>${streetMode ? `<span style="color:var(--ink-3)">${st.nodes.find(n => n.id === e.node)?.name || ''}:</span> ` : ''}${e.text}</span></div>`).join(''); }
+  else if (house && house.status === 'waiting_at_door') { el.thoughts.innerHTML = `<div class="thought"><b>house</b><span>Everyone is waiting. The purse is closed. The world keeps moving: Φ is ${(house.confidence * 100).toFixed(1)}%.</span></div>`; }
+  for (const d of frame.decisions || []) { if (d.decision === 'approve') el.thoughts.insertAdjacentHTML('afterbegin', `<div class="thought"><b>you</b><span>said yes at the door: ${d.description}.</span></div>`); if (d.decision === 'truth_changed') el.thoughts.insertAdjacentHTML('afterbegin', `<div class="thought"><b>world</b><span>The truth moved: ${d.description}.</span></div>`); }
+  // the door
+  const held = st.held;
+  if (held.length && (!streetMode || UI.cfg.camera === 1 || held[0].reason === 'awaiting_finality')) {
+    const h = held[0]; const node = st.nodes.find(n => n.id === h.node);
+    if (!UI.hold || UI.hold.envelope !== h.envelope) UI.hold = { envelope: h.envelope, compute: node ? node.compute : 0, phi: node ? node.confidence : 1, since: h.created_tick };
+    const waited = tick - h.created_tick;
+    el.door.hidden = false; el.door.classList.toggle('replay', !Eng.live());
+    el.doorTitle.textContent = h.reason === 'awaiting_finality' ? 'Awaiting the planetary proof' : `The Porter is at the door${held.length > 1 ? ` (and ${held.length - 1} more)` : ''}`;
+    el.doorDesc.textContent = `${h.node_name}: ${h.description}. Sending costs ${fmt1(h.cost)} cr. Nothing burns while you decide.`;
+    el.doorProof.textContent = `held ${waited} tick${waited === 1 ? '' : 's'} · purse ${fmt1(node ? node.compute : 0)} cr${node && Math.abs(node.compute - UI.hold.compute) < 1e-9 ? ', unchanged' : ''} · Φ ${(UI.hold.phi * 100).toFixed(1)}% → ${node ? (node.confidence * 100).toFixed(1) : '—'}%`;
+    el.doorReplay.textContent = Eng.live() ? '' : 'recorded run: the person says yes after 3 ticks';
+    el.doorYes.dataset.env = h.envelope; el.doorNo.dataset.env = h.envelope;
+  } else { el.door.hidden = true; UI.hold = null; }
+  // the note
+  const haltedHouse = streetMode ? null : (house && house.note ? house : null);
+  if (haltedHouse) { el.note.hidden = false; el.noteText.textContent = noteLine(haltedHouse.note); el.topup.hidden = !Eng.live(); el.topup.dataset.node = haltedHouse.id; } else el.note.hidden = true;
+  // street tiles
+  el.street.hidden = !streetMode; el.streetActions.hidden = !streetMode;
+  if (streetMode) {
+    el.street.innerHTML = hs.map(n => { const [c, l] = statusPill(n.status); return `<div class="house-tile"><div class="fog" style="opacity:${(n.fog * 1.2).toFixed(2)}"></div><div class="hn"><span>${n.name}</span><span class="status ${c}" style="font-size:0.62rem;padding:1px 6px">${n.status === 'waiting_at_door' ? 'at the door' : n.status}</span></div><div class="track"><div class="fill" style="width:${Math.max(0, n.compute / n.compute_allocated * 100)}%"></div></div><div class="track"><div class="fill t" style="width:${n.confidence * 100}%"></div></div><div class="hf"><span>${fmt1(n.compute)} cr · Φ ${(n.confidence * 100).toFixed(0)}%</span><span>${n.tasks_done}/${n.tasks_total} · $${fmt1(n.liquidity_truth)}</span></div></div>`; }).join('');
+    el.truth.disabled = !Eng.live();
+  }
+  // ledger
+  el.root.textContent = st.root.slice(0, 8); el.mempool.textContent = st.mempool; el.exec.textContent = Eng.live() ? st.executor : 'recorded';
+  el.tax.textContent = fmt1(st.totals.tax_paid) + ' cr'; el.approved.textContent = st.totals.approved; el.rejected.textContent = st.totals.rejected;
+  el.gates.innerHTML = st.gates.map(g => `<div>${g}</div>`).join('');
+  $$('[data-stage]').forEach(s => s.classList.toggle('on', Number(s.dataset.stage) === LEVEL[st.active_scale]));
+  // log
+  for (const d of frame.decisions || []) { if (d.decision === 'approve') logLine(d.tick, 'DOOR', 'commit', `you said yes: ${d.description}`); if (d.decision === 'truth_changed') logLine(d.tick, 'WORLD', 'verify', `the truth moved: ${d.description}`); }
+  const burns = frame.events.filter(e => e.type === 'BURN');
+  if (burns.length && !streetMode) logLine(tick, 'DRAFT', 'draft', burns.map(b => `${b.seat} ${fmt1(b.credits)}cr${b.cache_hit ? '·hit' : ''}`).join('  '));
+  if (burns.length && streetMode) logLine(tick, 'DRAFT', 'draft', `${new Set(burns.map(b => b.node)).size} houses drafted · ${fmt1(burns.reduce((a, b) => a + b.credits, 0))} cr`);
+  let sync = false;
+  for (const e of frame.events) {
+    switch (e.type) {
+      case 'PROPOSED': logLine(tick, 'COLLECT', 'collect', `${short('env', e.envelope)} ${e.kind.replace('_', ' ')} · crossing tax ${fmt1(e.tax_paid)} cr`); break;
+      case 'AWAITING_HUMAN_SIGNATURE': if (!UI.announced.has(e.envelope)) { UI.announced.add(e.envelope); logLine(tick, 'VERIFY', 'verify', `🚪 at the door: ${e.description} (${fmt1(e.cost)} cr)`); } break;
+      case 'AWAITING_FINALITY': logLine(tick, 'VERIFY', 'verify', `${short('env', e.envelope)} awaiting finality until t${e.until_tick}`); break;
+      case 'APPROVED': logLine(tick, 'VERIFY', 'verify', `${short('env', e.envelope)} approved at ${GATE[e.gate]}`); break;
+      case 'REJECTED': logLine(tick, 'REJECT', 'reject', `${short('env', e.envelope)} rejected: ${e.reason} · sunk ${fmt1(e.sunk_compute)} cr`); break;
+      case 'SLASHED': logLine(tick, 'SLASH', 'reject', `${short('node', e.node)} slashed ${fmt1(e.amount)}: ${e.reason}`); break;
+      case 'DELIVERED': logLine(tick, 'COMMIT', 'commit', `${short('env', e.envelope)} delivered · root ${st.root.slice(0, 8)}`); break;
+      case 'SETTLED': logLine(tick, 'COMMIT', 'commit', `${fmt1(e.amount)} settled ${short('node', e.from)} → ${short('node', e.to)}`); break;
+      case 'STATE_SYNC': sync = true; logLine(tick, 'SYNC', 'sync', `✦ ${st.nodes.find(n => n.id === e.node)?.name || ''} paid the oracle ${fmt1(e.cost)} cr · Φ ${(e.confidence_before * 100).toFixed(0)}% → 100%`); break;
+      case 'HALTED': logLine(tick, 'HALT', 'halt', noteLine(e.note)); break;
+      case 'TOPPED_UP': logLine(tick, 'PURSE', 'commit', `+${fmt1(e.credits)} cr in the purse. The week continues.`); break;
+      case 'DROPPED_BY_COURIER': logLine(tick, 'COURIER', 'reject', `dropped: ${e.reason}`); break;
+      case 'GLOBAL_STATE_CONFIRMED': logLine(tick, 'STARK', 'stark', `⚡ planetary root ${e.root.slice(0, 8)} · finality ${e.latency_ticks} ticks`); break;
+      case 'PACKED': logLine(tick, 'LOD', 'sync', `packed ${e.children} children into a statistical profile (seed ${e.seed % 100000})`); break;
+      case 'UNPACKED': logLine(tick, 'LOD', 'sync', `unpacked ${e.children} children after ${e.macro_ticks} macro ticks · ${fmt1(e.burn_distributed)} cr distributed`); break;
+      case 'NETTED': logLine(tick, 'NET', 'verify', `clearinghouse: ${e.envelopes} envelopes · gross ${fmt1(e.gross)} → net ${fmt1(e.net)}`); break;
+      case 'ROLLED_BACK': logLine(tick, 'COURT', 'halt', `rolled back to t${e.to_tick}: ${e.reason} · ${e.slashed} slashed`); break;
+    }
+  }
+  if (sync && !reduced) { el.room.classList.remove('sweep'); void el.room.offsetWidth; el.room.classList.add('sweep'); setTimeout(() => el.room.classList.remove('sweep'), 1300); }
+}
+
+function stepOnce() {
+  const f = Eng.tick();
+  if (!f) { stop(); el.thoughts.innerHTML = `<div class="thought"><b>engine</b><span>End of the recorded run. Press Reset to replay it.</span></div>`; return; }
+  render(f);
+  const h = primary(f.state);
+  if (h && h.status === 'halted' && UI.cfg.scenario === 'house' && UI.running && !Eng.live()) stop();
+}
+function stop() { UI.running = false; clearInterval(UI.timer); UI.timer = null; el.run.textContent = 'Run'; el.run.classList.add('primary'); }
+function start() { if (UI.running) return; UI.running = true; el.run.textContent = 'Pause'; el.run.classList.remove('primary'); UI.timer = setInterval(stepOnce, Number(el.speed.value)); }
+function readCfg() { UI.cfg.budget = Number(el.budget.value) || 800; UI.cfg.tasks = Number(el.tasks.value) || 15; UI.cfg.seed = Number(el.seed.value) || 7; UI.cfg.costVisible = el.cost.checked; }
+function reset() {
+  stop(); readCfg();
+  if (!Eng.live()) { const rec = { house: [800, 15], house_hidden_cost: [300, 10], street: [1600, 40] }[UI.cfg.scenario === 'street' ? 'street' : (UI.cfg.costVisible ? 'house' : 'house_hidden_cost')]; el.budget.value = rec[0]; el.tasks.value = rec[1]; el.seed.value = 7; UI.cfg.budget = rec[0]; UI.cfg.tasks = rec[1]; }
+  Eng.create(UI.cfg);
+  UI.purse = []; UI.phi = []; UI.hold = null; UI.announced.clear(); el.log.innerHTML = ''; UI.cfg.camera = UI.cfg.scenario === 'street' ? 2 : 1;
+  $$('#camera button').forEach(b => b.classList.toggle('on', Number(b.dataset.z) === UI.cfg.camera));
+  logLine(0, 'NEW', 'sync', `${UI.cfg.scenario === 'street' ? 'six houses on Elm Street' : 'one house'} · purse ${UI.cfg.budget} cr · ${UI.cfg.tasks} tasks · seed ${UI.cfg.seed} · price ${UI.cfg.costVisible ? 'visible' : 'hidden'}`);
+  stepOnce();
+}
+
+function wireConsole() {
+  $$('#scenario button').forEach(b => b.addEventListener('click', () => { $$('#scenario button').forEach(x => x.classList.remove('on')); b.classList.add('on'); UI.cfg.scenario = b.dataset.s; if (Eng.live()) { el.budget.value = UI.cfg.scenario === 'street' ? 1600 : 800; el.tasks.value = UI.cfg.scenario === 'street' ? 40 : 15; } reset(); }));
+  $$('#camera button').forEach(b => b.addEventListener('click', () => { if (!Eng.live()) return; $$('#camera button').forEach(x => x.classList.remove('on')); b.classList.add('on'); UI.cfg.camera = Number(b.dataset.z); Eng.zoom(UI.cfg.camera); logLine(UI.frame ? UI.frame.tick : 0, 'CAMERA', 'sync', `active scale ${UI.cfg.camera}: the gate is now ${Object.values(GATE)[Math.max(UI.cfg.camera, 1) - 1]} or higher`); if (!UI.running) stepOnce(); }));
+  el.reset.addEventListener('click', reset);
+  el.step.addEventListener('click', () => { stop(); stepOnce(); });
+  el.run.addEventListener('click', () => UI.running ? stop() : start());
+  el.speed.addEventListener('change', () => { if (UI.running) { clearInterval(UI.timer); UI.timer = setInterval(stepOnce, Number(el.speed.value)); } });
+  el.cost.addEventListener('change', reset);
+  [el.budget, el.tasks, el.seed].forEach(i => i.addEventListener('change', () => { if (Eng.live()) reset(); }));
+  el.doorYes.addEventListener('click', () => { if (!Eng.live()) return; Eng.authorize(el.doorYes.dataset.env); logLine(UI.frame.tick, 'DOOR', 'commit', 'you said yes. The send cost comes out of the purse now.'); if (!UI.running) stepOnce(); });
+  el.doorNo.addEventListener('click', () => { if (!Eng.live()) return; Eng.reject(el.doorNo.dataset.env); logLine(UI.frame.tick, 'DOOR', 'reject', 'you said no. The draft stays on the table; the compute that made it is gone.'); if (!UI.running) stepOnce(); });
+  el.topup.addEventListener('click', () => { if (!Eng.live()) return; Eng.topUp(el.topup.dataset.node, 200); if (!UI.running) stepOnce(); });
+  el.truth.addEventListener('click', () => { if (!Eng.live()) return; Eng.setTruth(12); el.truthNote.textContent = 'done: the truth is 12; every table still says 10 until it pays the oracle'; logLine(UI.frame.tick, 'WORLD', 'verify', 'the truth moved: the courier now costs 12; every table still says 10'); });
+  document.addEventListener('keydown', e => {
+    if (e.target && /INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) return;
+    if (e.code === 'Space') { e.preventDefault(); stop(); stepOnce(); }
+  });
+}
+
+/* ───────────────────────────── page chrome ───────────────────────────── */
+function wireRail() {
+  const links = $$('[data-rail]'); const secs = links.map(a => $(a.getAttribute('href')));
+  const io = new IntersectionObserver(entries => { for (const en of entries) if (en.isIntersecting) { links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + en.target.id)); } }, { rootMargin: '-40% 0px -55% 0px' });
+  secs.forEach(s => s && io.observe(s));
+  const all = $$('section.act');
+  document.addEventListener('keydown', e => {
+    if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+    if (e.key === 'p') { document.body.classList.toggle('presenting'); return; }
+    if (!['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp'].includes(e.key)) return;
+    const mid = scrollY + innerHeight * 0.35;
+    let idx = all.findIndex((s, i) => { const next = all[i + 1]; return s.offsetTop <= mid && (!next || next.offsetTop > mid); });
+    if (idx < 0) idx = 0;
+    const to = e.key === 'ArrowRight' || e.key === 'PageDown' ? Math.min(all.length - 1, idx + 1) : Math.max(0, idx - 1);
+    all[to].scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); e.preventDefault();
+  });
+}
+function fillStatic() {
+  $$('pre.code').forEach(p => { const k = p.dataset.code; p.innerHTML = hl(CODE[k], k === 'run' ? 'sh' : 'rust'); });
+  $('#file-tree').innerHTML = FILES.map(([f, d]) => `<div><b>${f}</b> <i>· ${d}</i></div>`).join('');
+  $('#proof-list').innerHTML = PROOFS.map(([t, d]) => `<div><span class="ok">✓</span><span><code>${t}</code> · ${d}</span></div>`).join('');
+  for (const side of ['backend', 'frontend']) $(`[data-stack="${side}-layers"]`).innerHTML = STACK[side].map(([l, s]) => `<div class="layer"><b>${l}</b><span>${s}</span></div>`).join('');
+  drawCoasean($('[data-chart="coasean"]'));
+  drawDrift($('[data-chart="drift"]'));
+}
+
+async function boot() {
+  fillStatic(); wireRail(); wireConsole();
+  await Eng.init();
+  const v = Eng.version(); $('#foot-version').textContent = v;
+  if (Eng.live()) { el.badge.innerHTML = `engine · <b>live</b> · ${v}`; }
+  else if (Eng.mode === 'replay') { el.badge.innerHTML = `engine · <b class="replay">recorded run</b> · ${v}`; el.banner.hidden = false; [el.budget, el.tasks, el.seed].forEach(i => i.disabled = true); $$('#camera button').forEach(b => b.disabled = true); }
+  else { el.badge.innerHTML = `engine · <b class="replay">unavailable</b>`; el.thoughts.innerHTML = '<div class="thought"><b>engine</b><span>Neither WebAssembly nor a recorded run is available in this viewer.</span></div>'; return; }
+  reset();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>

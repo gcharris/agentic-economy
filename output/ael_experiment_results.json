@@ -1,0 +1,274 @@
+{
+  "timestamp": "2026-09-27 16:03:23",
+  "benchmark_1_coasean_boundary": {
+    "workload_size": 15,
+    "initial_budget": 800.0,
+    "house_staff": {
+      "tasks_completed": 15,
+      "total_burned": 788.2499999999998,
+      "spent_on_work": 788.2499999999998,
+      "spent_on_coordination": 0.0,
+      "coordination_overhead_pct": 0.0,
+      "final_confidence": 0.6634,
+      "halted": false
+    },
+    "coasean_market": {
+      "tasks_completed": 5,
+      "total_burned": 800.0,
+      "spent_on_work": 800.0,
+      "spent_on_coordination": 159.9,
+      "coordination_overhead_pct": 19.99,
+      "final_confidence": 0.8316,
+      "halted": true
+    },
+    "federated_guild": {
+      "tasks_completed": 15,
+      "total_burned": 431.25,
+      "spent_on_work": 431.25,
+      "spent_on_coordination": 0.0,
+      "penny_reclaimed": 1593.75,
+      "final_confidence": 0.6721,
+      "halted": false
+    }
+  },
+  "benchmark_2_epistemic_drift": {
+    "generations": 20,
+    "final_confidence_uncalibrated": 0.5636,
+    "final_confidence_calibrated": 1.0,
+    "total_calibration_spend": 60.0,
+    "history_uncalibrated": [
+      {
+        "generation": 1,
+        "tier": "balanced_staff",
+        "confidence": 0.9764
+      },
+      {
+        "generation": 2,
+        "tier": "frontier_deep",
+        "confidence": 0.9706
+      },
+      {
+        "generation": 3,
+        "tier": "fast_quantized",
+        "confidence": 0.9134
+      },
+      {
+        "generation": 4,
+        "tier": "balanced_staff",
+        "confidence": 0.8918
+      },
+      {
+        "generation": 5,
+        "tier": "frontier_deep",
+        "confidence": 0.8866
+      },
+      {
+        "generation": 6,
+        "tier": "fast_quantized",
+        "confidence": 0.8342
+      },
+      {
+        "generation": 7,
+        "tier": "balanced_staff",
+        "confidence": 0.8146
+      },
+      {
+        "generation": 8,
+        "tier": "frontier_deep",
+        "confidence": 0.8098
+      },
+      {
+        "generation": 9,
+        "tier": "fast_quantized",
+        "confidence": 0.762
+      },
+      {
+        "generation": 10,
+        "tier": "balanced_staff",
+        "confidence": 0.744
+      },
+      {
+        "generation": 11,
+        "tier": "frontier_deep",
+        "confidence": 0.7396
+      },
+      {
+        "generation": 12,
+        "tier": "fast_quantized",
+        "confidence": 0.696
+      },
+      {
+        "generation": 13,
+        "tier": "balanced_staff",
+        "confidence": 0.6795
+      },
+      {
+        "generation": 14,
+        "tier": "frontier_deep",
+        "confidence": 0.6755
+      },
+      {
+        "generation": 15,
+        "tier": "fast_quantized",
+        "confidence": 0.6357
+      },
+      {
+        "generation": 16,
+        "tier": "balanced_staff",
+        "confidence": 0.6207
+      },
+      {
+        "generation": 17,
+        "tier": "frontier_deep",
+        "confidence": 0.617
+      },
+      {
+        "generation": 18,
+        "tier": "fast_quantized",
+        "confidence": 0.5806
+      },
+      {
+        "generation": 19,
+        "tier": "balanced_staff",
+        "confidence": 0.5669
+      },
+      {
+        "generation": 20,
+        "tier": "frontier_deep",
+        "confidence": 0.5636
+      }
+    ],
+    "history_calibrated": [
+      {
+        "generation": 1,
+        "tier": "balanced_staff",
+        "confidence": 0.9764,
+        "calibrated": false
+      },
+      {
+        "generation": 2,
+        "tier": "frontier_deep",
+        "confidence": 0.9706,
+        "calibrated": false
+      },
+      {
+        "generation": 3,
+        "tier": "fast_quantized",
+        "confidence": 0.9134,
+        "calibrated": false
+      },
+      {
+        "generation": 4,
+        "tier": "balanced_staff",
+        "confidence": 0.8918,
+        "calibrated": false
+      },
+      {
+        "generation": 5,
+        "tier": "frontier_deep",
+        "confidence": 1.0,
+        "calibrated": true
+      },
+      {
+        "generation": 6,
+        "tier": "fast_quantized",
+        "confidence": 0.941,
+        "calibrated": false
+      },
+      {
+        "generation": 7,
+        "tier": "balanced_staff",
+        "confidence": 0.9188,
+        "calibrated": false
+      },
+      {
+        "generation": 8,
+        "tier": "frontier_deep",
+        "confidence": 0.9134,
+        "calibrated": false
+      },
+      {
+        "generation": 9,
+        "tier": "fast_quantized",
+        "confidence": 0.8595,
+        "calibrated": false
+      },
+      {
+        "generation": 10,
+        "tier": "balanced_staff",
+        "confidence": 1.0,
+        "calibrated": true
+      },
+      {
+        "generation": 11,
+        "tier": "frontier_deep",
+        "confidence": 0.9941,
+        "calibrated": false
+      },
+      {
+        "generation": 12,
+        "tier": "fast_quantized",
+        "confidence": 0.9354,
+        "calibrated": false
+      },
+      {
+        "generation": 13,
+        "tier": "balanced_staff",
+        "confidence": 0.9134,
+        "calibrated": false
+      },
+      {
+        "generation": 14,
+        "tier": "frontier_deep",
+        "confidence": 0.908,
+        "calibrated": false
+      },
+      {
+        "generation": 15,
+        "tier": "fast_quantized",
+        "confidence": 1.0,
+        "calibrated": true
+      },
+      {
+        "generation": 16,
+        "tier": "balanced_staff",
+        "confidence": 0.9764,
+        "calibrated": false
+      },
+      {
+        "generation": 17,
+        "tier": "frontier_deep",
+        "confidence": 0.9706,
+        "calibrated": false
+      },
+      {
+        "generation": 18,
+        "tier": "fast_quantized",
+        "confidence": 0.9134,
+        "calibrated": false
+      },
+      {
+        "generation": 19,
+        "tier": "balanced_staff",
+        "confidence": 0.8918,
+        "calibrated": false
+      },
+      {
+        "generation": 20,
+        "tier": "frontier_deep",
+        "confidence": 1.0,
+        "calibrated": true
+      }
+    ]
+  },
+  "benchmark_3_door_integrity": {
+    "simulated_waiting_ticks": 100,
+    "burned_before_door": 60.0,
+    "credits_at_door": 440.0,
+    "idle_burn_in_clean_door": 0.0,
+    "idle_burn_in_busy_polling": 50.0,
+    "budget_wasted_by_busy_poll_pct": 10.0,
+    "post_approval_remaining_credits": 430.0,
+    "state_preserved_during_wait": true
+  }
+}

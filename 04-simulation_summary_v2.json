@@ -1,0 +1,10 @@
+{
+  "simulation_version": "2.0",
+  "steps_completed": 120,
+  "total_agents": 24,
+  "total_volume_processed": 47478.48051607453,
+  "total_yield_generated": 89.4214539638414,
+  "collateral_unlocked": 710.8860387055898,
+  "processed_iso_messages": 160,
+  "velocity_multiplier": 0.12
+}

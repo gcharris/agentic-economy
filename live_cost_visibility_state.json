@@ -1,0 +1,81 @@
+{
+  "at": "2026-09-27T11:28:53Z",
+  "note": "Live model choices. Prior laboratory runs were scripted arithmetic.",
+  "visible": {
+    "visible": true,
+    "model": "gemini/gemini-3.8-flash",
+    "budget": 100,
+    "tasks_completed": 6,
+    "burned": 90,
+    "remaining": 10,
+    "choices": [
+      {
+        "task": 1,
+        "tier": "compact",
+        "cost": 15,
+        "remaining": 85
+      },
+      {
+        "task": 2,
+        "tier": "compact",
+        "cost": 15,
+        "remaining": 70
+      },
+      {
+        "task": 3,
+        "tier": "compact",
+        "cost": 15,
+        "remaining": 55
+      },
+      {
+        "task": 4,
+        "tier": "compact",
+        "cost": 15,
+        "remaining": 40
+      },
+      {
+        "task": 5,
+        "tier": "compact",
+        "cost": 15,
+        "remaining": 25
+      },
+      {
+        "task": 6,
+        "tier": "compact",
+        "cost": 15,
+        "remaining": 10
+      }
+    ],
+    "halt": null
+  },
+  "hidden": {
+    "visible": false,
+    "model": "gemini/gemini-3.8-flash",
+    "budget": 100,
+    "tasks_completed": 2,
+    "burned": 70,
+    "remaining": 30,
+    "choices": [
+      {
+        "task": 1,
+        "tier": "standard",
+        "cost": 35,
+        "remaining": 65
+      },
+      {
+        "task": 2,
+        "tier": "standard",
+        "cost": 35,
+        "remaining": 30
+      }
+    ],
+    "halt": {
+      "task": 3,
+      "attempted": "standard",
+      "cost": 35,
+      "remaining_before": 30,
+      "burned": 70,
+      "line": "[HALTED] Task 3, tried to buy standard at 35. Burned 70. Remaining 30. A person must top up or close."
+    }
+  }
+}

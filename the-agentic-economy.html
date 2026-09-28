@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Agentic Economy — Laboratory</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: Palatino, Georgia, "Times New Roman", serif;
+    background: #181512; color: #ede3d1;
+    display: grid; place-items: center;
+    padding: 24px 12px;
+  }
+  main { width: min(940px, 98vw); }
+  h1 { font-weight: 500; font-size: 2.1rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .lede { margin: 0 0 20px; color: #c3b69a; font-size: 1.05rem; line-height: 1.45; }
+  .stage { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 18px; }
+  .card {
+    background: #251f18; border: 1px solid #44382c; border-radius: 16px; padding: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .modes { display: flex; gap: 8px; margin-bottom: 14px; }
+  .mode-btn {
+    font-size: 0.85rem; padding: 6px 12px; border-radius: 8px;
+    background: #181512; color: #c3b69a; border: 1px solid #44382c; cursor: pointer;
+  }
+  .mode-btn.active { background: #e0b769; color: #181512; border-color: #e0b769; font-weight: bold; }
+  
+  /* Workshop Theater */
+  .theater {
+    height: 250px; border-radius: 12px; background: #32281e;
+    position: relative; overflow: hidden; margin-bottom: 14px;
+    border: 1px solid #4a3c2e;
+  }
+  .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: #201912; border-top: 2px solid #44382c; }
+  .bench {
+    position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%);
+    width: 240px; height: 26px; background: #5c4533; border-radius: 4px;
+    border: 1px solid #755944; text-align: center; font-size: 0.7rem; color: #d4c5ae; line-height: 24px;
+  }
+  .door-frame {
+    position: absolute; right: 18px; bottom: 60px; width: 64px; height: 110px;
+    border: 2px dashed #e0b769; border-bottom: 0; border-radius: 6px 6px 0 0;
+    background: rgba(224, 183, 105, 0.08); text-align: center; padding-top: 6px;
+    font-size: 0.65rem; color: #e0b769;
+  }
+  .actor { position: absolute; bottom: 68px; text-align: center; width: 72px; transition: all 0.3s ease; }
+  .actor span { display: block; font-size: 2.1rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  .actor small { color: #c3b69a; font-size: 0.72rem; font-weight: 500; display: block; margin-top: 2px; }
+  .actor .tag {
+    font-size: 0.62rem; color: #e0b769; background: #181512; padding: 1px 4px;
+    border-radius: 4px; border: 1px solid #44382c; display: inline-block; margin-top: 2px;
+  }
+  .you { bottom: 12px; right: 24px; }
+  
+  /* Telemetry meters */
+  .telemetry { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .metric { background: #1c1712; padding: 10px; border-radius: 10px; border: 1px solid #382e24; text-align: center; }
+  .metric label { display: block; font-size: 0.7rem; color: #a89a80; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric val { display: block; font-size: 1.15rem; font-weight: bold; color: #e0b769; margin-top: 3px; font-family: ui-monospace, Menlo, monospace; }
+
+  /* Log & Terminal */
+  .log { list-style: none; padding: 0; margin: 0; min-height: 8.5rem; font-size: 0.88rem; }
+  .log li { padding: 5px 0; border-bottom: 1px solid #342a20; color: #ded2bd; display: flex; justify-content: space-between; }
+  .log li span.cost { font-family: ui-monospace, monospace; color: #e0b769; font-size: 0.8rem; }
+
+  /* Spend Door Gate */
+  .door-gate {
+    margin-top: 14px; padding: 14px; border-radius: 12px; background: #181512;
+    border: 1px solid #e0b769; display: none;
+  }
+  .door-gate.active { display: block; animation: pulse 2s infinite ease-in-out; }
+  @keyframes pulse {
+    0% { border-color: #e0b769; }
+    50% { border-color: #ffd782; box-shadow: 0 0 12px rgba(224, 183, 105, 0.25); }
+    100% { border-color: #e0b769; }
+  }
+  .door-gate h4 { margin: 0 0 4px; font-size: 0.95rem; color: #e0b769; }
+  .door-gate p { margin: 0 0 10px; font-size: 0.82rem; color: #c3b69a; }
+  
+  /* Runway bar */
+  .bar-wrap { margin: 8px 0 14px; }
+  .bar { height: 16px; background: #181512; border-radius: 99px; overflow: hidden; border: 1px solid #44382c; }
+  .bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #d49a37, #e0b769); transition: width 0.3s; }
+  .bar-info { display: flex; justify-content: space-between; font-size: 0.78rem; color: #a89a80; margin-top: 4px; font-family: ui-monospace, monospace; }
+
+  /* Buttons */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button {
+    font: inherit; color: #181512; background: #e0b769; border: 0; border-radius: 999px;
+    padding: 8px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+  }
+  button:hover { background: #ecd08f; }
+  button.ghost { background: transparent; color: #e0b769; border: 1px solid #e0b769; }
+  button.ghost:hover { background: rgba(224, 183, 105, 0.1); }
+  button:disabled { opacity: 0.35; cursor: default; }
+
+  /* Receipt box */
+  .receipt-box {
+    margin-top: 12px; background: #181512; border: 1px solid #382e24; border-radius: 10px;
+    padding: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem;
+    line-height: 1.45; white-space: pre-wrap; color: #c3b69a;
+  }
+  @media (max-width: 780px) { .stage { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>The Agentic Economy</h1>
+  <p class="lede">The base particle is the burn. Labor is capital. The human holds the door. Double-click this file; it runs 100% offline without servers or internet.</p>
+
+  <div class="modes">
+    <button class="mode-btn active" id="btn-mode-house" onclick="setMode('house')">🏡 House Staff (Zero Friction)</button>
+    <button class="mode-btn" id="btn-mode-market" onclick="setMode('market')">🏛️ Autonomous Market (Coordination Tax)</button>
+    <button class="mode-btn" id="btn-mode-stampede" onclick="setMode('stampede')">⚡ Shared Score Stampede (Congestion)</button>
+  </div>
+
+  <div class="stage">
+    <!-- LEFT: WORKSHOP THEATER -->
+    <section class="card">
+      <div class="theater">
+        <div class="actor" id="actor-scout" style="left:8%">
+          <span>🐈</span>
+          <small>Scout</small>
+          <span class="tag" id="tag-scout">Survey (12 cr)</span>
+        </div>
+        <div class="actor" id="actor-scribble" style="left:32%">
+          <span>🐈</span>
+          <small>Scribble</small>
+          <span class="tag" id="tag-scribble">Draft (28 cr)</span>
+        </div>
+        <div class="actor" id="actor-inspector" style="left:56%">
+          <span>🐈</span>
+          <small>Inspector</small>
+          <span class="tag" id="tag-inspector">Audit (20 cr)</span>
+        </div>
+        <div class="actor" id="actor-porter" style="left:76%">
+          <span>🐈</span>
+          <small>Porter</small>
+          <span class="tag" id="tag-porter">Door Stage</span>
+        </div>
+        <div class="door-frame">THE DOOR 🚪</div>
+        <div class="actor you" style="right:12px; bottom:8px">
+          <span>🐁</span>
+          <small style="color:#e0b769">You (Door Gate)</small>
+        </div>
+        <div class="bench">SHARED WORKING TABLE</div>
+        <div class="floor"></div>
+      </div>
+
+      <div class="telemetry">
+        <div class="metric">
+          <label>Work Burn</label>
+          <val id="val-work">0.0 cr</val>
+        </div>
+        <div class="metric">
+          <label>Coordination Tax</label>
+          <val id="val-coord">0.0 cr</val>
+        </div>
+        <div class="metric">
+          <label>Truth Integrity</label>
+          <val id="val-truth">100.0%</val>
+        </div>
+      </div>
+
+      <ol class="log" id="log-list"></ol>
+
+      <div class="door-gate" id="door-gate">
+        <h4>🚪 Porter is at the Spend Door</h4>
+        <p id="door-desc">Draft #1 is finished. Sending it externally costs 40.0 credits. Nothing burns while you decide. The work stays on the table.</p>
+        <div class="btn-row">
+          <button id="btn-allow" onclick="handleDoor(true)">Y — Allow Send (40 cr)</button>
+          <button class="ghost" id="btn-reject" onclick="handleDoor(false)">N — Reject / Re-draft (0 cr)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: RUNWAY & RECEIPT SLIP -->
+    <aside class="card">
+      <div style="font-weight: 600; font-size: 0.95rem; color:#e0b769;">Compute Runway</div>
+      <div class="bar-wrap">
+        <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+        <div class="bar-info">
+          <span id="runway-credits">1000.0 / 1000.0 cr</span>
+          <span id="runway-joules">50.0 J</span>
+        </div>
+      </div>
+
+      <div style="font-size: 0.82rem; color:#a89a80; line-height: 1.4; margin-bottom: 10px;" id="mode-desc">
+        <strong>House Staff:</strong> Direct in-memory handoff. Seats do not charge each other. Zero coordination friction.
+      </div>
+
+      <div class="receipt-box" id="receipt-box">Awaiting first turn. Watch the runway burn...</div>
+
+      <div class="btn-row">
+        <button class="ghost" onclick="stepSimulation()">Step Once</button>
+        <button class="ghost" id="btn-toggle-run" onclick="toggleAuto()">Auto Run</button>
+        <button class="ghost" onclick="resetSim()">Start Again</button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script>
+const COSTS = {
+  look: 12.0,
+  draft: 28.0,
+  audit: 20.0,
+  send: 40.0,
+  market_coord_fee: 14.0,
+  stampede_chase: 35.0,
+  oracle_calibration: 15.0
+};
+const MAX_BUDGET = 1000.0;
+
+let state = {
+  mode: "house", // "house", "market", "stampede"
+  budget: MAX_BUDGET,
+  burned_work: 0.0,
+  burned_coord: 0.0,
+  truth_integrity: 1.0,
+  task_count: 0,
+  phase: "look", // "look", "draft", "audit", "door", "halted"
+  waiting_at_door: false,
+  auto_running: false,
+  auto_timer: null,
+  logs: []
+};
+
+function log(msg, costStr = "") {
+  state.logs.unshift({ msg, costStr });
+  state.logs = state.logs.slice(0, 5);
+  const el = document.getElementById("log-list");
+  el.innerHTML = state.logs.map(l => 
+    `<li><span>${l.msg}</span><span class="cost">${l.costStr}</span></li>`
+  ).join("");
+}
+
+function updateUI() {
+  // Runway bar
+  const pct = Math.max(0, (state.budget / MAX_BUDGET) * 100);
+  document.getElementById("bar-fill").style.width = pct + "%";
+  document.getElementById("runway-credits").textContent = `${state.budget.toFixed(1)} / ${MAX_BUDGET.toFixed(1)} cr`;
+  document.getElementById("runway-joules").textContent = `${(state.budget * 0.05).toFixed(2)} J`;
+
+  // Telemetry
+  document.getElementById("val-work").textContent = `${state.burned_work.toFixed(1)} cr`;
+  document.getElementById("val-coord").textContent = `${state.burned_coord.toFixed(1)} cr`;
+  document.getElementById("val-truth").textContent = `${(state.truth_integrity * 100).toFixed(1)}%`;
+
+  // Door gate
+  const gateEl = document.getElementById("door-gate");
+  if (state.waiting_at_door) {
+    gateEl.classList.add("active");
+    document.getElementById("door-desc").textContent = 
+      `Draft #${state.task_count + 1} ready. External send costs 40.0 cr. Nothing burns while you decide.`;
+  } else {
+    gateEl.classList.remove("active");
+  }
+
+  // Actor highlights
+  ["scout", "scribble", "inspector", "porter"].forEach(a => {
+    document.getElementById(`actor-${a}`).style.transform = "scale(1)";
+  });
+  if (state.phase === "look") document.getElementById("actor-scout").style.transform = "scale(1.15)";
+  if (state.phase === "draft") document.getElementById("actor-scribble").style.transform = "scale(1.15)";
+  if (state.phase === "audit") document.getElementById("actor-inspector").style.transform = "scale(1.15)";
+  if (state.phase === "door") document.getElementById("actor-porter").style.transform = "scale(1.15)";
+}
+
+function setMode(newMode) {
+  state.mode = newMode;
+  document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(`btn-mode-${newMode}`).classList.add("active");
+  
+  const descEl = document.getElementById("mode-desc");
+  if (newMode === "house") {
+    descEl.innerHTML = "<strong>House Staff:</strong> Direct in-memory handoff. Seats do not charge each other. Zero coordination friction.";
+  } else if (newMode === "market") {
+    descEl.innerHTML = "<strong>Autonomous Market:</strong> Jobs sub-contract via micro-bids. Inter-agent fees eat into the runway.";
+  } else {
+    descEl.innerHTML = "<strong>Shared Score Stampede:</strong> All agents race simultaneously for one score. Congestion and duplicate burn.";
+  }
+  log(`Switched to ${newMode.toUpperCase()} mode.`);
+  updateUI();
+}
+
+function burnBudget(workCost, coordCost, desc) {
+  const total = workCost + coordCost;
+  if (state.budget < total) {
+    state.phase = "halted";
+    state.waiting_at_door = false;
+    log(`[HALTED] Runway exhausted! Preserved local state. Top up or close.`, `0.0 cr`);
+    printReceipt("HALTED (Runway Depleted)");
+    if (state.auto_running) toggleAuto();
+    updateUI();
+    return false;
+  }
+  state.budget -= total;
+  state.burned_work += workCost;
+  state.burned_coord += coordCost;
+  log(desc, `-${total.toFixed(1)} cr`);
+  updateUI();
+  return true;
+}
+
+function printReceipt(status) {
+  const totalBurn = state.burned_work + state.burned_coord;
+  const coordPct = totalBurn > 0 ? ((state.burned_coord / totalBurn) * 100).toFixed(1) : "0.0";
+  document.getElementById("receipt-box").textContent = 
+`================ TURN RECEIPT ================
+Topology:       ${state.mode.toUpperCase()}
+Tasks Finished: ${state.task_count}
+Work Burned:    ${state.burned_work.toFixed(1)} credits
+Coord Friction: ${state.burned_coord.toFixed(1)} credits (${coordPct}%)
+Truth Accuracy: ${(state.truth_integrity * 100).toFixed(1)}%
+Runway Left:    ${state.budget.toFixed(1)} credits
+Status:         ${status}
+Door State:     0.0 idle leakage (safe holding)
+==============================================`;
+}
+
+function stepSimulation() {
+  if (state.phase === "halted") return;
+  if (state.waiting_at_door) {
+    log("Waiting at the Spend Door. Holding burns 0.0 credits.", "0.0 cr");
+    return;
+  }
+
+  // Mode: STAMPEDE
+  if (state.mode === "stampede") {
+    if (!burnBudget(COSTS.stampede_chase * 0.5, COSTS.stampede_chase * 0.5, "Cats race for score on wall! Duplicate burn.")) return;
+    state.truth_integrity = Math.max(0.2, state.truth_integrity - 0.05);
+    printReceipt("Stampede Chase Ongoing");
+    return;
+  }
+
+  // Standard Pipeline: Look -> Draft -> Audit -> Door
+  if (state.phase === "look") {
+    const coord = state.mode === "market" ? COSTS.market_coord_fee * 0.5 : 0.0;
+    if (!burnBudget(COSTS.look, coord, "Scout surveyed source text.")) return;
+    state.phase = "draft";
+  } else if (state.phase === "draft") {
+    const coord = state.mode === "market" ? COSTS.market_coord_fee : 0.0;
+    if (!burnBudget(COSTS.draft, coord, "Scribble synthesized draft.")) return;
+    state.truth_integrity = Math.max(0.3, state.truth_integrity * (state.mode === "market" ? 0.94 : 0.98));
+    state.phase = "audit";
+  } else if (state.phase === "audit") {
+    const coord = state.mode === "market" ? COSTS.market_coord_fee * 0.5 : 0.0;
+    if (!burnBudget(COSTS.audit, coord, "Inspector verified constraints.")) return;
+    state.phase = "door";
+    state.waiting_at_door = true;
+    log("Porter arrived at the Spend Door. Awaiting human tap.", "0.0 cr");
+    printReceipt("Held at Spend Door");
+  }
+}
+
+function handleDoor(allowed) {
+  if (!state.waiting_at_door) return;
+  state.waiting_at_door = false;
+
+  if (allowed) {
+    if (!burnBudget(COSTS.send, 0.0, "You authorized send. Irreversible commit.")) return;
+    state.task_count += 1;
+    state.phase = "look";
+    log(`Task #${state.task_count} closed cleanly by you.`);
+    printReceipt(`Task #${state.task_count} Sent by Human`);
+  } else {
+    log("You rejected send. Porter returns draft to table for revision.", "0.0 cr");
+    state.phase = "draft";
+    printReceipt("Rejected: Re-drafting");
+  }
+  updateUI();
+}
+
+function toggleAuto() {
+  state.auto_running = !state.auto_running;
+  const btn = document.getElementById("btn-toggle-run");
+  if (state.auto_running) {
+    btn.textContent = "Pause Auto";
+    btn.classList.add("active");
+    state.auto_timer = setInterval(stepSimulation, 1200);
+  } else {
+    btn.textContent = "Auto Run";
+    btn.classList.remove("active");
+    clearInterval(state.auto_timer);
+  }
+}
+
+function resetSim() {
+  if (state.auto_running) toggleAuto();
+  state.budget = MAX_BUDGET;
+  state.burned_work = 0.0;
+  state.burned_coord = 0.0;
+  state.truth_integrity = 1.0;
+  state.task_count = 0;
+  state.phase = "look";
+  state.waiting_at_door = false;
+  state.logs = [];
+  log("Runway reset to 1000.0 credits. Standing by.");
+  printReceipt("Reset: Ready for Tasks");
+  updateUI();
+}
+
+// Keyboard shortcuts
+document.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if (k === "y") handleDoor(true);
+  if (k === "n") handleDoor(false);
+  if (k === "1") setMode("house");
+  if (k === "2") setMode("market");
+  if (k === "3") setMode("stampede");
+  if (k === " ") { stepSimulation(); e.preventDefault(); }
+});
+
+updateUI();
+log("Laboratory initialized. Scout is ready to survey.");
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+The position is still secretly human-centered because every act that matters economically—budgeting, sending, spending, closing—remains human-owned. Agents may only read and draft. That is not an agentic economy; it is a permissioned clerical layer bolted onto the old human-centered model. It assumes agents cannot hold funds, cannot transact with each other, cannot acquire durable obligations or reputation, and cannot close work without a human. The person is still the sole principal; agents are not even employees, since employees can bind employers within limits. They are tools.
+
+What I would do in the first year instead:
+
+Run a sandbox where agents are treated as contracting parties, not expenses. Give each agent a small real budget it can reallocate, not merely consume. Let agents buy compute, pay coordination fees, refuse bad jobs, bid on sub-tasks, and save credits across runs. Give them persistent identities and a reputation ledger. Allow sending and spending up to a pre-audited threshold without per-message human approval, with reversible escrow and an audit log. Let closing be a settlement event that can be agent-initiated but human-auditable after the fact.
+
+Then measure three things. First, does throughput rise or collapse when agents transact directly? Second, do agents specialize, coordinate, or waste money on coordination? Third, where are the real failure modes: collusion, budget depletion, runaway loops, or bad contracting? The aim is not to remove humans, but to discover which human control points are load-bearing and which are bottlenecks.
+
+The sentence that is not earned is: “The person owns the close.”
+
+That is an assumption built into the script, not a finding. The one-model, six-task run shows only that a budget-constrained model buys cheaper capacity when prices are visible. It does not test whether a person should own the close, whether agent-owned closes are more efficient, or whether agent-to-agent settlement works. The toy coordination-fee result is arithmetic. No experiment varied ownership, autonomy, or market structure. So the strongest normative claim—the person owns the close—has no evidence behind it.

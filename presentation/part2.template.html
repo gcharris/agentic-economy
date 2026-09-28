@@ -1,0 +1,266 @@
+
+<!-- ═══════════════════════════════ 3. MEASURED ═══════════════════════════════ -->
+<section class="act" id="measured">
+  <div class="act-head">
+    <div class="eyebrow">The laboratory record · 27 September 2026</div>
+    <h2>What we measured before we built</h2>
+    <p class="lede measure">Three benchmarks ran in this folder before a line of engine code existed. Every constant in the engine traces back to one of them. The numbers below are read from the raw record, not from a slide.</p>
+  </div>
+  <div class="cols cols-2">
+    <figure class="viz" id="fig-coasean">
+      <div class="fig-title">Benchmark 1 · the Coasean boundary</div>
+      <div class="fig-sub">Fifteen synthesis tasks, 800 credits, three ways to organise the same staff</div>
+      <div class="fig-wrap" data-chart="coasean"></div>
+      <figcaption>The market of agents, paying each other to pass the page across the table, halted at task six with a fifth of its budget gone to coordination. Staff seats at one desk finished the list. <span class="mono">output/ael_experiment_results.json → benchmark_1_coasean_boundary</span></figcaption>
+      <details class="table-view"><summary>Table view</summary><div class="table-wrap"><table><thead><tr><th>Topology</th><th>Tasks</th><th>Burned</th><th>Coordination</th><th>Final Φ</th></tr></thead><tbody>
+        <tr><td>House staff</td><td>15 / 15</td><td>788.2 cr</td><td>0.0 cr (0.0%)</td><td>66.3%</td></tr>
+        <tr><td>Coasean market</td><td>5 / 15</td><td>800.0 cr</td><td>159.9 cr (19.99%)</td><td>83.2%</td></tr>
+        <tr><td>Federated guild</td><td>15 / 15</td><td>431.2 cr</td><td>0.0 cr (0.0%)</td><td>67.2%</td></tr>
+      </tbody></table></div></details>
+    </figure>
+    <figure class="viz" id="fig-drift">
+      <div class="fig-title">Benchmark 2 · epistemic drift across twenty handovers</div>
+      <div class="fig-sub">Ground-truth confidence Φ as each seat consumes the last seat's synthetic output</div>
+      <div class="legend"><span style="--sw:#b98626">Uncalibrated</span><span style="--sw:#2aa5b8">Oracle every five generations</span><span class="dot" style="--sw:#2aa5b8">Oracle paid · 15 cr</span></div>
+      <div class="fig-wrap" data-chart="drift"></div>
+      <figcaption>Left alone, confidence fell to 56.4% by the twentieth handover. Four oracle calls, sixty credits in all, held it at one. The engine's decay constant, 0.02867 per tick, is fitted to this curve. <span class="mono">benchmark_2_epistemic_drift</span></figcaption>
+      <details class="table-view"><summary>Table view</summary><div class="table-wrap"><table><thead><tr><th>Generation</th><th>Tier</th><th>Uncalibrated</th><th>Calibrated</th></tr></thead><tbody data-table="drift"></tbody></table></div></details>
+    </figure>
+  </div>
+  <div style="height:18px"></div>
+  <h4>Benchmark 3 and two smaller measurements</h4>
+  <div style="height:10px"></div>
+  <div class="tiles">
+    <div class="tile"><div class="label">Idle burn across 100 ticks at the door, clean suspension</div><div class="value good">0.0 cr</div><div class="delta">State preserved; 440.0 cr still in the purse when the person returned</div><div class="src">benchmark_3_door_integrity</div></div>
+    <div class="tile"><div class="label">The same 100 ticks, busy-polling while waiting</div><div class="value bad">50.0 cr</div><div class="delta">10% of the whole budget, spent on looking busy</div><div class="src">benchmark_3_door_integrity</div></div>
+    <div class="tile"><div class="label">Price visible · one model, six tasks, budget 100</div><div class="value good">6 of 6</div><div class="delta">Six compact calls at 15 each; finished with 10 left</div><div class="src">LIVE_COST_VISIBILITY.md · gemini flash</div></div>
+    <div class="tile"><div class="label">Price hidden · same model, same tasks, same budget</div><div class="value bad">2 of 6</div><div class="delta">Two standard calls at 35; halted when the third would not fit</div><div class="src">LIVE_COST_VISIBILITY.md</div></div>
+    <div class="tile"><div class="label">A market of jobs charging handoff fees</div><div class="value bad">30.5%</div><div class="delta">of a 1,000-credit budget burned on coordination; 6 of 10 items finished</div><div class="src">ENERGETIC_RUNWAY_EXPERIMENTS.md · exp. 2</div></div>
+    <div class="tile"><div class="label">The other voice's concession, after three rounds</div><div class="value" style="font-size:1.25rem;line-height:1.3">“Without fees or reputation the bid is advisory, closer to scheduling than to a market.”</div><div class="src">DIALECTIC.md · deepseek-v4-pro</div></div>
+  </div>
+  <div style="height:18px"></div>
+  <div class="provenance measure"><b>Provenance and two corrections.</b> The door benchmark's table in the foundations report says 33.0 credits burned before the door and 467.0 after approval; the raw JSON says 60.0 and 430.0. The page uses the JSON. The federated guild's “1,593.8 credits reclaimed” in the same report is a bookkeeping artefact: the kernel added the cushion back to the runway although it was never taken out, so the guild's 46% reserve is real but the reclaimed figure is not money. The engine's steward records the cushion and mints nothing.</div>
+</section>
+
+<!-- ═══════════════════════════════ 4. THE TICK ═══════════════════════════════ -->
+<section class="act" id="engine">
+  <div class="act-head">
+    <div class="eyebrow">Architecture · the asynchronous agentic state machine</div>
+    <h2>The tick is a block, not a frame</h2>
+    <p class="lede measure">A conventional engine iterates every entity against shared memory sixty times a second. Here a tick has four phases, and the only phase allowed to touch the world is the last one. Search the tick file for writes to the Sovereign Graph and you will find them in one function.</p>
+  </div>
+  <figure class="diagram">
+    <svg viewBox="0 0 1040 400" role="img" aria-label="The four phases of a tick: Draft runs in isolation against snapshots; Collect mints envelopes and charges the crossing tax; Verify routes each envelope to its gate and holds or rejects; Commit is the only writer of the Sovereign Graph. There is no path from Draft to the graph.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+        <marker id="ah-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#d4a755"/></marker>
+        <marker id="ah-cool" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2aa5b8"/></marker>
+      </defs>
+      <!-- lanes -->
+      <text x="40" y="26" class="k">INSIDE THE HOUSE · PRIVATE</text>
+      <text x="560" y="26" class="k">AT THE BOUNDARY · VERIFIED</text>
+      <line x1="530" y1="14" x2="530" y2="386" class="lane"/>
+      <!-- sources above draft -->
+      <rect x="40" y="44" width="110" height="46" rx="8" class="box"/><text x="95" y="63" text-anchor="middle" class="t">Oak Table</text><text x="95" y="80" text-anchor="middle" class="m">merkle root</text>
+      <rect x="170" y="44" width="110" height="46" rx="8" class="box"/><text x="225" y="63" text-anchor="middle" class="t">Purse</text><text x="225" y="80" text-anchor="middle" class="m">compute · liquidity</text>
+      <path d="M95 90 V150" class="arrow" marker-end="url(#ah)"/><text x="102" y="126" class="al">snapshot (a copy)</text>
+      <path d="M225 90 V150" class="arrow" marker-end="url(#ah)"/><text x="232" y="126" class="al">burns a copy</text>
+      <!-- the four phases -->
+      <rect x="40" y="150" width="240" height="90" rx="10" class="box"/>
+      <text x="60" y="176" class="t">1 · DRAFT</text><text x="60" y="196">seats run in order on one</text><text x="60" y="212">owned DraftContext</text><text x="60" y="228" class="m">parallel · Send + 'static</text>
+      <path d="M280 195 H318" class="arrow" marker-end="url(#ah)"/>
+      <rect x="320" y="150" width="190" height="90" rx="10" class="box"/>
+      <text x="340" y="176" class="t">2 · COLLECT</text><text x="340" y="196">reconcile the burn,</text><text x="340" y="212">mint envelopes, tax the</text><text x="340" y="228">crossing, courier rule</text>
+      <path d="M510 195 H558" class="arrow" marker-end="url(#ah)"/><text x="512" y="186" class="al">mempool</text>
+      <rect x="560" y="150" width="210" height="90" rx="10" class="box hot"/>
+      <text x="580" y="176" class="t">3 · VERIFY</text><text x="580" y="196">one strategy per gate</text><text x="580" y="212">approve · hold · reject · slash</text><text x="580" y="228" class="m">Door · Slot · Clearing · Court · STARK</text>
+      <path d="M770 195 H818" class="arrow" marker-end="url(#ah)"/><text x="772" y="186" class="al">approved</text>
+      <rect x="820" y="150" width="190" height="90" rx="10" class="box"/>
+      <text x="840" y="176" class="t">4 · COMMIT</text><text x="840" y="196">settle, deliver, sync,</text><text x="840" y="212">charge the send cost</text><text x="840" y="228" class="m">the one writer</text>
+      <!-- gates feeding verify -->
+      <rect x="560" y="44" width="210" height="46" rx="8" class="box"/><text x="665" y="63" text-anchor="middle" class="t">The gates</text><text x="665" y="80" text-anchor="middle" class="m">effective gate = max(own, camera)</text>
+      <path d="M665 90 V150" class="arrow" marker-end="url(#ah)"/><text x="672" y="126" class="al">verdict</text>
+      <!-- held loop -->
+      <path d="M600 240 V296 H640 V242" class="arrow cool" marker-end="url(#ah-cool)"/><text x="648" y="292" class="al">held at the door · 0.0 cr · re-verified next tick</text>
+      <!-- rejected -->
+      <path d="M740 240 V296" class="arrow" marker-end="url(#ah)"/><text x="748" y="316" class="al" style="fill:#e0705f">rejected → destroyed, compute sunk</text>
+      <!-- graph -->
+      <rect x="820" y="318" width="190" height="60" rx="10" class="box hot"/><text x="915" y="342" text-anchor="middle" class="t">Sovereign Graph</text><text x="915" y="360" text-anchor="middle" class="m">truth · snapshots · rollback</text>
+      <path d="M915 240 V318" class="arrow hot" marker-end="url(#ah-hot)"/><text x="922" y="284" class="al hot">writes · only here</text>
+      <!-- no path -->
+      <path d="M160 240 V370 H818" class="arrow" style="stroke-dasharray:4 5;opacity:0.5"/>
+      <g transform="translate(470 370)"><circle r="11" fill="#16110c" stroke="#c95140" stroke-width="1.5"/><path d="M-5 -5 L5 5 M5 -5 L-5 5" stroke="#c95140" stroke-width="1.8"/></g>
+      <text x="490" y="392" class="al" style="fill:#e0705f">no path from a draft to the graph: not read, not write</text>
+    </svg>
+    <figcaption>What the drawing insists on: a draft sees copies, an envelope is the only thing that leaves a node, the gate decides, and the graph has one writer. Everything else is bookkeeping.</figcaption>
+  </figure>
+  <div style="height:36px"></div>
+  <div class="cols cols-2">
+    <div style="display:grid;gap:14px;align-content:start">
+      <h3>The invariant, as a type</h3>
+      <p class="callout">A seat receives a <b>DraftContext</b> by value and returns it by value. The struct has no lifetime parameter, so no borrow of the engine, another node, or the graph can enter it. The compiler checks <code>Send + 'static</code> once; every future seat inherits the proof.</p>
+      <div class="code-head"><span class="path">engine/src/node.rs</span><span class="mono" style="color:var(--ink-3)">excerpt</span></div>
+      <pre class="code" data-code="draftcontext"></pre>
+    </div>
+    <div style="display:grid;gap:14px;align-content:start">
+      <h3>The tick, in its own words</h3>
+      <p class="callout">Four phases, one <b>async fn</b>. On native, the draft jobs fan out over Tokio tasks across every core. In the browser they run in order on one thread. The sovereign roots come out identical, and a test proves it.</p>
+      <div class="code-head"><span class="path">engine/src/tick.rs</span><span class="mono" style="color:var(--ink-3)">excerpt</span></div>
+      <pre class="code" data-code="tick"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ 5. THE GATES ═══════════════════════════════ -->
+<section class="act" id="gates">
+  <div class="act-head">
+    <div class="eyebrow">Verification boundaries · the strategy pattern</div>
+    <h2>Five gates, one trait</h2>
+    <p class="lede measure">A node does not know whether it is a house or a country. It submits its envelope to whichever strategy the camera assigns and waits for the verdict. Zoom out from a house and its Door becomes the street's Letter Slot: the verification scales with the view.</p>
+  </div>
+  <div class="gates">
+    <div class="gate"><div class="lvl">01</div><div class="name">The Door<small>Stage 1 · the house</small></div><div class="actor">The Porter, and you</div><div class="rule">Hard interrupt. Anything that moves liquidity or cannot be undone waits for a human click. Holding costs 0.0 credits. Rejection destroys the envelope; nothing is refunded. <code>Stage1Door</code></div></div>
+    <div class="gate"><div class="lvl">02</div><div class="name">The Letter Slot<small>Stage 2 · the street</small></div><div class="actor">Couriers between houses</div><div class="rule">Atomic delivery-versus-payment. Lock, transfer, verify, settle or revert. A stale price on the initiator's table produces a hash mismatch; the swap reverts and the compute spent verifying stays burned. <code>Stage2LetterSlot</code></div></div>
+    <div class="gate"><div class="lvl">03</div><div class="name">The Clearinghouse<small>Stage 3 · the city</small></div><div class="actor">The municipal treasury</div><div class="rule">End-of-tick netting in one O(N) pass. Opposing debts cancel; only the net settles. A node whose truth cannot back its net position is slashed at ten percent. <code>Stage3Clearinghouse</code></div></div>
+    <div class="gate"><div class="lvl">04</div><div class="name">Statutory Law<small>Stage 4 · the country</small></div><div class="actor">The High Court</div><div class="rule">Stop-lines and rollback. When more than half of a tick's envelopes fail, the graph rolls back to the last coherent snapshot, offenders lose a quarter of their reserves, and they trade under injunction. <code>Stage4StatutoryLaw</code></div></div>
+    <div class="gate"><div class="lvl">05</div><div class="name">Recursive STARKs<small>Stage 5 · the world</small></div><div class="actor">Global validators</div><div class="rule">No court, only proofs. An envelope is held for eight to thirty-two ticks of finality, decided by its own hash. A heartbeat aggregates every country's root into one planetary root. <code>Stage5RecursiveStark</code></div></div>
+  </div>
+  <div style="height:22px"></div>
+  <div class="cols cols-2">
+    <pre class="code" data-code="strategy"></pre>
+    <div style="display:grid;gap:12px;align-content:start">
+      <p class="callout"><b>What a gate may see.</b> The truth in the Sovereign Graph, the person's decisions, and which nodes are alive. Never an Oak Table. Gates verify; they do not snoop.</p>
+      <p class="callout"><b>What a gate may do.</b> Approve, hold, reject, or slash. Approval hands the envelope to Commit. Holding parks it on its node at zero burn. Rejection is sunk cost. Slashing takes reserves in the graph and re-syncs the node's belief to the smaller truth.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ 6. LIVE ═══════════════════════════════ -->
+<section class="act" id="live">
+  <div class="act-head">
+    <div class="eyebrow">Live · the Rust engine, compiled to WebAssembly, inside this page</div>
+    <h2>Stand at the door yourself</h2>
+    <p class="lede measure">This is not a JavaScript imitation. The crate you just read was compiled for <code>wasm32-unknown-unknown</code> with a raw C ABI and embedded here. Every number on the panel comes out of the engine's own state view. Step it. Say yes at the door, or no. Watch the purse hold still and the truth keep slipping.</p>
+  </div>
+  <div class="banner" id="mode-banner" hidden><b>Recorded run.</b> This viewer's policy blocked WebAssembly, so the panel is replaying a deterministic run of the same engine, frame by frame, including the moment the person said yes at the door. Open the local file to drive it live.</div>
+  <div style="height:14px"></div>
+  <div class="console" id="console">
+    <div class="console-bar">
+      <div class="group"><label for="scenario">Scenario</label><div class="seg" id="scenario" role="group" aria-label="Scenario"><button type="button" data-s="house" class="on">The house</button><button type="button" data-s="street">The street</button></div></div>
+      <div class="group"><label for="budget">Purse</label><input type="number" id="budget" value="800" min="20" step="10"><label for="tasks">Tasks</label><input type="number" id="tasks" value="15" min="1" max="60"><label for="seed">Seed</label><input type="number" id="seed" value="7" min="0"></div>
+      <div class="group"><label class="toggle"><input type="checkbox" id="cost-visible" checked> price on the table</label></div>
+      <div class="group"><label>Camera</label><div class="seg" id="camera" role="group" aria-label="Active scale"><button type="button" data-z="1" class="on">1</button><button type="button" data-z="2">2</button><button type="button" data-z="3">3</button><button type="button" data-z="4">4</button><button type="button" data-z="5">5</button></div></div>
+      <div class="group" style="margin-left:auto">
+        <button type="button" class="btn small" id="btn-reset">Reset</button>
+        <button type="button" class="btn small" id="btn-step">Step</button>
+        <button type="button" class="btn small primary" id="btn-run">Run</button>
+        <select id="speed" aria-label="Speed"><option value="1500">slow</option><option value="700" selected>normal</option><option value="300">fast</option><option value="120">very fast</option></select>
+      </div>
+    </div>
+    <div class="console-body">
+      <div class="room" id="room">
+        <div class="room-head">
+          <div class="title" id="room-title">The House <small id="room-id">node:…</small></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="status cool" id="room-gate">gate · The Door</span><span class="status" id="room-status">ready</span><span class="mono" style="color:var(--ink-3);font-size:0.74rem" id="room-tick">t00</span></div>
+        </div>
+        <div class="meters">
+          <div class="meter"><div class="mh"><span class="l">The purse</span><span class="v num" id="m-purse">800.0 cr</span></div><div class="track"><div class="fill" id="m-purse-fill" style="width:100%"></div></div><div class="foot"><span id="m-purse-burn">burned 0.0 · 0.00 J</span><span id="m-purse-alloc">of 800</span></div></div>
+          <div class="meter truth"><canvas class="fog-canvas" id="fog" width="320" height="120" aria-hidden="true"></canvas><div class="mh"><span class="l">Truth Φ</span><span class="v num" id="m-phi">100.0%</span></div><div class="track"><div class="fill" id="m-phi-fill" style="width:100%"></div></div><div class="foot"><span id="m-phi-gen">0 handovers · 0 oracle calls</span><span id="m-phi-fog">fog 0%</span></div></div>
+        </div>
+        <div class="seats" id="seats">
+          <div class="seat" data-seat="Scout"><div class="glyph">S</div><div class="sn">Scout</div><div class="sr">looks · fast tier</div></div>
+          <div class="seat" data-seat="Scribble"><div class="glyph">Sc</div><div class="sn">Scribble</div><div class="sr">drafts · staff tier</div></div>
+          <div class="seat" data-seat="Inspector"><div class="glyph">I</div><div class="sn">Inspector</div><div class="sr">audits · frontier</div></div>
+          <div class="seat" data-seat="Penny"><div class="glyph">P</div><div class="sn">Penny</div><div class="sr">sweeps the cushion</div></div>
+          <div class="seat" data-seat="Porter"><div class="glyph">Po</div><div class="sn">Porter</div><div class="sr">walks to the door</div></div>
+        </div>
+        <div class="thoughts" id="thoughts"><div class="thought"><b>engine</b><span>Loading the WebAssembly build…</span></div></div>
+        <div class="door" id="door" hidden>
+          <h3 id="door-title">The Porter is at the door</h3>
+          <div class="desc" id="door-desc"></div>
+          <div class="proof" id="door-proof"></div>
+          <div class="actions"><button type="button" class="btn good" id="door-yes">Yes, send it</button><button type="button" class="btn danger" id="door-no">No, leave it on the table</button><span class="mono" style="color:var(--ink-3);font-size:0.74rem;align-self:center" id="door-replay"></span></div>
+        </div>
+        <div class="note-card" id="note" hidden>
+          <h4>The note on the table</h4>
+          <div id="note-text"></div>
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn small primary" id="btn-topup">Put 200 cr in the purse</button><span style="color:#6b5636;font-size:0.76rem">Nothing was deleted. The papers are still here.</span></div>
+        </div>
+        <div class="street-grid" id="street" hidden></div>
+        <div id="street-actions" hidden style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn small" id="btn-truth">Change the truth: the courier now costs 12</button><span class="mono" style="color:var(--ink-3);font-size:0.74rem" id="truth-note">every table still says 10 until it pays the oracle</span></div>
+      </div>
+      <div class="ledger">
+        <div class="mode-badge" id="mode-badge">engine · <b>loading</b></div>
+        <div class="kv">
+          <div><span class="l">Sovereign root</span><span class="v" id="k-root">—</span></div>
+          <div><span class="l">Mempool</span><span class="v" id="k-mempool">0</span></div>
+          <div><span class="l">Executor</span><span class="v" id="k-exec">—</span></div>
+          <div><span class="l">Crossing tax paid</span><span class="v" id="k-tax">0.0 cr</span></div>
+          <div><span class="l">Approved</span><span class="v" id="k-approved">0</span></div>
+          <div><span class="l">Rejected · sunk</span><span class="v" id="k-rejected">0</span></div>
+        </div>
+        <div class="spark">
+          <figure><div class="fig-title">Purse · credits</div><svg id="sp-purse" viewBox="0 0 300 54" preserveAspectRatio="none"></svg></figure>
+          <figure><div class="fig-title">Truth Φ · percent</div><svg id="sp-phi" viewBox="0 0 300 54" preserveAspectRatio="none"></svg></figure>
+        </div>
+        <div><h4>Block log</h4><div class="log" id="log"></div></div>
+        <div><h4>The gates</h4><div class="gate-lines" id="gate-lines"></div></div>
+      </div>
+    </div>
+  </div>
+  <div style="height:14px"></div>
+  <p class="measure" style="color:var(--ink-3);font-size:0.9rem">The seats in the page are the engine's statistical staff, priced by the laboratory kernel. The LLM-backed seat is the same trait with a network call inside its future; it runs on the native build, where twenty houses' model calls proceed concurrently under Tokio.</p>
+</section>
+
+<!-- ═══════════════════════════════ 7. THE STACK ═══════════════════════════════ -->
+<section class="act" id="stack">
+  <div class="act-head">
+    <div class="eyebrow">Decision record · backend and frontend</div>
+    <h2>The stack, and why</h2>
+    <p class="lede measure">Two constraints were non-negotiable: the backend must process a high-concurrency mempool, and the frontend must zoom isometrically between a hex-grid city and a discrete room. Three independent proposals per side were scored by two judges each. The full record, with dissent, is in <code>engine/docs/TECH-STACK-DECISION.md</code>.</p>
+  </div>
+  <div class="stack-grid" id="stack-grid">
+    <div class="stack" id="stack-backend"><div class="eyebrow">Backend</div><h3 data-stack="backend-title">Rust · Tokio · one crate, two hosts</h3><div class="layers" data-stack="backend-layers"></div></div>
+    <div class="stack" id="stack-frontend"><div class="eyebrow">Frontend</div><h3 data-stack="frontend-title">TypeScript · WebGL2 with WebGPU opt-in</h3><div class="layers" data-stack="frontend-layers"></div></div>
+  </div>
+  <div style="height:26px"></div>
+  <h4>What the scaffold already proves</h4>
+  <div style="height:10px"></div>
+  <div class="proof-list" id="proof-list"></div>
+</section>
+
+<!-- ═══════════════════════════════ 8. THE CODE ═══════════════════════════════ -->
+<section class="act" id="code">
+  <div class="act-head">
+    <div class="eyebrow">The first scaffolding · engine/</div>
+    <h2>SovereignNode, and the crate around it</h2>
+    <p class="lede measure">One struct at every scale. A house, a street, a city, a country and the world differ only in their <code>scale_level</code> and the gate the camera assigns them. That is the fractal rule made concrete.</p>
+  </div>
+  <div class="code-head"><span class="path">engine/src/node.rs</span><span class="mono" style="color:var(--ink-3)">the node schema from doc 02, plus what the runtime needs</span></div>
+  <pre class="code" data-code="node"></pre>
+  <div style="height:26px"></div>
+  <div class="cols cols-2">
+    <div style="display:grid;gap:12px;align-content:start">
+      <h3>The crate</h3>
+      <div class="file-tree" id="file-tree"></div>
+    </div>
+    <div style="display:grid;gap:12px;align-content:start">
+      <h3>Run it</h3>
+      <pre class="code" data-code="run"></pre>
+      <p class="callout"><b>Determinism is a law.</b> No wall clock, no OS entropy, ids minted from a seeded generator. The same seed replays bit for bit, on ten cores or one, native or WebAssembly. That is what a High Court rollback and a fractal unpack both stand on.</p>
+    </div>
+  </div>
+</section>
+
+<section class="act" id="colophon">
+  <div class="colophon measure">
+    <div class="eyebrow">Colophon</div>
+    <p>Built inside the Multi-Asset Workflows laboratory on 28 September 2026 from the philosophy in <code>IF-THE-AGENTS-DO-THE-ECONOMY.md</code>, the mechanics in <code>AGENTIC_ECONOMY_FOUNDATIONS.md</code>, the five engine specifications in <code>game_design_docs/</code>, and the raw battery record. The engine is a laboratory artefact: nothing here is shipped, adopted, or a shared contract until the Director carries it across the stop line.</p>
+    <p>What is real: the crate, its tests, the WebAssembly build in this page, the recorded runs. What is modelled: the seats are statistical, priced by the laboratory kernel; no live model was called from this page. What is still open: Stage 3 netting settles gross amounts at commit today; Stage 5 partitioning is minimal; the LLM seat has an adapter but no production backend.</p>
+    <p>Type: Fraunces, Schibsted Grotesk, JetBrains Mono. Palette validated for colour-vision deficiency on the dark ground before the charts were drawn.</p>
+  </div>
+</section>
+</main>
+<footer><span>The Agentic Economy · The Context Engine · laboratory build</span><span class="mono" id="foot-version">context-engine 0.1.0</span></footer>
+<div class="present-hint"><kbd>←</kbd> <kbd>→</kbd> sections · <kbd>p</kbd> present · <kbd>space</kbd> step the engine</div>
+<div class="tip" id="tip"></div>
