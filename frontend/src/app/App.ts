@@ -160,6 +160,7 @@ export class App {
 
   /** One render frame at app time t: rig, bands, draw. Reads no Frame. */
   renderFrame(t = this.now()): void {
+    this.rig.rows = this.renderer.rows;
     this.rig.update(t, this.renderer.camera);
     for (const b of this.bands) { b.setAltitude(this.rig.a); b.animate?.(t); }
     this.renderer.render();
@@ -172,10 +173,10 @@ export class App {
     return { x: (v.x * 0.5 + 0.5) * size.w, y: (-v.y * 0.5 + 0.5) * size.h, depth: v.z, visible: v.z > -1 && v.z < 1 };
   }
 
-  /** Where the focused house's Door (east wall, x = 4.0, lintel at 2.1 m) falls on screen; null headless. */
+  /** Where the focused house's Door (east wall, x = 4.0, mid-height 1.0 m) falls on screen; null headless. */
   doorScreen(): { x: number; y: number } | null {
     if (this.renderer.kind === 'null') return null;
-    const p = new THREE.Vector3(4.0, 2.1, 0).applyAxisAngle(THREE.Object3D.DEFAULT_UP, this.rig.frameYaw).add(this.rig.origin);
+    const p = new THREE.Vector3(4.0, 1.0, 0).applyAxisAngle(THREE.Object3D.DEFAULT_UP, this.rig.frameYaw).add(this.rig.origin);
     const s = this.project(p);
     return s.visible ? s : null;
   }

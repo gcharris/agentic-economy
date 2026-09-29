@@ -12,13 +12,14 @@ export class ThreeRenderer implements Renderer {
   readonly camera = new THREE.PerspectiveCamera(4, 16 / 9, 1, 1000);
   readonly gl: THREE.WebGLRenderer;
   frames = 0;
+  rows = 720;
   private readonly onResize = () => this.setSize(innerWidth, innerHeight, devicePixelRatio);
 
   constructor(canvas: HTMLCanvasElement, readonly quality: QualityPreset, private readonly stats = false) {
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: quality !== 'low', powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.gl.outputColorSpace = THREE.SRGBColorSpace;
     this.gl.toneMapping = THREE.ACESFilmicToneMapping;
-    this.gl.toneMappingExposure = 1.35;
+    this.gl.toneMappingExposure = 1.2;
     this.gl.shadowMap.enabled = quality !== 'low';
     this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.scene.background = new THREE.Color('#16110c');
@@ -29,6 +30,7 @@ export class ThreeRenderer implements Renderer {
   setSize(w: number, h: number, dpr: number): void {
     this.gl.setPixelRatio(Math.min(dpr, DPR_CAP[this.quality]));
     this.gl.setSize(w, h, false);
+    this.rows = h;
     this.camera.aspect = w / Math.max(1, h);
     this.camera.updateProjectionMatrix();
   }

@@ -18,8 +18,8 @@ import type { LightingPreset, QualityPreset } from './engine/store/bus.ts';
 import { RoomBand } from './scene/room/RoomBand.ts';
 
 const TAKES = {
-  /** DESIGN §11: H = 7 m framing the Oak Table's east end to the step. */
-  thumbnail: { H: 7, target: [2.8, 0.9, 0.0] as [number, number, number] },
+  /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
+  thumbnail: { ppm: 154, target: [3.5, 0.8, 0.3] as [number, number, number] },
 };
 
 async function makeSource(q: URLSearchParams): Promise<EngineSource> {
@@ -65,6 +65,12 @@ async function main(): Promise<void> {
       step: async () => { await app.step(); return render(); },
       frame: () => app.frame(),
       render: (at?: number) => { app.renderFrame(at); return true; },
+      /** Where a point in the focused house's local metres projects on screen. */
+      locatePoint: (x: number, y: number, z: number) => {
+        const w = new Vector3(x, y, z).applyAxisAngle(new Vector3(0, 1, 0), app.rig.frameYaw).add(app.rig.origin);
+        const p = app.project(w);
+        return { x: Math.round(p.x), y: Math.round(p.y), visible: p.visible };
+      },
       /** Where a named scene object (a seat's cat, 'room-fixtures') projects on screen, for GPU tests. */
       locate: (name: string) => {
         const o = renderer.scene.getObjectByName(name);

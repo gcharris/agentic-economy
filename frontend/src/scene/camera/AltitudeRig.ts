@@ -13,18 +13,23 @@ import { BANDS, dolly, heightAt, YAW_DEG } from './bands.ts';
 const HALF_LIFE = 0.12;
 const DEG = Math.PI / 180;
 
-/** A director's framing: a view height and a target in the focused house's local metres. */
-export interface Take { H: number; target: [number, number, number] }
+/** A director's framing: pixels per metre (DESIGN §11: 154 at 1080 rows) and a target in house-local metres. */
+export interface Take { ppm: number; target: [number, number, number] }
+
+/** Band 1 holds pixels per metre, not H (REVIEW-ROOM §3): 77 px/m, so a 0.9 m cat is 69 px at any viewport. */
+export const ROOM_PPM = 77;
 
 export class AltitudeRig {
-  a = 1.2;
-  aTarget = 1.2;
+  a = 1.0;
+  aTarget = 1.0;
   /** The focused house's frame in world space. */
   readonly origin = new THREE.Vector3();
   frameYaw = 0;
   /** Target in house-local metres (the Oak Table's centre by default). */
   readonly local = new THREE.Vector3(0.6, 0.8, -0.6);
   take: Take | null = null;
+  /** CSS pixel rows of the viewport; App sets it from the renderer. */
+  rows = 1080;
   private readonly target = new THREE.Vector3();
   private readonly smoothTarget = new THREE.Vector3();
   private lastT = -1;
@@ -56,7 +61,7 @@ export class AltitudeRig {
     if (dt >= 1) this.smoothTarget.copy(this.target); else this.smoothTarget.lerp(this.target, k);
 
     const row = BANDS[this.band - 1];
-    const H = this.take?.H ?? heightAt(this.a);
+    const H = this.take ? this.rows / this.take.ppm : heightAt(this.a, BANDS.map((b, i) => (i === 0 ? this.rows / ROOM_PPM : b.H)));
     const fov = row.fovDeg;
     const d = dolly(H, fov);
     const p = row.pitchDeg * DEG;

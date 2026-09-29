@@ -21,6 +21,7 @@ test('while waiting at the Door every cat is still at its station and the Porter
   await app.stepTo(4);
   advance(2);
   expect(room.status).toBe('waiting_at_door');
+  expect(room.fx.doorPivot.rotation.y).toBe(0); // the leaf stays closed, frame lit, until APPROVED
   const porter = room.actors.get('Porter')!;
   expect(porter.cat.position.x).toBeCloseTo(PORTER_AT_DOOR.x, 5);
   expect(porter.cat.position.z).toBeCloseTo(PORTER_AT_DOOR.z, 5);

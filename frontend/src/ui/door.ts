@@ -70,15 +70,22 @@ export class DoorDialog {
     }
   }
 
-  /** Beside the Door, never over it: the Porter and the lit frame stay in view while the card is open. */
+  /**
+   * Anchored to the Door's projected position, lower right of the room (DESIGN §3, REVIEW-ROOM): the Porter and
+   * the lit frame stay in view, and the card never covers the focus card.
+   */
   private place(): void {
     const p = this.deps.locate?.();
     if (!p || typeof innerWidth === 'undefined') { this.el.style.removeProperty('left'); this.el.style.removeProperty('top'); return; }
-    const w = Math.min(440, innerWidth - 32);
-    const right = p.x + 48, left = p.x - 48 - w;
-    const x = right + w <= innerWidth - 16 ? right : left >= 16 ? left : (innerWidth - w) / 2;
+    const w = Math.min(440, innerWidth - 32), h = 360;
+    let x = p.x + 56;
+    if (x + w > innerWidth - 16) x = Math.max(16, p.x - 56 - w);
+    let y = Math.max(16, p.y - 40);
+    const focus = this.deps.root.querySelector<HTMLElement>('#focus')?.getBoundingClientRect();
+    if (focus && focus.height > 0 && x + w > focus.left && x < focus.right && y < focus.bottom + 12) y = focus.bottom + 12;
+    y = Math.min(y, Math.max(16, innerHeight - h - 16));
     this.el.style.left = `${Math.round(x)}px`;
-    this.el.style.top = `${Math.round(Math.max(16, Math.min(innerHeight - 380, p.y - 220)))}px`;
+    this.el.style.top = `${Math.round(y)}px`;
   }
 
   private async decide(decision: 'approve' | 'reject'): Promise<void> {

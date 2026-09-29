@@ -54,6 +54,18 @@ export function buildFixtures(): Fixtures {
   const floor = box(8.2, 0.3, 6.2, flat(C.floor), 0, -0.15, 0);
   floor.castShadow = false;
   g.add(floor);
+  // Oak boards running east–west over the --floor plate, 0.18 m wide with 0.02 m --floor seams (REVIEW-ROOM §1:
+  // the oak floor reads as oak). One instanced mesh, shade varied per board from a fixed sequence.
+  const BOARD = 0.2, boards = Math.floor(6.0 / BOARD);
+  const planks = new THREE.InstancedMesh(new THREE.BoxGeometry(8.0, 0.012, BOARD - 0.02), flat('#ffffff'), boards);
+  const brd = seq(11), pm = new THREE.Matrix4(), oakDark = new THREE.Color(C.oakDark), oakTop = new THREE.Color(C.oakTop);
+  for (let i = 0; i < boards; i++) {
+    pm.makeTranslation(0, 0.006, -3.0 + BOARD / 2 + i * BOARD);
+    planks.setMatrixAt(i, pm);
+    planks.setColorAt(i, oakDark.clone().lerp(oakTop, brd() * 0.6));
+  }
+  planks.receiveShadow = true;
+  g.add(planks);
 
   // North wall (the far wall, where the fog haze lives) and east wall with the Door opening.
   const wallN = new THREE.Mesh(new THREE.BoxGeometry(8.2, 3.2, 0.1), haze.material);
@@ -126,8 +138,8 @@ export function buildFixtures(): Fixtures {
   g.add(note);
 
   // The table lamp L1 hangs at (0.8, 2.4, 0.0).
-  const tableShade = new THREE.MeshLambertMaterial({ color: C.brass, emissive: C.goldLight, emissiveIntensity: 0.6, side: THREE.DoubleSide, flatShading: true });
-  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.22, 8, 1, true), tableShade);
+  const tableShade = new THREE.MeshLambertMaterial({ color: C.brass, emissive: C.goldLight, emissiveIntensity: 0.15, side: THREE.DoubleSide, flatShading: true });
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.2, 8, 1, true), tableShade);
   shade.position.set(0.8, 2.5, 0);
   const cord = box(0.015, 0.7, 0.015, flat(C.oakDark), 0.8, 2.95, 0);
   cord.castShadow = false;
@@ -142,10 +154,13 @@ export function buildFixtures(): Fixtures {
   dshade.position.set(2.7, 1.22, -2.6);
   g.add(dshade);
   const purseBody = box(0.4, 0.25, 0.3, flat(C.oakDark), 3.3, 0.925, -2.6);
-  g.add(purseBody, box(0.42, 0.03, 0.04, flat(C.brass), 3.3, 1.05, -2.46), box(0.42, 0.03, 0.04, flat(C.brass), 3.3, 1.05, -2.74));
+  // Brass-bound: a lid plate, bands along the lid's long edges and the four vertical corners.
+  const brass = flat(C.brass);
+  g.add(purseBody, box(0.41, 0.02, 0.31, brass, 3.3, 1.055, -2.6), box(0.42, 0.04, 0.03, brass, 3.3, 1.03, -2.45), box(0.42, 0.04, 0.03, brass, 3.3, 1.03, -2.75));
+  for (const [x, z] of [[3.1, -2.45], [3.5, -2.45], [3.1, -2.75], [3.5, -2.75]]) g.add(box(0.03, 0.25, 0.03, brass, x, 0.925, z));
   const purseArc = new THREE.Mesh(new THREE.RingGeometry(0.06, 0.1, 24, 1, Math.PI / 2, -2 * Math.PI), new THREE.MeshBasicMaterial({ color: C.gold, side: THREE.DoubleSide }));
   purseArc.rotation.x = -Math.PI / 2;
-  purseArc.position.set(3.3, 1.052, -2.6);
+  purseArc.position.set(3.3, 1.067, -2.6);
   g.add(purseArc);
 
   // Scout's stool at (−2.7, −1.8).

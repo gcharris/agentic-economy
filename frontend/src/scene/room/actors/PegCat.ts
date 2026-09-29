@@ -131,7 +131,7 @@ function smoothNormals(g: THREE.BufferGeometry): THREE.BufferAttribute {
 }
 
 const outlineMaterial = (() => {
-  const m = new THREE.MeshBasicMaterial({ color: '#0e0a06', side: THREE.BackSide });
+  const m = new THREE.MeshBasicMaterial({ color: '#3e2d1f', side: THREE.BackSide }); // --oak-dark
   m.onBeforeCompile = (s) => {
     s.vertexShader = s.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec3 smoothNormal;')
@@ -153,7 +153,8 @@ export class PegCat extends THREE.Group {
   constructor(fur: string) {
     super();
     const geo = pegCatGeometry(fur);
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    // A small emissive floor (0.06 of the fur) so shadow never takes a cat to black (REVIEW-ROOM §2).
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(fur).multiplyScalar(0.06) });
     this.body = new THREE.Mesh(geo, mat);
     this.body.castShadow = true;
     this.outline = new THREE.Mesh(geo, outlineMaterial);

@@ -63,8 +63,11 @@ export function makeSeat(seat: SeatName): SeatActor {
     case 'Porter': {
       add(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.05, 8), flat('#2c2219'))).position.set(0, 0.83, 0.04); // flat cap
       envelope = add(new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.006),
-        new THREE.MeshLambertMaterial({ color: '#f0e6d2', emissive: '#f0e6d2', emissiveIntensity: 0.9 }))) as THREE.Mesh;
-      envelope.position.set(0, 0.46, 0.26); envelope.rotation.x = -0.25; // held out, leading
+        new THREE.MeshLambertMaterial({ color: '#f0e6d2', emissive: '#f0e6d2', emissiveIntensity: 0.3, side: THREE.DoubleSide }))) as THREE.Mesh;
+      // Held out at his side, turned to the camera (which stands behind his left shoulder while he faces the
+      // Door): the one white rectangle in the frame, never seen edge-on (REVIEW-ROOM §2).
+      envelope.position.set(-0.24, 0.5, 0.12);
+      envelope.rotation.set(-Math.PI / 6, -0.75 * Math.PI, 0, 'YXZ');
       break;
     }
   }

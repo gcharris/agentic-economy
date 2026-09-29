@@ -7,8 +7,13 @@ import * as THREE from 'three';
 import { keyDirection, LIGHTING } from '../../app/lighting.ts';
 import type { LightingState, QualityPreset } from '../../engine/store/bus.ts';
 
-/** three's physically based point lights are in candela; DESIGN's 1.2 is a relative value. */
-const POINT_SCALE = 14;
+/** three's physically based point lights are in candela; DESIGN's 1.2 is a relative value (1.2 → 36 cd). */
+const POINT_SCALE = 30;
+/** The preset's sky/ground are dark sRGB tones; as light colours they are tints, so normalise to full brightness. */
+const tint = (hex: string) => { const c = new THREE.Color(hex); const m = Math.max(c.r, c.g, c.b) || 1; return c.multiplyScalar(1 / m); };
+/** REVIEW-ROOM §1: key about 2.5 and hemisphere 1.5–2.0 at the Golden preset; other presets scale with DESIGN's table. */
+const KEY_GAIN = 4.5 / 1.9; // measured: three's Lambert is albedo/π, so the review's 2.5 leaves the floor at 6/255 (room-light.spec.ts)
+const HEMI_GAIN = 4.0 / 0.6;
 const RAMP = 0.2;
 
 export class RoomLights {
@@ -23,10 +28,10 @@ export class RoomLights {
 
   constructor(quality: QualityPreset, lighting: LightingState) {
     const row = LIGHTING[lighting.preset];
-    this.key = new THREE.DirectionalLight(row.key, row.keyIntensity * 1.6);
+    this.key = new THREE.DirectionalLight(row.key, row.keyIntensity * KEY_GAIN);
     const [x, y, z] = keyDirection(row);
     this.key.position.set(x * 20, y * 20, z * 20);
-    this.hemi = new THREE.HemisphereLight(row.sky, row.ground, row.hemi * 6);
+    this.hemi = new THREE.HemisphereLight(tint(row.sky), tint(row.ground), row.hemi * HEMI_GAIN);
     this.l1 = new THREE.PointLight('#f2cb7a', 1.2 * POINT_SCALE, 5.5, 2);
     this.l1.position.set(0.8, 2.3, 0.0);
     this.l1.castShadow = quality !== 'low';

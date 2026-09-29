@@ -11,6 +11,8 @@ export interface Renderer {
   readonly gl: THREE.WebGLRenderer | null;
   /** Render frames drawn so far (reducer.test.ts compares this with the reduce count). */
   readonly frames: number;
+  /** CSS pixel rows of the viewport (the rig holds pixels per metre against it). */
+  readonly rows: number;
   setSize(w: number, h: number, dpr: number): void;
   render(): void;
   dispose(): void;
@@ -23,6 +25,7 @@ export class NullRenderer implements Renderer {
   readonly gl = null;
   frames = 0;
   size = { w: 1280, h: 720, dpr: 1 };
+  get rows(): number { return this.size.h; }
 
   setSize(w: number, h: number, dpr: number): void {
     this.size = { w, h, dpr };
