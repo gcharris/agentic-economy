@@ -1,0 +1,1323 @@
+{
+ "workflow": "wf_754f6288-a8f",
+ "started": [
+  {
+   "agentId": "adf364b3e7166073a",
+   "label": "edit+build",
+   "phase": "Edit and build"
+  },
+  {
+   "agentId": "aa4511513c4c8f6fe",
+   "label": "verify:copy:r1",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a1db851f9248edb7e",
+   "label": "verify:build:r1",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "ac2aaef2198941887",
+   "label": "verify:layout:r1",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a0ca4d013d81d9376",
+   "label": "repair:r1",
+   "phase": "Repair"
+  },
+  {
+   "agentId": "a185cbddcca7ef421",
+   "label": "verify:copy:r2",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "adfffd18049247dad",
+   "label": "verify:build:r2",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "af58ebc63d2810530",
+   "label": "verify:layout:r2",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "aea2248b12ab2358c",
+   "label": "repair:r2",
+   "phase": "Repair"
+  },
+  {
+   "agentId": "a845b285012edac72",
+   "label": "verify:copy:r3",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a46d3a896468e8d66",
+   "label": "verify:build:r3",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a3e37a0160a71646c",
+   "label": "verify:layout:r3",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a580b6555e3d76a3b",
+   "label": "repair:r3",
+   "phase": "Repair"
+  }
+ ],
+ "results": [
+  {
+   "label": "edit+build",
+   "phase": "Edit and build",
+   "result": {
+    "built": true,
+    "trace_stats": "trace: house 70 frames, hidden 9, visible 13, street 30, 889 KB\nhouse final: 14/15 sent, 18.5 cr left, \u03a6 67.1%, status active\ncost visible: 6/10 (halted) \u00b7 hidden: 4/10 (halted)",
+    "build_stats": "index.html: 1435 KB (wasm 331 KB, trace 885 KB)",
+    "edits": [
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "A1 \u00b7 idle decay attributed to doc 02; benchmark 3 held \u03a6 constant (the door object, ~line 410)",
+      "before": "In the engine, waiting at the door burns exactly zero credits. Truth, though, keeps decaying while you decide.</p>",
+      "after": "In the engine, waiting at the door burns exactly zero credits. Truth keeps decaying while you decide, and that is a rule, not a measurement: it comes from doc 02 (<code>02_ENTITY_STATE_MACHINE.md</code> \u00a72), which decays confidence with every tick since the last sync. The kernel's benchmark 3 held \u03a6 constant while the door was closed. The engine keeps the rule and says where it comes from.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A1 \u00b7 proof-list wording for law_4 (kept consistent with the attribution)",
+      "before": "['law_4_the_door_holds_at_zero_burn', 'benchmark 3 inside the engine: 100 ticks at the door, 0.0 credits, truth still decaying'],",
+      "after": "['law_4_the_door_holds_at_zero_burn', 'benchmark 3 inside the engine: 100 ticks at the door, 0.0 credits; \u03a6 decays by doc 02\\'s rule, which the kernel did not apply'],"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A2 \u00b7 gates lede: Letter Slot only for envelopes not yet asked about; asked_human stays at the Door (~line 119)",
+      "before": "Zoom out from a house and its Door becomes the street's Letter Slot: the verification scales with the view.</p>",
+      "after": "Zoom out from a house and its Door becomes the street's Letter Slot for envelopes the person has not yet been asked about: the verification scales with the view. An envelope already presented to the person stays at the Door whatever the camera does (<code>asked_human</code>); once asked, only the person answers.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A3 \u00b7 benchmark 1 caption (~line 14)",
+      "before": "<figcaption>The market of agents, paying each other to pass the page across the table, halted at task six with a fifth of its budget gone to coordination. Staff seats at one desk finished the list. <span class=\"mono\">output/ael_experiment_results.json \u2192 benchmark_1_coasean_boundary</span></figcaption>",
+      "after": "<figcaption>The market of agents, paying each other to pass the page across the table, halted at task six. Its ledger records a fifth of the budget as coordination, but in the original Python kernel that 19.99% was added to a side ledger and never deducted from the runway; the market ran dry on cache misses, not on fees. Staff seats at one desk finished the list. The engine keeps doc 04's 1.25 and 1.40 crossing multipliers as a design rule; the percentage is evidence that a tax exists, not of the multipliers. <span class=\"mono\">output/ael_experiment_results.json \u2192 benchmark_1_coasean_boundary</span></figcaption>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A3 \u00b7 benchmark 1 chart panel title (~line 50)",
+      "before": "{ title: 'Budget spent on coordination', key: 'coordPct', max: 25,",
+      "after": "{ title: 'Coordination recorded \u00b7 a side ledger, never deducted', key: 'coordPct', max: 25,"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A3 \u00b7 benchmark 1 tooltip (~line 68)",
+      "before": "${d.halted ? '<br><small>halted at task 6</small>' : ''}",
+      "after": "${d.halted ? '<br><small>halted at task 6 on cache misses; the 19.99% was never deducted from the runway</small>' : ''}"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A3 \u00b7 provenance box (~line 42): 19.99% never deducted; multipliers are a design rule; also the 0.0 idle burn was an assigned constant (HANDOFF \u00a78)",
+      "before": "<b>Provenance and two corrections.</b> The door benchmark's table in the foundations report says 33.0 credits burned before the door and 467.0 after approval; the raw JSON says 60.0 and 430.0. The page uses the JSON. The federated guild's \u201c1,593.8 credits reclaimed\u201d [...] The engine's steward records the cushion and mints nothing.</div>",
+      "after": "<b>Provenance and four corrections.</b> [unchanged first two corrections] The engine's steward records the cushion and mints nothing. The Coasean market's 19.99% coordination tax is a side ledger: in the original Python kernel (<code>backend/ael/topologies.py</code>) it was added to <code>spent_on_coordination</code> but never deducted from the runway, which is why the JSON shows 800.0 spent on work and 159.9 on coordination against 800.0 burned in all. That market halted at task six because of cache misses (a 65.0 cr draft and a 32.0 cr audit per task where the staff, on cache hits, paid 9.75 and 4.8), not because of fees. The engine keeps doc 04's 1.25 and 1.40 crossing multipliers as a design rule; the two observed percentages, 19.99% here and 30.5% in the runway experiment, justify that a tax exists, not the multipliers. The 0.0 cr idle burn in the door benchmark was an assigned constant in the battery, not a measured loop; the measurement that exists is the engine's own <code>law_4_the_door_holds_at_zero_burn</code> test, 100 real ticks.</div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A4 \u00b7 camera control log line (wireConsole, ~line 555)",
+      "before": "logLine(UI.frame ? UI.frame.tick : 0, 'CAMERA', 'sync', `active scale ${UI.cfg.camera}: the gate is now ${Object.values(GATE)[Math.max(UI.cfg.camera, 1) - 1]} or higher`);",
+      "after": "const atDoor = UI.frame ? UI.frame.state.held.filter(h => h.reason === 'awaiting_human_signature').length : 0; logLine(UI.frame ? UI.frame.tick : 0, 'CAMERA', 'sync', `camera at scale ${UI.cfg.camera}: new envelopes are verified at ${Object.values(GATE)[Math.max(UI.cfg.camera, 1) - 1]} or higher; ${atDoor ? `the ${atDoor} envelope${atDoor === 1 ? '' : 's'} already at the Door stay${atDoor === 1 ? 's' : ''} there until you answer` : 'an envelope already at the Door stays there until you answer'}`);"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A4 \u00b7 held-envelope display no longer hidden by the camera (render, ~line 478)",
+      "before": "if (held.length && (!streetMode || UI.cfg.camera === 1 || held[0].reason === 'awaiting_finality')) {",
+      "after": "if (held.length) { // an envelope the person was asked about stays at the Door whatever the camera does"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A4 \u00b7 door proof line says the camera does not move an asked envelope (render, ~line 485)",
+      "before": "el.doorProof.textContent = `held ${waited} tick${waited === 1 ? '' : 's'} \u00b7 purse ... \u00b7 \u03a6 ${(UI.hold.phi * 100).toFixed(1)}% \u2192 ${node ? (node.confidence * 100).toFixed(1) : '\u2014'}%`;",
+      "after": "el.doorProof.textContent = `held ${waited} tick${waited === 1 ? '' : 's'} \u00b7 purse ... \u00b7 \u03a6 ${(UI.hold.phi * 100).toFixed(1)}% \u2192 ${node ? (node.confidence * 100).toFixed(1) : '\u2014'}%${h.reason === 'awaiting_human_signature' && UI.cfg.camera > 1 ? ` \u00b7 asked at the Door; the camera at scale ${UI.cfg.camera} does not move it` : ''}`;"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A5 \u00b7 send fee 10 cr stated; fresh house-run numbers (new paragraph under the console, after ~line 212)",
+      "before": "<p class=\"measure\" style=\"color:var(--ink-3);font-size:0.9rem\">The seats in the page are the engine's statistical staff, priced by the laboratory kernel. [...] under Tokio.</p>",
+      "after": "[same paragraph, then:]\n  <div style=\"height:10px\"></div>\n  <p class=\"measure\" style=\"color:var(--ink-3);font-size:0.9rem\">A send costs 10 cr at the door, which is what the laboratory kernel actually charged for a send (100 tokens); the battery's <code>spend_amount = 25</code> was declared and never read. The engine adds doc 04's crossing tax on top, 2.5 cr on a 10 cr send inside one street, which the kernel never charged. <span data-fact=\"house-run\">On 800 cr and 15 tasks, seed 7, with the person saying yes after three ticks at the door, the recorded run sends 14 of 15 and ends after 70 ticks with 18.5 cr in the purse, \u03a6 67.1%, 35.0 cr paid in crossing tax.</span> The Python benchmark's house staff finished 15 of 15 on 788.2 cr with no door fee and no tax; the two runs are not comparable task for task.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A5 \u00b7 the house-run sentence is filled from the embedded TRACE at runtime (fillStatic), so a re-recorded trace cannot leave the copy stale",
+      "before": "for (const side of ['backend', 'frontend']) $(`[data-stack=\"${side}-layers\"]`).innerHTML = ...;\n  drawCoasean(...)",
+      "after": "for (const side of ['backend', 'frontend']) ...;\n  // the house-run sentence follows the recorded trace, so a re-recorded run cannot leave the copy stale\n  const hr = $('[data-fact=\"house-run\"]'); const hf = TRACE && TRACE.house && TRACE.house.length ? TRACE.house[TRACE.house.length - 1] : null; const hh = hf ? hf.state.nodes.find(n => n.stage === 'House') : null;\n  if (hr && hh) hr.textContent = `On ${fmt1(hh.compute_allocated)} cr and ${hh.tasks_total} tasks, seed 7, with the person saying yes after three ticks at the door, the recorded run sends ${hh.tasks_done} of ${hh.tasks_total} and ends after ${hf.tick} ticks with ${fmt1(hh.compute)} cr in the purse, \u03a6 ${(hh.confidence * 100).toFixed(1)}%, ${fmt1(hf.state.totals.tax_paid)} cr paid in crossing tax${hh.status === 'halted' ? ', halted with the note on the table' : ''}.`;\n  drawCoasean(...)"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "A6 \u00b7 STACK object replaced with TECH-STACK-DECISION.md (same [label, sentence] pair shape; 5 backend + 6 frontend layers)",
+      "before": "backend: Language (Rust 1.85+) \u00b7 Async (Tokio multi-thread; runtime-free block_on) \u00b7 State (Sovereign Graph, SHA-256, ring buffer, tick journal) \u00b7 Transport (SSE now, WebSocket later, JSON/CBOR) \u00b7 Agents (Agent trait, LlmSeat) \u00b7 Browser (wasm32 cdylib __WASM_KB__ KB)\nfrontend: Language (TypeScript with Vite) \u00b7 Renderer (Three.js WebGL2, WebGPU opt-in, InstancedMesh) \u00b7 Camera (orthographic iso rig Stages 1\u20134, perspective orbital at Stage 5) \u00b7 Fog of war (GLSL value noise 1 \u2212 \u03a6, radar pulses) \u00b7 State (renders graph and events; wasm ABI offline, SSE online) \u00b7 Recording (deterministic seeds)",
+      "after": "backend: Language (Rust 1.85+, edition 2021; ownership makes law 1 a compile error; determinism is a law: seeded ids, no clock, no libm in the replayed path) \u00b7 Async (Tokio for the Draft fan-out, a JoinSet per tick; Draft embarrassingly parallel, Verify batches per gate, Commit single-writer; throughput proposal's second Rayon lane at 100k nodes) \u00b7 Hosts (one crate, two hosts: native under Tokio and the same crate as a wasm32 cdylib, __WASM_KB__ KB, zero imports, no bindgen) \u00b7 Next (append-only input journal so a run is a fold of its inputs; persistent map with structural sharing; canonical byte encoding for hashing and the wire; VaultBackend implementing InferenceBackend over the estate route) \u00b7 Dissent (velocity-first: persistent map premature before Stage 3 has players; invariant-first: integer money now; crate uses f64 with platform-independent arithmetic, enough for the laboratory and the video)\nfrontend: Language (TypeScript; renders only StateView and EngineEvent; frame contract testable without a GPU) \u00b7 Renderer (Three.js on WebGL2, WebGPU behind a flag; instanced hex tiles fed by a per-node truth buffer; axial coordinates laid out deterministically from the graph) \u00b7 Camera (one altitude scalar from room cutaway to orbital view; five LOD bands; cross-dissolve at band edges; pack/unpack as the source of truth) \u00b7 Source (one EngineSource interface: wasm in a worker, SSE from serve, recorded trace) \u00b7 Fog of war (fog = 1 \u2212 \u03a6 into a noise shader; light sweep on StateSync; LOD transition animated only on Packed/Unpacked) \u00b7 Provenance (Truth Buffer's data path + Altitude's camera + One Quad's EngineSource and no-GPU tests; brief in engine/docs/FRONTEND-DESIGNER-BRIEF.md)"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A6 \u00b7 stack lede: the judges never ran, scoring is one reader's (~line 220)",
+      "before": "Three independent proposals per side were scored by two judges each. The full record, with dissent, is in <code>engine/docs/TECH-STACK-DECISION.md</code>.</p>",
+      "after": "Six independent proposals, three per side, were generated by a judge-panel workflow on 28 September. The four judges and the synthesiser never ran: they hit a weekly usage limit. The decision record was written by the engine's previous operator from the proposals directly, so the scoring in it is one reader's, not a panel's. The full record, with dissent, is in <code>engine/docs/TECH-STACK-DECISION.md</code>.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A6 \u00b7 backend card title",
+      "before": "<h3 data-stack=\"backend-title\">Rust \u00b7 Tokio \u00b7 one crate, two hosts</h3>",
+      "after": "<h3 data-stack=\"backend-title\">Rust 1.85+ \u00b7 Tokio \u00b7 one crate, two hosts</h3>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "A6 \u00b7 frontend card title",
+      "before": "<h3 data-stack=\"frontend-title\">TypeScript \u00b7 WebGL2 with WebGPU opt-in</h3>",
+      "after": "<h3 data-stack=\"frontend-title\">TypeScript \u00b7 Three.js on WebGL2 \u00b7 WebGPU behind a flag</h3>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "colophon: stale open-items line (audit ledger #9 fixed netting) replaced with the ledger's open items (~line 259)",
+      "before": "What is still open: Stage 3 netting settles gross amounts at commit today; Stage 5 partitioning is minimal; the LLM seat has an adapter but no production backend.</p>",
+      "after": "What is still open, from the audit ledger: the High Court's rollback depth and coherence marker; the Stage 3 tension between a camera that packs houses and a clearinghouse that needs them; receiver-side verification in a DvP swap; the LLM seat has an adapter but no production backend.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/build.py",
+      "item": "B \u00b7 read the wasm from engine/dist first",
+      "before": "wasm = here.parent / \"engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm\"",
+      "after": "dist = here.parent / \"engine/dist/context_engine.wasm\"\nwasm = dist if dist.exists() else here.parent / \"engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "phone width: stack layer grid column can shrink (CSS)",
+      "before": ".stack .layer { display: grid; grid-template-columns: 118px 1fr; gap: 12px; ... }",
+      "after": ".stack .layer { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 12px; ... }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "phone width: proof-list grid column can shrink (CSS; this was the pre-existing 10px horizontal overflow at 390px)",
+      "before": ".proof-list div { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }",
+      "after": ".proof-list div { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "phone width: long test names in the proof list may wrap (CSS)",
+      "before": ".proof-list code { font-size: 0.78rem; }",
+      "after": ".proof-list code { font-size: 0.78rem; overflow-wrap: anywhere; }"
+     }
+    ],
+    "console_errors": "One console error per load, at both widths, verbatim: \"[error] Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID\". The failed resource is the Google Fonts stylesheet (https://fonts.googleapis.com/css2?family=Fraunces...&family=Schibsted+Grotesk...&family=JetBrains+Mono...), refused by the sandbox's TLS interception; the page falls back to its system font stack. No pageerror, no warnings. The pre-edit build (git HEAD index.html) produces the identical single error, so it is environmental, not from these edits.",
+    "notes": "Built from /home/user/agentic-economy/engine/dist/context_engine.wasm (339,214 bytes; build.py reports 331 KB). Fresh trace recorded first, then build.py; index.html is 1,476,491 bytes. Nothing committed; only presentation/{index.template.html, part2.template.html, part3.template.html, build.py, trace.json, index.html} changed. Backups of the originals are in the scratchpad (*.bak) and the exact before/after strings in scratchpad/edits.json.\n\nVerification (headless Chromium, swiftshader): the console badge reads \"engine \u00b7 live \u00b7 context-engine 0.1.0 (wasm32, sequential executor)\", so the wasm ran live and the recorded-run fallback was not exercised in the screenshots (the 885 KB trace is embedded). Both benchmark charts drew (2 bar panels, 3 drift paths), 11 stack layers rendered, the door panel showed \"Sending costs 10.0 cr\". The camera control was exercised live: with an envelope at the Door, clicking camera 2 wrote \"t01 CAMERA camera at scale 2: new envelopes are verified at The Letter Slot or higher; the 1 envelope already at the Door stays there until you answer\"; the door panel stayed visible with proof \"\u2026 asked at the Door; the camera at scale 2 does not move it\"; the gate pill became \"gate \u00b7 The Letter Slot\"; \"Yes, send it\" then approved it (approved 1). The old condition that hid a held Door envelope in street mode whenever the camera was above 1 was removed because it contradicted asked_human.\n\nItem 5: no template ever stated the send fee as 25 (the only \"25\" was a chart axis max, left alone), so the send fee is now stated once, plainly, in a new paragraph under the console, together with the fresh run's numbers (14/15 sent, 70 ticks, 18.5 cr left, \u03a6 67.1%, 35.0 cr tax). That sentence is also filled from the embedded TRACE at runtime, so the documented refresh command (record_trace + build.py) keeps it current. The Python benchmark's 5/15, 800.0 cr and 159.9 cr are left as historical, labelled as such.\n\nBeyond the six items: the stack lede's \"scored by two judges each\" was false per TECH-STACK-DECISION.md and was replaced; the colophon's \"Stage 3 netting settles gross amounts at commit today\" is stale per AUDIT-LEDGER #9 and now lists the ledger's open items; the provenance box also records that the 0.0 cr idle burn was an assigned constant (HANDOFF \u00a78 says this will be asked). Phone width: the page had a pre-existing 10px horizontal scroll (documentElement.scrollWidth 400 on a 390 viewport, same on the old build) caused by the proof list's long unbreakable test names; after the CSS fix scrollWidth is 390 and nothing overflows (the only elements past the edge are tables inside overflow-x:auto wrappers in closed <details>). Desktop: no overflow, 9 sections, 1 hero.\n\nScreenshots: /tmp/claude-0/-home-user-agentic-economy/cb18da94-1b1d-5696-9695-4826407a9893/scratchpad/shots/pres-desktop.png (1400x13258) is clean and continuous; it was recaptured with the viewport sized to the page because Playwright's full-page capture of this very tall page tiled and repeated content (a capture artefact; the DOM has one hero). pres-phone.png (390x23246) is from the instructed shot.mjs command and shows that same tiling artefact; the clean per-section phone captures are alongside it: phone-hero.png, phone-measured.png, phone-live.png, phone-stack.png (and desktop-*.png), all inspected.\n\nNot changed, worth a look before publishing: the hero says \"72 invariant tests, all green\"; that count is build.py's tally of #[test] attributes (it includes the two #[ignore]d stage2 tests) and I did not run cargo test; task #2 (adapting the six lane tests) was running in parallel. HANDOFF \u00a76's refresh command and the usage comment in record_trace.mjs still name the engine/target path; build.py now prefers engine/dist, and record_trace.mjs takes the path as an argument, so both work."
+   }
+  },
+  {
+   "label": "verify:build:r1",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 360,
+      "severity": "should-fix",
+      "claim": "The hero's auto-filled '72 invariant tests, all green' (and part3's 'cargo test # 72 tests, all green') counts #[test] attributes, but cargo test runs 70 and skips 2 on purpose; no line cargo prints says 72 or 'all green' for 72.",
+      "evidence": "build.py line 13 computes tests as the count of '#[test]' + '#[tokio::test' across src and tests (= 72). Built page line 360: '<span class=\"num\" data-fact=\"tests\">72</span> invariant tests, all green.' and line 946: 'cargo test  # 72 tests, all green'. Running `cargo test` in /home/user/agentic-economy/engine: per-binary totals sum to 'passed 70 failed 0 ignored 2'; tests/stage2_letter_slot.rs:808 `#[ignore = \"documents a DvP gap: the verified hash is not bound to the locked amount; ...\"]` and :860 `#[ignore = \"documents a DvP gap: the Lock phase reads the balance but reserves nothing; ...\"]`; cargo's line for that binary reads 'test result: ok. 10 passed; 0 failed; 2 ignored'. The editor's own report flagged this as 'not changed, worth a look' and said cargo test was not run; it has now been run and confirms the overstatement.",
+      "proposed_fix": "In build.py, also count ignores (`ignored = sum(p.read_text().count(\"#[ignore\") for p in ...)`) and substitute __TESTS__ with `tests - ignored` (70), adding a second placeholder (e.g. __IGNORED__) so index.template.html:360 reads '70 invariant tests, all green; 2 more document known DvP gaps and are ignored on purpose.' and part3.template.html:265 reads 'cargo test  # 70 passed, 2 ignored on purpose'. Then re-run build.py. Alternatively keep 72 but change the claim to '72 invariant tests: 70 green, 2 ignored on purpose'."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/build.py",
+      "line": 17,
+      "severity": "nit",
+      "claim": "build.py's printed sizes are character counts, not bytes, so its 'trace 885 KB' disagrees with record_trace.mjs's '889 KB' for the same file and its 'index.html: 1435 KB' understates the 1,476,538-byte file; the mismatch shows up in the editor's report as two different sizes for one trace.",
+      "evidence": "build.py line 17: `print(f\"index.html: {len(out)/1024:.0f} KB (wasm ..., trace {len(trace)/1024:.0f} KB)\")` where `trace = (here / \"trace.json\").read_text()` (a str, 906,033 chars) while `ls -l trace.json` is 910,427 bytes (\u03a6 and other multibyte characters); record_trace.mjs uses `fs.statSync(outPath).size` (bytes) and prints 889 KB. Rebuilt page: len(out) = 1,469,936 chars vs 1,476,538 bytes on disk. The page content itself is unaffected (rebuild is byte-identical to index.html).",
+      "proposed_fix": "Report bytes: `len(out.encode())/1024` and `len(trace.encode())/1024` (or `(here/'trace.json').stat().st_size`) in the print on line 17, so build.py and record_trace.mjs agree."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:copy:r1",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 214,
+      "severity": "blocking",
+      "claim": "The \u00a76 item-5 paragraph ends with a false sentence that contradicts its own first sentence, HANDOFF \u00a74.5 and facts F03/D5: the Python house staff did pay a door fee.",
+      "evidence": "part2.template.html:214 says \"The Python benchmark's house staff finished 15 of 15 on 788.2 cr with no door fee and no tax\" \u2014 but the same paragraph opens with \"A send costs 10 cr at the door, which is what the laboratory kernel actually charged for a send (100 tokens)\". facts.md F03: \"House Staff total runway burned (reproduces as 15 x (28.0 + 9.75 + 4.8 + 10.0) = 788.25)\" \u2014 the 10.0 per task is the send fee; D5: \"every topology charges a send as ResourceUnit(tokens=100, ...) = 10 cr\". HANDOFF.md:75: \"Send fee = 10 cr (what the kernel actually charged: 100 tokens)\". 150 of the 788.2 cr were door fees.",
+      "proposed_fix": "Replace the last sentence with: \"The Python benchmark's house staff finished 15 of 15 on 788.2 cr paying the same 10 cr per send, but no crossing tax and no wait at the door; the runs differ by the 2.5 cr tax on each send and by the door's hold, so they are not comparable task for task.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 121,
+      "severity": "blocking",
+      "claim": "The DraftContext code excerpt, labelled as engine/src/node.rs, shows the pre-audit struct with public fields \u2014 the exact shape the audit's critical finding #1 fixed by making every field private.",
+      "evidence": "part3.template.html:129-146 renders `pub struct DraftContext { pub node_id: NodeId, pub stage: Stage, pub tick: u64, pub purse: Purse, pub oak: OakSnapshot, pub epistemics: Epistemics, ... pub burned: f64, pub proposals: Vec<ProposalDraft>, pub halted_doing: Option<String> }` under the header \"engine/src/node.rs \u00b7 excerpt\" (part2.template.html:102). Actual engine/src/node.rs:470-492: every field is private (`node_id: NodeId, node_name: String, stage: Stage, ...`), there is no `burned` field, and it has `node_name, parent, known_peers, children, scratch, thoughts, receipts, handovers, cushion`. AUDIT-LEDGER.md:7 (#1, critical): \"A draft could rename itself: ctx.node_id was public and Collect trusted it \u2014 fixed: DraftContext fields private\". HANDOFF.md:37: \"DraftContext (PRIVATE fields, getters, recorded acts)\". The page presents the vulnerable version as current code beneath the Law 1 callout at part2.template.html:101.",
+      "proposed_fix": "Replace CODE.draftcontext with the current struct from node.rs:470-497 (private fields, the `assert_send_static` const, and a one-line note that inputs are read through getters and acts are recorded, so a seat cannot rename itself or calibrate for free)."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 50,
+      "severity": "should-fix",
+      "claim": "\"Search the tick file for writes to the Sovereign Graph and you will find them in one function\" (and the diagram's \"writes \u00b7 only here\" at COMMIT, part2:79/89/95, part3:179) is refuted by tick.rs itself: the graph is written from Verify as well as Commit.",
+      "evidence": "engine/src/tick.rs:7-13 (the file's own header): \"The Sovereign Graph is mutated in exactly two functions, both in the Commit phase: Engine::commit and its Stage 3 helper Engine::settle_netted, plus the court's rollback in Engine::apply_court_order.\" In addition, `self.graph.slash(env.initiator, amount)` at tick.rs:828 is inside `fn verify` (tick.rs:642-865), and `apply_court_order` (rollback_to at :873, slash at :877) is called from verify at tick.rs:862 \u2014 i.e. during Phase 3, before Commit. part2.template.html:50 also says \"the only phase allowed to touch the world is the last one\".",
+      "proposed_fix": "Say what the code does: \"Every write to the Sovereign Graph is in tick.rs: settlement and delivery in commit() and settle_netted(), and the two court actions, slashing and rollback, applied as verdicts land. A draft has no path to any of them.\" Adjust the diagram label at part2:89 to \"writes \u00b7 commit, settle, and the court\"."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 125,
+      "severity": "should-fix",
+      "claim": "The High Court rule overstates the code and contradicts the colophon: it does not roll back to \"the last coherent snapshot\" (always one tick), and the trigger counts liquidity verdicts, not \"a tick's envelopes\".",
+      "evidence": "part2.template.html:125: \"When more than half of a tick's envelopes fail, the graph rolls back to the last coherent snapshot\". engine/src/boundary.rs:563: `to_tick: tick.saturating_sub(1)`; :566 the reason string is \"{:.0}% of {} liquidity verdicts failed\"; :544 `min_sample: 5`. AUDIT-LEDGER.md:12 (#6): TickStats \"counts only liquidity failures at algorithmic gates\"; :34 (#28, open): \"Court rollback depth is effectively 1; no coherence marker\". The page's own colophon (part2.template.html:261) lists \"the High Court's rollback depth and coherence marker\" as still open, so :125 contradicts :261.",
+      "proposed_fix": "\"When more than half of a tick's liquidity verdicts at the algorithmic gates fail (at least five), the graph rolls back one tick, offenders lose a quarter of their reserves, and they trade under injunction. A person saying no at the Door never counts.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 7,
+      "severity": "should-fix",
+      "claim": "\"Every constant in the engine traces back to one of them [the three benchmarks]\" contradicts the page's own corrections that the crossing multipliers and the idle-decay rule come from the design docs, not the benchmarks.",
+      "evidence": "part2.template.html:7. Versus part2.template.html:14 \"The engine keeps doc 04's 1.25 and 1.40 crossing multipliers as a design rule; the percentage is evidence that a tax exists, not of the multipliers\"; :42 same; index.template.html:410 idle decay \"is a rule, not a measurement: it comes from doc 02\". Also facts F39 (8\u201332 tick finality from doc 05), F42 (HALLUCINATION_THRESHOLD 0.75, MAX_UNCALIBRATED_HANDOVERS 5) \u2014 none from a benchmark. HANDOFF.md:73 and :76.",
+      "proposed_fix": "\"The engine's empirical anchors trace back to one of them; its multipliers and the idle-decay rule are the design docs' and are labelled as such below.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 26,
+      "severity": "should-fix",
+      "claim": "The benchmark-2 caption still presents the per-tick idle-decay constant as fitted to a measurement, which is the framing ledger #24 and HANDOFF \u00a74.6 retire, and it sits in tension with the corrected door text.",
+      "evidence": "part2.template.html:26: \"The engine's decay constant, 0.02867 per tick, is fitted to this curve.\" The curve is twenty handovers (facts D9: \"the laboratory only measured the handover one\"). engine/src/epistemics.rs:10-14: \"Idle decay (doc 02's rule ...) with k chosen so that twenty idle ticks land where twenty handovers did. This is a design rule, not a measurement: benchmark 2 measured handovers, and benchmark 3 held \u03a6 constant while the door was closed.\" AUDIT-LEDGER.md:30 (#24): \"Idle decay presented as fitted to a measurement of waiting\". index.template.html:410 now says the per-tick decay \"is a rule, not a measurement\".",
+      "proposed_fix": "\"The engine's handover drift reproduces this curve to four decimals; its separate idle-decay rule (doc 02) uses k = 0.02867 per tick, chosen so that twenty idle ticks land where the twentieth handover did \u2014 a design rule, not a measurement of waiting.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 34,
+      "severity": "should-fix",
+      "claim": "The two benchmark-3 tiles present assigned constants as 100-tick measurements; the provenance box now says the 0.0 was assigned, so the tile and the box disagree, and the 50.0 busy-poll figure is flagged nowhere on the page.",
+      "evidence": "part2.template.html:34 \"Idle burn across 100 ticks at the door, clean suspension \u00b7 0.0 cr\"; :35 \"The same 100 ticks, busy-polling while waiting \u00b7 50.0 cr \u00b7 10% of the whole budget, spent on looking busy\", under :31 \"Benchmark 3 and two smaller measurements\" and :7 \"read from the raw record\". facts F21 caveat: \"an assigned constant (idle_burn_clean = 0.0, ael_battery.py line 204), not a measured loop\"; F22 caveat: \"Computed as simulated_waiting_ticks * 0.5 (ael_battery.py line 207), an assumed 0.5 cr/tick polling cost, not a measurement\"; D17. ael_battery.py:204,207 confirm. part2.template.html:42 says only of the 0.0: \"was an assigned constant in the battery, not a measured loop\".",
+      "proposed_fix": "Label both tiles honestly: \"Idle burn while waiting, as the battery assumed it \u00b7 0.0 cr\" and \"Busy-polling, as the battery assumed it: 0.5 cr per tick \u00d7 100 \u00b7 50.0 cr\"; move the \"100 ticks\" claim to the law_4 test, which is the only measured 100-tick wait, and extend the provenance sentence to cover the 50.0."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 38,
+      "severity": "should-fix",
+      "claim": "The 30.5% coordination figure is presented as a measurement and, in the provenance box, as an \"observed percentage\", though the record says the fees were installed by hand in scripted arithmetic.",
+      "evidence": "part2.template.html:38 tile under \"two smaller measurements\": \"A market of jobs charging handoff fees \u00b7 30.5% \u00b7 of a 1,000-credit budget burned on coordination\"; :42 \"the two observed percentages, 19.99% here and 30.5% in the runway experiment\". facts F34 caveat: \"Fees were installed by hand (15 + 20 + 10 = 45 cr/item ...)\"; F32 caveat: \"Scripted arithmetic (energetic_runway_experiments.py), not a live model\"; F62: \"'about a third' \u2014 installed by hand, not observed\", described as \"the narrative's hedge ... for the presenter to honour on screen\".",
+      "proposed_fix": "Tile: \"A toy market of jobs with hand-installed handoff fees \u00b7 30.5% \u00b7 scripted arithmetic, not a live model; 6 of 10 items finished\". Provenance box: \"the two recorded percentages\" instead of \"observed\"."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 212,
+      "severity": "should-fix",
+      "claim": "The LLM-seat sentence asserts runtime behaviour that does not exist: there is no network call and no live backend, as the colophon and HANDOFF \u00a73 say.",
+      "evidence": "part2.template.html:212: \"The LLM-backed seat is the same trait with a network call inside its future; it runs on the native build, where twenty houses' model calls proceed concurrently under Tokio.\" engine/src/agents/llm.rs:6: \"No live backend ships in this scaffold\"; :106-117 the only backend is `MockBackend`, which \"answers instantly with canned text\". HANDOFF.md:48: \"LlmSeat + InferenceBackend trait + MockBackend (no live backend)\". part2.template.html:261: \"the LLM seat has an adapter but no production backend\".",
+      "proposed_fix": "\"The LLM-backed seat is the same trait awaiting a backend's future; today the only backend is a mock. Under Tokio the houses' calls would run concurrently; a Vault backend is the next open item.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 214,
+      "severity": "nit",
+      "claim": "\"ends after 70 ticks\" describes the recorder's cap, not the run's end; the numbers themselves match the fresh trace.",
+      "evidence": "record_trace.mjs:27 `houseRun({ ..., ticks = 70 })` with break only on halted or all tasks done; trace.json last house frame: tick 70, status `active`, 14/15, 18.5 cr, the 14th DELIVERED event lands at tick 70; the 15th draft (Scout 28.0 + Scribble 9.75 + Inspector 4.8 \u2248 42.55 cr) no longer fits. The runtime fill at part3.template.html:595 repeats \"ends after ${hf.tick} ticks\". Values 14/15, 18.5, 67.1%, 35.0 and seed 7 / three-tick hold all match the trace and the editor's trace_stats.",
+      "proposed_fix": "\"the recording stops at tick 70, just after the fourteenth send, with 18.5 cr in the purse \u2014 not enough for the fifteenth draft \u2014 \u03a6 67.1%, 35.0 cr paid in crossing tax\"; mirror the wording in fillStatic at part3:595."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 360,
+      "severity": "nit",
+      "claim": "\"72 invariant tests, all green\" overcounts: two of the 72 are #[ignore]d and never run, and the tally includes unit tests of hash/rng/oak_table that are not invariant tests.",
+      "evidence": "build.py:13 counts every `#[test]` and `#[tokio::test` (69 + 3 = 72). `cargo test --no-fail-fast` today: 16 + 14 + 5 + 1 + 10 + 8 + 8 + 8 = 70 passed, 2 ignored, 0 failed; the ignored tests are tests/stage2_letter_slot.rs:808 and :860, whose messages describe DvP gaps that AUDIT-LEDGER.md:10 (#4) and :17 (#11) record as fixed. Same string at part3.template.html:265.",
+      "proposed_fix": "Count only tests that run (`--` ignore excluded), or write \"70 tests pass; two are ignored on purpose\", and drop \"invariant\" or restrict the count to golden_invariant.rs + law_1_forgery.rs."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 361,
+      "severity": "nit",
+      "claim": "\"Runs on ten cores under Tokio\" (and part2:252 \"on ten cores or one\") is a claim about the previous operator's laptop, not a property of the engine or a fact in facts.md.",
+      "evidence": "The only sources of \"ten cores\" are docs/workflow/proposal-backend-1-...md:8,22,69 (\"1.5x on ten cores\") and a doc comment; the test that proves executor independence, tests/golden_invariant.rs:403, runs with `worker_threads = 4`. facts.md F45 records only \"executor tokio-multi-thread\".",
+      "proposed_fix": "\"Runs on every core under Tokio and as N KB of WebAssembly ...\"; part2:252 \"on many cores or one\"."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 39,
+      "severity": "nit",
+      "claim": "The DeepSeek tile puts a paraphrase inside quotation marks and cites the index file rather than the round where the words were said.",
+      "evidence": "part2.template.html:39: \u201cWithout fees or reputation the bid is advisory, closer to scheduling than to a market.\u201d \u00b7 DIALECTIC.md. Verbatim (dialectic-round-3.md:1, facts F38): \"But without fees, reputation, or irreversible close, the bid is advisory, not a binding price or commitment\u2014closer to cooperative scheduling than to a market.\" The tile's wording is DIALECTIC.md:9's paraphrase.",
+      "proposed_fix": "Quote the verbatim clause (\"without fees, reputation, or irreversible close, the bid is advisory ... closer to cooperative scheduling than to a market\") and cite dialectic-round-3.md, or drop the quotation marks."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 158,
+      "severity": "nit",
+      "claim": "CODE.tick's header says \"the full function is 60 lines\" and its condensed Collect loop elides the audit-#1 reconciliation.",
+      "evidence": "engine/src/tick.rs:370-464 is 95 lines. The excerpt at part3:169-174 has `jobs.push(DraftJob { ctx, seats: staff.clone() })` and `for ctx in results { self.collect(ctx, tick, &mut report); }`; the real code (tick.rs:396-413) keys jobs by `node: id`, collects `outcome.node, ctx.into_outputs()` and emits `SeatFailed` when a draft is lost \u2014 the fix recorded in AUDIT-LEDGER.md:7 (#1) and :21 (#15).",
+      "proposed_fix": "Say \"the full function is about 95 lines\" and show the keyed Collect: `for outcome in outcomes { match outcome.ctx { Some(ctx) => self.collect(outcome.node, ctx.into_outputs(), ...), None => SeatFailed } }`."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 332,
+      "severity": "nit",
+      "claim": "The Async layer says the throughput proposal \"adds\" a Rayon lane; the decision record only says it argues for one.",
+      "evidence": "part3.template.html:332: \"The throughput proposal adds a second, Rayon lane for purely statistical households at 100k nodes.\" TECH-STACK-DECISION.md:14: \"the throughput-first proposal argues for a second, Rayon lane for purely statistical households at 100k nodes.\" The decision (TSD:8) is Tokio JoinSet; no Rayon lane exists in the crate.",
+      "proposed_fix": "\"The throughput-first proposal argues for a second, Rayon lane ... once there are 100k nodes.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 261,
+      "severity": "nit",
+      "claim": "The colophon's \"still open, from the audit ledger\" list omits one of the ledger's four open policy items.",
+      "evidence": "part2.template.html:261 lists the court's rollback depth/coherence marker (#28), the Stage 3 LOD tension (#30) and receiver-side DvP verification (#31). AUDIT-LEDGER.md:38 (#32) is also \"open\": \"Stage 5: settlement writes no ledger line to Oak Tables, so country roots are static\".",
+      "proposed_fix": "Add \"Stage 5 settlement writing no ledger line to the Oak Tables, so country roots stay static\" to the list."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:layout:r1",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "presentation/part2.template.html",
+      "line": 76,
+      "severity": "should-fix",
+      "claim": "The tick diagram has overlapping and hidden labels at desktop and is illegible at 390px, so \"every chart and the tick diagram legible\" does not hold (pre-existing, untouched by these edits).",
+      "evidence": "Screenshot shots/l/desktop-tick.png (and desktop-04.png, top third): the VERIFY box's gate list at part2.template.html:76 (`Door \u00b7 Slot \u00b7 Clearing \u00b7 Court \u00b7 STARK`, x=580 mono 11px) runs past the box's right edge and the last word is hidden under the COMMIT box, reading \"Court \u00b7 STA\"; the `mempool` label at :74 (x=512) straddles the vertical divider line; the `held at the door \u00b7 0 cr \u00b7 re-verified next tick` label (:84 region, x=648 y=288) is crossed by the reject arrow at x=740 so it reads \"held at the door \u00b7 \u25ae0 cr\"; `rejected \u2192 destroyed, compute sunk` at :86 is crossed by the gold writes arrow at x=915 (\"compute s\u25aek\"). At 390px (shots/l/phone-07.png and phone-tick-zoom.png) the svg scales to 358px and its text renders at 3.8\u20134.6px (measured from computed font-size \u00d7 358/1040): unreadable without pinch zoom.",
+      "proposed_fix": "Nudge the four labels off their collisions (shorten the gate list to `Door \u00b7 Slot \u00b7 Clearing \u00b7 Court \u00b7 STARK` on two lines or widen the VERIFY box to x=560..800; move `mempool` to x=534; move the reject label right of x=750; end the writes arrow above the red label). For phones add `@media (max-width: 560px) { figure.diagram { overflow-x: auto; } figure.diagram svg { min-width: 780px; } }` (index.template.html:177) so the drawing scrolls at a readable size instead of shrinking."
+     },
+     {
+      "file": "presentation/index.template.html",
+      "line": 406,
+      "severity": "should-fix",
+      "claim": "Two of the three Stage 1 illustrations have clipped or spilled labels at every width (pre-existing, untouched by these edits).",
+      "evidence": "shots/l/desktop-01.png (illustration row, right column) and phone-door-obj.png: the door label `0.0 cr while waiting` at index.template.html:406 starts at x=150 in a 220-wide viewBox; 20 monospace characters at 10px run to x\u2248270, so the svg clips it to \"0.0 cr while\". shots/l/desktop-note-obj.png (and tablet-01.png): the note label `[HALTED] top up or close` at :394 starts at x=66 and runs past the note card's right edge (card ends x\u2248100 in viewBox units), so \"close\" sits on the dark ground in #6b5636 and is nearly invisible.",
+      "proposed_fix": "Widen the two viewBoxes to `0 0 260 120` (and `.object svg { max-width: 260px }` at :122), or move the door label to x=118 and shorten the note label to `[HALTED] top up`. Either way check the three svgs at 220px once more."
+     },
+     {
+      "file": "presentation/index.template.html",
+      "line": 410,
+      "severity": "should-fix",
+      "claim": "The new door-card copy carries a provenance argument into the Stage 1 philosophy card, breaks the card's voice, and unbalances the three-column layout at desktop.",
+      "evidence": "shots/l/desktop-01.png: \"The purse\" and \"The note\" paragraphs end at y\u2248672 and y\u2248640 while \"The door\" runs to y\u2248810, leaving a blank block under the first two columns. The card's siblings are four plain sentences each; this one is now seven, with \"doc 02 (02_ENTITY_STATE_MACHINE.md \u00a72)\", \"The kernel's benchmark 3 held \u03a6 constant while the door was closed\" and \"The engine keeps the rule and says where it comes from\", which is the register of the provenance box (part2.template.html:42), not of a card headed by a quotation. The same attribution already appears twice more: part3.template.html:318 (law_4 proof line) and part2.template.html:42 (the fourth correction).",
+      "proposed_fix": "Cut the card back to one clause: \"Truth keeps decaying while you decide; that is doc 02's rule, not something the battery measured.\" Move the \u00a72 reference and the benchmark-3 sentence into the provenance box at part2.template.html:42, which already holds the matching correction."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 7,
+      "severity": "should-fix",
+      "claim": "The measured-section lede still says \"Every constant in the engine traces back to one of them\", which the new corrections in the same section now deny.",
+      "evidence": "part2.template.html:7 keeps \"Every constant in the engine traces back to one of them [the three benchmarks].\" The new provenance box at :42 says \"The engine keeps doc 04's 1.25 and 1.40 crossing multipliers as a design rule; the two observed percentages ... justify that a tax exists, not the multipliers\" and \"The 0.0 cr idle burn in the door benchmark was an assigned constant in the battery, not a measured loop\"; the door card at index.template.html:410 says the decay rule \"comes from doc 02\". Three named constants now trace to design docs, not to a benchmark, so the lede is an orphaned claim of the kind this lens asks about (shots/l/desktop-02.png, lede under \"What we measured before we built\").",
+      "proposed_fix": "Change the sentence to \"Most constants in the engine trace back to one of them; the provenance note below names the ones that come from the design docs instead.\""
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 14,
+      "severity": "nit",
+      "claim": "The benchmark 1 caption and the provenance box now say the same three things twice within one screen, and the caption's last clause is ungrammatical.",
+      "evidence": "part2.template.html:14 caption: side ledger never deducted, ran dry on cache misses, multipliers are a design rule. part2.template.html:42, same section: \"it was added to spent_on_coordination but never deducted from the runway\", \"halted at task six because of cache misses\", \"keeps doc 04's 1.25 and 1.40 crossing multipliers as a design rule\". The caption's close, \"the percentage is evidence that a tax exists, not of the multipliers\", mixes \"evidence that\" with \"evidence of\". The tooltip at part3.template.html:68 repeats it a third time. shots/l/desktop-02.png and desktop-03.png show the two blocks ~450px apart.",
+      "proposed_fix": "Keep the caption to two sentences (\"halted at task six on cache misses, not on fees; the 19.99% is a side ledger the kernel never deducted\") and let the provenance box carry the multiplier argument once. If the clause stays, write \"evidence that a tax exists, not evidence for the multipliers\"."
+     },
+     {
+      "file": "presentation/part3.template.html",
+      "line": 50,
+      "severity": "nit",
+      "claim": "The new two-line chart panel title editorialises where the sibling title is a plain axis label, and its wrap misaligns the two panels' rows at desktop.",
+      "evidence": "part3.template.html:50 `'Coordination recorded \u00b7 a side ledger, never deducted'` next to :49 `'Tasks completed \u00b7 of 15'`. In shots/l/desktop-02.png the right title wraps to two lines (\"COORDINATION RECORDED \u00b7 A SIDE LEDGER, NEVER DEDUCTED\") so the House staff row sits at y\u2248355 on the right against y\u2248336 on the left; at 390px (phone-04.png) it also takes two lines. \"never deducted\" is true only of the Coasean row, yet it heads all three.",
+      "proposed_fix": "Title the panel `'Coordination recorded \u00b7 % of 800'` and leave the caveat to the caption and tooltip, which already carry it."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 214,
+      "severity": "nit",
+      "claim": "The new send-fee paragraph corrects a number the page never showed and uses \"actually\", a defensive word the page otherwise avoids.",
+      "evidence": "part2.template.html:214: \"which is what the laboratory kernel actually charged for a send (100 tokens); the battery's spend_amount = 25 was declared and never read.\" The editor's own report says no template ever stated 25; grep for `spend_amount|25 cr` finds only this line. A reader meets \"25\" here for the first and only time, as a disclaimer with nothing to disclaim. \"actually\" appears nowhere else in the three templates (grep). Also the runtime fill at part3.template.html:595 writes \"On 800.0 cr\" over the template's \"On 800 cr\" (shots/l/desktop-08.png, second grey paragraph).",
+      "proposed_fix": "\"A send costs 10 cr at the door, the laboratory kernel's price for 100 tokens. The engine adds doc 04's crossing tax on top ...\" and drop the spend_amount clause. In :595 use `Math.round(hh.compute_allocated)` for the allocation so the sentence reads as the template does."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 222,
+      "severity": "nit",
+      "claim": "The stack lede now carries workflow-operations detail (\"hit a weekly usage limit\") that is off the page's register, and it is the longest lede on the page.",
+      "evidence": "part2.template.html:222: \"Six independent proposals, three per side, were generated by a judge-panel workflow on 28 September. The four judges and the synthesiser never ran: they hit a weekly usage limit. The decision record was written by the engine's previous operator ...\" Every other lede speaks about the engine; this one speaks about tooling. shots/l/desktop-08.png shows it at eight lines against three to five for the others.",
+      "proposed_fix": "Keep the correction in one sentence in the lede (\"The scoring in the record is one reader's, not a panel's: the judge and synthesiser passes never ran.\") and put the date and usage-limit detail in the colophon at :259, which already lists what is real and what is modelled."
+     },
+     {
+      "file": "presentation/index.template.html",
+      "line": 319,
+      "severity": "nit",
+      "claim": "The new `overflow-wrap: anywhere` fixes the 390px overflow but breaks a test name mid-word.",
+      "evidence": "shots/l/phone-18.png, proof list: `exhaustion_leaves_a_note_and_keeps_the_pape` / `rs` (break inside \"papers\"); `twenty_handovers_land_on_the_laboratory_rec` / `ord` in phone-20.png. The rule at index.template.html:319 lets the browser break at any character.",
+      "proposed_fix": "Keep the rule as the safety net but insert break opportunities at underscores when the list is built: at part3.template.html:592 render `t.replace(/_/g, '_<wbr>')` inside the `<code>`."
+     },
+     {
+      "file": "presentation/part3.template.html",
+      "line": 332,
+      "severity": "nit",
+      "claim": "Comma splice in the new Async layer: \"a second, Rayon lane\".",
+      "evidence": "part3.template.html:332: \"The throughput proposal adds a second, Rayon lane for purely statistical households at 100k nodes.\" Rendered in shots/l/desktop-09.png, backend card, ASYNC row.",
+      "proposed_fix": "\"adds a second lane, on Rayon, for purely statistical households at 100k nodes.\""
+     },
+     {
+      "file": "presentation/index.template.html",
+      "line": 154,
+      "severity": "nit",
+      "claim": "At desktop the six measurement tiles fall 5 + 1, leaving the concession quote alone on a second row (pre-existing).",
+      "evidence": "shots/l/desktop-02.png and desktop-03.png: five tiles across, then \"The other voice's concession\" alone at the left of the next row. `.tiles { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) }` at index.template.html:154 yields five columns in the 1140px measure; tablet (tablet-03.png) gets a clean 3 + 3.",
+      "proposed_fix": "Use `minmax(260px, 1fr)` (four columns at desktop: 4 + 2) or `minmax(340px, 1fr)` (3 + 3 everywhere above phone)."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 150,
+      "severity": "nit",
+      "claim": "At 390px the console's SEED label is separated from its input by a line break (pre-existing).",
+      "evidence": "shots/l/phone-13.png, console controls: row two reads \"PURSE [800] TASKS [15] SEED\" and the \"7\" input drops to row three on its own. The label/input pairs at part2.template.html:150 are siblings in one flex `.group`, so the wrap can fall between a label and its input.",
+      "proposed_fix": "Wrap each label+input pair in a `<span style=\"display:inline-flex;gap:8px;align-items:center\">` (or give `.group label { white-space: nowrap }` and pair them with `display:contents` removed) so the pair wraps together."
+     }
+    ]
+   }
+  },
+  {
+   "label": "repair:r1",
+   "phase": "Repair",
+   "result": {
+    "built": true,
+    "trace_stats": "trace: house 70 frames, hidden 9, visible 13, street 30, 889 KB\nhouse final: 14/15 sent, 18.5 cr left, \u03a6 67.1%, status active\ncost visible: 6/10 (halted) \u00b7 hidden: 4/10 (halted)",
+    "build_stats": "index.html: 1439 KB (wasm 331 KB, trace 885 KB); tests 70 run + 2 ignored",
+    "edits": [
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F1 (blocking) \u00b7 the Python house staff paid the same 10 cr per send; the runs differ by the tax and the hold (~line 214)",
+      "before": "The Python benchmark's house staff finished 15 of 15 on 788.2 cr with no door fee and no tax; the two runs are not comparable task for task.</p>",
+      "after": "The Python benchmark's house staff finished 15 of 15 on 788.2 cr paying the same 10 cr per send, but no crossing tax and no wait at the door; the runs differ by the 2.5 cr tax on each send and by the door's hold, so they are not comparable task for task.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F2 (blocking) \u00b7 CODE.draftcontext replaced with the current struct from node.rs:470\u2013497 (private fields, no `burned`, recorded acts), doc comment reflowed to the column width",
+      "before": "CODE.draftcontext = `/// **The Golden Invariant, as a type.** [\u2026] A seat can burn the purse copy, read the\n/// Oak Table copy, leave papers, and propose envelopes. That is all.\n#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]\npub struct DraftContext {\n    pub node_id: NodeId,\n    pub stage: Stage,\n    pub tick: u64,\n    /// A copy of the purse. Reconciled against the real one in Collect.\n    pub purse: Purse,\n    /// A copy of the table, frozen at this tick.\n    pub oak: OakSnapshot,\n    pub epistemics: Epistemics,\n    pub task: Option<Task>,\n    pub rng: Rng,\n    pub cost_visible: bool,\n    // outputs\n    pub papers: Vec<Paper>,\n    pub burned: f64,\n    pub proposals: Vec<ProposalDraft>,\n    pub halted_doing: Option<String>,\n}\n\nfn assert_send_static<T: Send + 'static>() {}\n/// Compile-time proof of law 1.\npub const GOLDEN_INVARIANT_LAW_1: fn() = assert_send_static::<DraftContext>;\n\n/// A seat at the oak table. Receives the context by value, returns it by value.\npub trait Agent: Send + Sync { [\u2026] }`",
+      "after": "CODE.draftcontext = `/// **The Golden Invariant, as a type.**\n///\n/// A draft runs against this and nothing else. It is owned,\n/// Send, and 'static: it cannot hold a reference to the engine,\n/// another node, or the Sovereign Graph, because there is no\n/// lifetime parameter through which such a reference could enter.\n///\n/// Its fields are private. Identity and inputs are read through\n/// getters and cannot be changed; outputs are produced only\n/// through methods that record what happened (burn,\n/// record_handover, leave_paper, propose). The engine reconciles\n/// from that record, keyed by the job it issued, never from a\n/// field a seat could set. A seat cannot rename itself, cannot\n/// burn another purse, cannot calibrate its own truth for free,\n/// and cannot forge a signature, because none of those are\n/// things the type lets it say.\n#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]\npub struct DraftContext {\n    node_id: NodeId,\n    node_name: String,\n    stage: Stage,\n    tick: u64,\n    parent: Option<NodeId>,\n    known_peers: Vec<NodeId>,\n    children: Vec<NodeId>,\n    purse: Purse,           // a copy, reconciled in Collect\n    oak: OakSnapshot,       // a copy, frozen at this tick\n    epistemics: Epistemics,\n    task: Option<Task>,\n    rng: Rng,\n    cost_visible: bool,\n    scratch: BTreeMap<String, String>,\n    papers: Vec<Paper>,     // outputs: recording methods only\n    proposals: Vec<ProposalDraft>,\n    thoughts: Vec<Thought>,\n    receipts: Vec<SeatReceipt>,\n    handovers: Vec<Handover>,\n    cushion: f64,\n    halted_doing: Option<String>,\n}\n\nfn assert_send_static<T: Send + 'static>() {}\n/// Compile-time proof of law 1: a draft context can be moved to\n/// any thread and outlive any borrow, because it holds none.\npub const GOLDEN_INVARIANT_LAW_1: fn() = assert_send_static::<DraftContext>;\n\n/// A seat at the oak table. Context in by value, out by value.\npub trait Agent: Send + Sync { [\u2026unchanged\u2026] }`"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F3 \u00b7 tick lede: every graph write named (commit, settle_netted, the court's slash and rollback from Verify) (~line 50)",
+      "before": "Here a tick has four phases, and the only phase allowed to touch the world is the last one. Search the tick file for writes to the Sovereign Graph and you will find them in one function.</p>",
+      "after": "Here a tick has four phases, and nothing inside a house touches the world. Every write to the Sovereign Graph is in <code>tick.rs</code>, at the boundary: settlement and delivery in <code>commit()</code> and <code>settle_netted()</code>, and the two court actions, slashing and rollback, applied as verdicts land. A draft has no path to any of them.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F3/F11 \u00b7 tick diagram redrawn (~lines 52\u201396): taller phase boxes so the gate list fits on two lines, mempool label in a gap in the divider, held and rejected labels clear of the arrows, a court arrow from Verify for slash and rollback, 'writes \u00b7 only here' and 'the one writer' retired; svg wrapped in <div class=\"diagram-scroll\">",
+      "before": "[svg viewBox 0 0 1040 400; the lines that changed:] <line x1=\"530\" y1=\"14\" x2=\"530\" y2=\"386\" class=\"lane\"/> \u00b7 phase boxes height=\"90\" \u00b7 <text x=\"512\" y=\"186\" class=\"al\">mempool</text> \u00b7 <text x=\"580\" y=\"228\" class=\"m\">Door \u00b7 Slot \u00b7 Clearing \u00b7 Court \u00b7 STARK</text> \u00b7 <text x=\"840\" y=\"228\" class=\"m\">the one writer</text> \u00b7 held loop M600 240 V296 H640 V242 with one label \"held at the door \u00b7 0.0 cr \u00b7 re-verified next tick\" at x=648 \u00b7 reject M740 240 V296 with \"rejected \u2192 destroyed, compute sunk\" at x=748 y=316 \u00b7 graph box y=318 \u00b7 writes arrow M915 240 V318 labelled \"writes \u00b7 only here\" \u00b7 aria-label \"\u2026Commit is the only writer of the Sovereign Graph\u2026\" \u00b7 figcaption \"\u2026the gate decides, and the graph has one writer.\"",
+      "after": "[svg viewBox 0 0 1040 436 inside <div class=\"diagram-scroll\">; the lines that changed:] divider split into y 14\u2013172 and 212\u2013430 with <text x=\"534\" y=\"190\" text-anchor=\"middle\" class=\"al\">mempool</text> in the gap \u00b7 phase boxes height=\"104\" with a fifth mono line each (DRAFT \"fields private \u00b7 acts recorded\", COLLECT \"keyed by the job issued\", VERIFY \"Door \u00b7 Slot \u00b7 Clearing\" / \"Court \u00b7 STARK\", COMMIT \"commit \u00b7 settle_netted\" / \"then snapshot the root\") \u00b7 held loop M572 254 V292 H596 V256 with two labels at x=604 (\"held at the door \u00b7 0.0 cr\", \"re-verified next tick\") \u00b7 reject M752 254 V304 with two right-anchored labels at x=744 (\"rejected \u2192 destroyed,\", \"compute sunk\") \u00b7 new hot court arrow M770 240 H796 V366 H818 labelled \"court verdicts\" / \"slash \u00b7 roll back\" \u00b7 graph box y=348 \u00b7 writes arrow M915 254 V348 labelled \"writes \u00b7 settle,\" / \"deliver, sync\" \u00b7 no-path line at y=400, its label at y=422 \u00b7 aria-label now says Verify is where the court's slash and rollback land and Commit settles and delivers \u00b7 figcaption \"\u2026the gate decides, and the graph is written only at the boundary: by Commit, and by the court's verdicts. Everything else is bookkeeping.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F3 \u00b7 tick excerpt (declared condensed): the Verify and Commit comments name the court's writes and the settlement path (~line 176\u2013180)",
+      "before": "    // \u2500\u2500 Phase 3: VERIFY. The gates. \u2500\u2500\n    self.verify(tick, &mut report);\n\n    // \u2500\u2500 Phase 4: COMMIT. The one write path into the Sovereign Graph. \u2500\u2500\n    self.commit(tick, &mut report);",
+      "after": "    // \u2500\u2500 Phase 3: VERIFY. The gates; court slash and rollback. \u2500\u2500\n    self.verify(tick, &mut report);\n\n    // \u2500\u2500 Phase 4: COMMIT. Settle and deliver into the graph. \u2500\u2500\n    self.commit(tick, &mut report);"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F4 \u00b7 High Court rule says what boundary.rs does: liquidity verdicts at algorithmic gates, five or more, rollback one tick, a no at the Door never counts (~line 125)",
+      "before": "Stop-lines and rollback. When more than half of a tick's envelopes fail, the graph rolls back to the last coherent snapshot, offenders lose a quarter of their reserves, and they trade under injunction. <code>Stage4StatutoryLaw</code>",
+      "after": "Stop-lines and rollback. When more than half of a tick's liquidity verdicts at the algorithmic gates fail, five or more, the graph rolls back one tick, offenders lose a quarter of their reserves, and they trade under injunction. A person saying no at the Door never counts. <code>Stage4StatutoryLaw</code>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F5/F14 \u00b7 measured lede: empirical anchors trace to the benchmarks; multipliers and idle decay are the design docs' (line 7)",
+      "before": "Three benchmarks ran in this folder before a line of engine code existed. Every constant in the engine traces back to one of them. The numbers below are read from the raw record, not from a slide.</p>",
+      "after": "Three benchmarks ran in this folder before a line of engine code existed. The engine's empirical anchors trace back to one of them; its crossing multipliers and its idle-decay rule come from the design docs instead, and the provenance note below names them. The numbers below are read from the raw record, not from a slide.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F6 \u00b7 benchmark 2 caption: handover drift reproduces the curve; the per-tick constant is doc 02's rule chosen to land on it, not a fit to a measurement of waiting (line 26)",
+      "before": "Left alone, confidence fell to 56.4% by the twentieth handover. Four oracle calls, sixty credits in all, held it at one. The engine's decay constant, 0.02867 per tick, is fitted to this curve. <span class=\"mono\">benchmark_2_epistemic_drift</span></figcaption>",
+      "after": "Left alone, confidence fell to 56.4% by the twentieth handover. Four oracle calls, sixty credits in all, held it at one. The engine's handover drift reproduces this curve to four decimals. Its separate idle-decay rule, doc 02's, uses k = 0.02867 per tick, chosen so that twenty idle ticks land where the twentieth handover did: a design rule, not a measurement of waiting. <span class=\"mono\">benchmark_2_epistemic_drift</span></figcaption>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F7 \u00b7 tiles heading (line 31)",
+      "before": "<h4>Benchmark 3 and two smaller measurements</h4>",
+      "after": "<h4>Benchmark 3, two smaller experiments, and a concession</h4>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F7 \u00b7 idle-burn tile: an assigned constant; the measured 100-tick wait is the law_4 test (line 34)",
+      "before": "<div class=\"tile\"><div class=\"label\">Idle burn across 100 ticks at the door, clean suspension</div><div class=\"value good\">0.0 cr</div><div class=\"delta\">State preserved; 440.0 cr still in the purse when the person returned</div><div class=\"src\">benchmark_3_door_integrity</div></div>",
+      "after": "<div class=\"tile\"><div class=\"label\">Idle burn while waiting at the door, as the battery assumed it</div><div class=\"value good\">0.0 cr</div><div class=\"delta\">Assigned in the battery, not run; 440.0 cr were still in the purse when the person returned. The measured wait is the engine's <code>law_4</code> test: 100 real ticks, 0.0 cr</div><div class=\"src\">benchmark_3_door_integrity</div></div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F7 \u00b7 busy-poll tile: 0.5 cr per tick \u00d7 100, assumed (line 35)",
+      "before": "<div class=\"tile\"><div class=\"label\">The same 100 ticks, busy-polling while waiting</div><div class=\"value bad\">50.0 cr</div><div class=\"delta\">10% of the whole budget, spent on looking busy</div><div class=\"src\">benchmark_3_door_integrity</div></div>",
+      "after": "<div class=\"tile\"><div class=\"label\">Busy-polling instead, as the battery assumed it: 0.5 cr per tick \u00d7 100</div><div class=\"value bad\">50.0 cr</div><div class=\"delta\">10% of a 500-credit budget, spent on looking busy; assumed, not run</div><div class=\"src\">benchmark_3_door_integrity</div></div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F8 \u00b7 runway tile: a toy with hand-installed fees, scripted arithmetic (line 38)",
+      "before": "<div class=\"tile\"><div class=\"label\">A market of jobs charging handoff fees</div><div class=\"value bad\">30.5%</div><div class=\"delta\">of a 1,000-credit budget burned on coordination; 6 of 10 items finished</div><div class=\"src\">ENERGETIC_RUNWAY_EXPERIMENTS.md \u00b7 exp. 2</div></div>",
+      "after": "<div class=\"tile\"><div class=\"label\">A toy market of jobs with hand-installed handoff fees</div><div class=\"value bad\">30.5%</div><div class=\"delta\">of a 1,000-credit budget went to fees of 45 cr an item; scripted arithmetic, not a live model; 6 of 10 items finished</div><div class=\"src\">ENERGETIC_RUNWAY_EXPERIMENTS.md \u00b7 exp. 2</div></div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F7/F8/F13 \u00b7 provenance box heading (line 42)",
+      "before": "<b>Provenance and four corrections.</b>",
+      "after": "<b>Provenance and corrections.</b>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F7/F8/F13 \u00b7 provenance box tail: 'recorded' not 'observed', both benchmark-3 figures assigned (battery lines 204 and 207), and the doc 02 \u00a72 attribution with the benchmark-3 sentence moved here from the door card (line 42)",
+      "before": "the two observed percentages, 19.99% here and 30.5% in the runway experiment, justify that a tax exists, not the multipliers. The 0.0 cr idle burn in the door benchmark was an assigned constant in the battery, not a measured loop; the measurement that exists is the engine's own <code>law_4_the_door_holds_at_zero_burn</code> test, 100 real ticks.</div>",
+      "after": "the two recorded percentages, 19.99% here and 30.5% in the runway experiment (where the fees were installed by hand), justify that a tax exists, not the multipliers. Benchmark 3's idle figures were assigned in the battery, not run: <code>idle_burn_clean = 0.0</code> and a busy-poll cost of 0.5 cr per tick \u00d7 100 ticks = 50.0 (<code>ael_battery.py</code> lines 204 and 207). The measurement that exists is the engine's own <code>law_4_the_door_holds_at_zero_burn</code> test, 100 real ticks at 0.0 cr. The decay of truth while a house waits is doc 02's rule (<code>02_ENTITY_STATE_MACHINE.md</code> \u00a72: confidence decays with every tick since the last sync); the kernel's benchmark 3 held \u03a6 constant while the door was closed. The engine keeps the rule and says where it comes from.</div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F9 \u00b7 LLM seat: awaiting a backend's future; today only a mock (~line 212)",
+      "before": "The LLM-backed seat is the same trait with a network call inside its future; it runs on the native build, where twenty houses' model calls proceed concurrently under Tokio.</p>",
+      "after": "The LLM-backed seat is the same trait, awaiting a backend's future; today the only backend is a mock that answers with canned text. Under Tokio the houses' calls would run concurrently; a Vault backend is the next open item.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F9 \u00b7 file tree: llm.rs has a mock backend, no network call",
+      "before": "  ['src/agents/llm.rs', 'the LLM seat: same trait, a network call inside'],",
+      "after": "  ['src/agents/llm.rs', 'the LLM seat: same trait, a backend\\'s future inside; mock only today'],"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/build.py",
+      "item": "F10 \u00b7 __TESTS__ is the number cargo runs (attributes minus #[ignore] attribute lines); __IGNORED__ added; the print line reports both",
+      "before": "tests = sum(p.read_text().count(\"#[test]\") + p.read_text().count(\"#[tokio::test\") for p in list((eng/\"src\").rglob(\"*.rs\")) + list((eng/\"tests\").glob(\"*.rs\")))\nout = (template.replace(\"/*__WASM_B64__*/\", b64).replace(\"/*__TRACE_JSON__*/\", trace)\n       .replace(\"__LOC__\", f\"{loc:,}\").replace(\"__TESTS__\", str(tests)).replace(\"__WASM_KB__\", str(round(wasm.stat().st_size/1024))))\n(here / \"index.html\").write_text(out)\nprint(f\"index.html: {len(out)/1024:.0f} KB (wasm {wasm.stat().st_size/1024:.0f} KB, trace {len(trace)/1024:.0f} KB)\")",
+      "after": "import re\nrs = list((eng/\"src\").rglob(\"*.rs\")) + list((eng/\"tests\").glob(\"*.rs\"))\nattrs = sum(p.read_text().count(\"#[test]\") + p.read_text().count(\"#[tokio::test\") for p in rs)\nignored = sum(len(re.findall(r\"^\\s*#\\[ignore\", p.read_text(), re.M)) for p in rs)  # attribute lines only, not the doc comment that mentions them\ntests = attrs - ignored  # what `cargo test` runs; the ignored ones are skipped on purpose\nout = (template.replace(\"/*__WASM_B64__*/\", b64).replace(\"/*__TRACE_JSON__*/\", trace)\n       .replace(\"__LOC__\", f\"{loc:,}\").replace(\"__TESTS__\", str(tests)).replace(\"__IGNORED__\", str(ignored)).replace(\"__WASM_KB__\", str(round(wasm.stat().st_size/1024))))\n(here / \"index.html\").write_text(out)\nprint(f\"index.html: {len(out)/1024:.0f} KB (wasm {wasm.stat().st_size/1024:.0f} KB, trace {len(trace)/1024:.0f} KB); tests {tests} run + {ignored} ignored\")"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F10 \u00b7 hero: 70 green, 2 ignored on purpose (line 360)",
+      "before": "<span><span class=\"num\" data-fact=\"tests\">__TESTS__</span> invariant tests, all green.</span>",
+      "after": "<span><span class=\"num\" data-fact=\"tests\">__TESTS__</span> invariant tests, all green; <span class=\"num\" data-fact=\"ignored\">__IGNORED__</span> more, written against the Letter Slot's lock phase, are ignored on purpose.</span>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F10 \u00b7 run snippet: '70 passed, 2 ignored on purpose', with the comment moved left so it is visible without scrolling the block (~line 265)",
+      "before": "cargo test                                             # __TESTS__ tests, all green",
+      "after": "cargo test   # __TESTS__ passed, __IGNORED__ ignored on purpose"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F11 \u00b7 phone: the tick diagram scrolls horizontally at a readable size instead of shrinking (CSS, after line 177)",
+      "before": "  figure.diagram svg { width: 100%; max-width: 1040px; height: auto; color: var(--ink-2); display: block; }",
+      "after": "  figure.diagram svg { width: 100%; max-width: 1040px; height: auto; color: var(--ink-2); display: block; }\n  .diagram-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }\n  @media (max-width: 560px) { .diagram-scroll svg { min-width: 780px; } }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F12 \u00b7 .object svg max-width 220 \u2192 260 (the three viewBoxes widened to match) (line 122)",
+      "before": ".object svg { width: 100%; max-width: 220px; height: auto; color: var(--ink-2); }",
+      "after": ".object svg { width: 100%; max-width: 260px; height: auto; color: var(--ink-2); }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F12 \u00b7 purse svg re-centred in a 260-wide viewBox (~line 380)",
+      "before": "<svg viewBox=\"0 0 220 120\" role=\"img\" aria-label=\"The purse: a fixed amount that thinking draws down\">\n  <rect x=\"30\" y=\"34\" width=\"160\" height=\"62\" rx=\"10\" \u2026/>\n  <path d=\"M30 52 H190\" \u2026/>\n  <rect x=\"42\" y=\"64\" width=\"98\" height=\"18\" rx=\"4\" fill=\"#b98626\"/>\n  <rect x=\"140\" y=\"64\" width=\"38\" height=\"18\" \u2026 stroke-dasharray=\"3 3\"/>\n  <text x=\"42\" y=\"26\" \u2026>runway \u00b7 burns on thinking</text>",
+      "after": "<svg viewBox=\"0 0 260 120\" role=\"img\" aria-label=\"The purse: a fixed amount that thinking draws down\">\n  <rect x=\"50\" y=\"34\" width=\"160\" height=\"62\" rx=\"10\" \u2026/>\n  <path d=\"M50 52 H210\" \u2026/>\n  <rect x=\"62\" y=\"64\" width=\"98\" height=\"18\" rx=\"4\" fill=\"#b98626\"/>\n  <rect x=\"160\" y=\"64\" width=\"38\" height=\"18\" \u2026 stroke-dasharray=\"3 3\"/>\n  <text x=\"62\" y=\"26\" \u2026>runway \u00b7 burns on thinking</text>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F12 \u00b7 note svg: wider card so '[HALTED] top up or close' stays on the paper (~line 392)",
+      "before": "<svg viewBox=\"0 0 220 120\" \u2026>\n  <rect x=\"52\" y=\"14\" width=\"116\" height=\"94\" rx=\"3\" fill=\"#f0e6d2\"/>\n  <path d=\"M66 36 H154 M66 50 H140 M66 64 H150 M66 78 H120\" \u2026/>\n  <text x=\"66\" y=\"100\" font-size=\"9.5\" \u2026>[HALTED] top up or close</text>",
+      "after": "<svg viewBox=\"0 0 260 120\" \u2026>\n  <rect x=\"50\" y=\"14\" width=\"160\" height=\"94\" rx=\"3\" fill=\"#f0e6d2\"/>\n  <path d=\"M64 36 H196 M64 50 H176 M64 64 H190 M64 78 H150\" \u2026/>\n  <text x=\"64\" y=\"100\" font-size=\"9.5\" \u2026>[HALTED] top up or close</text>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F12 \u00b7 door svg: door moved left so '0.0 cr while waiting' fits inside the viewBox (~line 402)",
+      "before": "<svg viewBox=\"0 0 220 120\" \u2026>\n  <rect x=\"80\" y=\"12\" width=\"60\" height=\"98\" rx=\"4\" \u2026/>\n  <rect x=\"86\" y=\"18\" width=\"48\" height=\"86\" rx=\"2\" \u2026/>\n  <circle cx=\"126\" cy=\"64\" r=\"3.5\" fill=\"#d4a755\"/>\n  <path d=\"M150 64 H200\" \u2026 stroke-dasharray=\"4 4\"/>\n  <text x=\"150\" y=\"54\" font-size=\"10\" \u2026>0.0 cr while waiting</text>",
+      "after": "<svg viewBox=\"0 0 260 120\" \u2026>\n  <rect x=\"60\" y=\"12\" width=\"60\" height=\"98\" rx=\"4\" \u2026/>\n  <rect x=\"66\" y=\"18\" width=\"48\" height=\"86\" rx=\"2\" \u2026/>\n  <circle cx=\"106\" cy=\"64\" r=\"3.5\" fill=\"#d4a755\"/>\n  <path d=\"M130 64 H240\" \u2026 stroke-dasharray=\"4 4\"/>\n  <text x=\"130\" y=\"54\" font-size=\"10\" \u2026>0.0 cr while waiting</text>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F13 \u00b7 door card cut back to one clause; the \u00a72 reference and the benchmark-3 sentence moved to the provenance box (line 410)",
+      "before": "In the engine, waiting at the door burns exactly zero credits. Truth keeps decaying while you decide, and that is a rule, not a measurement: it comes from doc 02 (<code>02_ENTITY_STATE_MACHINE.md</code> \u00a72), which decays confidence with every tick since the last sync. The kernel's benchmark 3 held \u03a6 constant while the door was closed. The engine keeps the rule and says where it comes from.</p>",
+      "after": "In the engine, waiting at the door burns exactly zero credits. Truth keeps decaying while you decide; that is doc 02's rule, not something the battery measured.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "beyond the findings \u00b7 highlighter: attributes wrapped last, so the string regex no longer eats the span's own class=\"a\" (a '\"a\">' leaked onto every #[derive] line; pre-existing, visible in the old build too) (hl(), ~line 282)",
+      "before": "    code = code.replace(/(#\\[[^\\]]*\\])/g, '<span class=\"a\">$1</span>')\n      .replace(/(\"[^\"]*\")/g, '<span class=\"s\">$1</span>')\n      .replace(KW, '<span class=\"k\">$1</span>')\n      .replace(/\\b([A-Z][A-Za-z0-9_]*)\\b/g, '<span class=\"t\">$1</span>')\n      .replace(/\\b(\\d+(\\.\\d+)?)\\b/g, '<span class=\"n\">$1</span>');",
+      "after": "    code = code.replace(/(\"[^\"]*\")/g, '<span class=\"s\">$1</span>')\n      .replace(KW, '<span class=\"k\">$1</span>')\n      .replace(/\\b([A-Z][A-Za-z0-9_]*)\\b/g, '<span class=\"t\">$1</span>')\n      .replace(/\\b(\\d+(\\.\\d+)?)\\b/g, '<span class=\"n\">$1</span>')\n      .replace(/(#\\[[^\\]]*\\])/g, '<span class=\"a\">$1</span>'); // attributes last: the spans above must not be re-matched"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "beyond the findings \u00b7 tiles: the mono source line may wrap (ENERGETIC_RUNWAY_EXPERIMENTS.md ran past its tile's edge; pre-existing) (line 160)",
+      "before": ".tile .src { color: var(--ink-3); font-size: 0.74rem; font-family: var(--mono); }",
+      "after": ".tile .src { color: var(--ink-3); font-size: 0.74rem; font-family: var(--mono); overflow-wrap: anywhere; }"
+     }
+    ],
+    "console_errors": "One console error per load, at both widths, verbatim: \"[error] Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID\". It is the Google Fonts stylesheet refused by the sandbox's TLS interception; the page falls back to its system font stack. No pageerror, no warnings. Same single error as the pre-repair build, so it is environmental.",
+    "notes": "All fourteen findings were verified against the sources and every one was real; all are fixed. Verification specifics: F1 by facts.md F03/D5 and HANDOFF \u00a74.5 (the 10.0 in 15 \u00d7 (28.0 + 9.75 + 4.8 + 10.0) is the send fee); F2 by engine/src/node.rs:470\u2013497 (every field private, no `burned`); F3 by engine/src/tick.rs:7\u201313 (the file's own header), self.graph.slash at :828 inside fn verify, and apply_court_order (rollback_to :873, slash :877) called from verify at :862; F4 by boundary.rs:544 (min_sample 5), :563 (to_tick = tick \u2212 1), :566 (the reason counts liquidity verdicts); F6 by epistemics.rs:10\u201314; F7 by ael_battery.py:204 and :207; F8 by facts F34/F62; F9 by agents/llm.rs:6 and the MockBackend at :108; F10 by running `cargo test --no-fail-fast` myself: 70 passed, 0 failed, 2 ignored across all binaries (the scratchpad's earlier cargo-test.log was truncated to 34). F11 and F12 by the reviewers' screenshots and my own captures.\n\nTest count: build.py now counts `#[ignore` only on attribute lines (regex ^\\s*#\\[ignore), because tests/stage2_letter_slot.rs:15 mentions `#[ignore]` in a doc comment and a plain substring count gives 3. One more thing for the next operator, not the page: run with `--ignored`, `dvp_binds_the_lock_amount_to_the_verified_price` passes today and only `dvp_lock_reserves_liquidity_so_a_second_swap_cannot_pass_the_gate` fails, so the first could be un-ignored; the hero therefore says only that the two are \"written against the Letter Slot's lock phase\" and \"ignored on purpose\", without claiming both still document open gaps.\n\nF3 was drawn, not only relabelled: the diagram now has a second hot arrow from Verify into the Sovereign Graph (\"court verdicts \u00b7 slash \u00b7 roll back\") beside Commit's (\"writes \u00b7 settle, deliver, sync\"), because the court's slash and rollback are applied inside verify(). Not changed: tick.rs:422's own comment still reads \"The one write path into the Sovereign Graph\" and disagrees with the file header at tick.rs:7\u201313; the page's excerpt (already declared condensed) now says what the phases do, and a one-line engine comment fix is worth doing later. I changed nothing under engine/; the engine files that show as modified in git status are from other tasks in this session.\n\nHANDOFF \u00a76's six items are all still honoured: (1) doc 02 attribution stays in the door card as one clause and in full, with the \u00a72 reference and \"the kernel held \u03a6 constant\", in the provenance box; (2) the gates lede with asked_human is untouched; (3) the benchmark-1 caption and the 19.99% correction are untouched; (4) the camera log line is untouched; (5) the send-fee-10 paragraph stays, only its false last sentence changed; (6) the STACK object from TECH-STACK-DECISION.md is untouched. The Python house-staff numbers (15/15, 788.2, 5/15, 800.0, 159.9) remain as labelled history.\n\nBeyond the findings, three pre-existing defects that the captures showed were fixed: the code highlighter leaked a literal `\"a\">` onto every #[derive] line (the attribute span's own class was re-matched by the string regex; the old build shows it too); the tile source line ENERGETIC_RUNWAY_EXPERIMENTS.md overflowed its tile; and the tick diagram is now wrapped in .diagram-scroll so on phones it scrolls at 780px (smallest text 8.3px, was 3.8\u20134.6px) instead of shrinking. Phone check: documentElement.scrollWidth 390 on a 390 viewport, nothing overflows the page (the only elements past the edge are comment spans inside pre.code blocks, which scroll on their own as before, and tables in closed details). Desktop: no overflow, 9 sections, 1 hero, console badge \"engine \u00b7 live \u00b7 context-engine 0.1.0 (wasm32, sequential executor)\", door panel \"Sending costs 10.0 cr\", crossing tax 2.5 cr at t01, house-run sentence filled from the embedded trace.\n\nScreenshots: the instructed command produced /tmp/claude-0/-home-user-agentic-economy/cb18da94-1b1d-5696-9695-4826407a9893/scratchpad/shots/pres-repair.png (1400\u00d713936, equal to the page's scrollHeight). Like the editor's run, Playwright's full-page capture of this tall page tiles and repeats content (the hero appears twice in the image while the DOM has one hero), so I also captured the page with the viewport sized to the page: shots/pres-repair-clean.png and shots/r/band-00.png \u2026 band-07.png (2000px clips; at that viewport the vh-based section padding makes the page 14722px, which is why there are eight bands), plus per-section captures shots/r/desktop-{objects,tick,tiles,provenance,excerpts,gates,hero-meta,charts,live-foot}.png and shots/r/phone-{objects,tick,tick-right,tiles,hero-meta}.png. All were inspected: the tick diagram has no overlapping labels, the three Stage 1 illustrations fit their viewBoxes, the three object columns are balanced again, the DraftContext excerpt shows the private-field struct without a horizontal scroll, and the colophon and footer render.\n\nFiles changed, none committed: presentation/index.template.html, part2.template.html, part3.template.html, build.py, trace.json (re-recorded, identical numbers), index.html (1,479,790 bytes, built from engine/dist/context_engine.wasm). Backups of the pre-repair templates are in the scratchpad as *.pre-repair; the repair scripts are scratchpad/repair.py and repair2.py, and the exact strings are in scratchpad/repair-edits.json."
+   }
+  },
+  {
+   "label": "verify:build:r2",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/engine/dist/context_engine.wasm",
+      "severity": "nit",
+      "claim": "The wasm embedded in index.html (copied from engine/dist) was compiled from the pre-rustfmt source tree, so it is not byte-reproducible from the sources the page quotes; the difference is confined to panic-Location line numbers and has no behavioural effect (recorded trace identical).",
+      "evidence": "dist wasm mtime 21:10:23, committed 21:17 (01b0b10); every engine/src and tests .rs file has a later mtime (21:19\u201321:35, the `cargo fmt` reflow from task #2). Rebuilt with the documented command into a scratchpad target dir (`cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown`, 11 s): same size 339,214 bytes, sha256 8ac591c4\u2026 vs dist 5a3c9f89\u2026; `cmp` \u2192 38 differing bytes in 30 runs, offsets 295385\u2013302014, ALL inside the data section (290810\u2013339214); code section (2542\u2013290806) byte-identical; printable string sets identical. The differing integers are source line numbers: e.g. u32 at 297040 = 1054 \u2192 1473, and `serde_json::to_string(&self.state_view()).expect(\"state serialises\")` sits at tick.rs:1054 in HEAD and tick.rs:1473 in the working tree. `node record_trace.mjs <fresh wasm> trace-fresh.json` then `cmp trace.json trace-fresh.json` \u2192 identical. Confirmations of the checklist: base64(dist)[:64] = `AGFzbQEAAAAB1gRTYAJ/fwBgA39/fwBgAX8AYAF/AX9gBX9/f39/AGACf38Bf2AD` occurs once in index.html after `const WASM_B64 = \"` and the full 452,288-char string is present; trace version `context-engine 0.1.0 (wasm32, sequential executor)` occurs once; the whole trace.json text is embedded verbatim after `const TRACE = `; frames house 70 / hidden 9 / visible 13 / street 30 match record_trace's print; `cmp trace.json scratchpad/trace-check.json` exit 0, both sha256 09fe523e256857131749a995ef0ad8362cc563bfd5fd0fcd0caa2f342a5320e6.",
+      "proposed_fix": "Before the presentation commit (task #8), regenerate the artefact chain from the reflowed tree so the tracked wasm matches the tracked source: `sh engine/build-wasm.sh && cd presentation && node record_trace.mjs ../engine/dist/context_engine.wasm trace.json && python3 build.py` (about 15 s; trace.json will be byte-identical, only the WASM_B64 string in index.html changes)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "line": 11,
+      "severity": "nit",
+      "claim": "HANDOFF.md's build record disagrees with the built page on the wasm size and still declares the presentation stale, so the handoff no longer describes what build.py produced (outside the presentation folder, but it is the build's own provenance record).",
+      "evidence": "HANDOFF.md:11 `wasm32-unknown-unknown (354 KB, zero imports \u2026)` and :25 `cargo build --profile wasm \u2026 OK, 354,339 bytes`, whereas engine/dist/context_engine.wasm is 339,214 bytes and index.html's colophon reads `<span class=\"num\" data-fact=\"wasm-kb\">331</span>` (339,214/1024 = 331.26). HANDOFF.md:61 `index.html (STALE, see \u00a77)` and :100 `It is **STALE**: built against the pre-audit wasm and trace`, but index.html (21:58) was built from dist (21:10) with a trace that re-records byte-identically. HANDOFF.md:104 still records the wasm path as `../engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm` while build.py now prefers `engine/dist/context_engine.wasm` (`wasm = dist if dist.exists() else \u2026`). The colophon substitutions themselves are correct: `<span class=\"num\" data-fact=\"loc\">10,538</span> lines.` = `wc -l` 10538; `<span class=\"num\" data-fact=\"tests\">70</span>` = 69 `#[test]` + 3 `#[tokio::test` \u2212 2 `^\\s*#\\[ignore` lines (stage2_letter_slot.rs:809, :861; the doc-comment mention at :15 correctly excluded) = cargo-test-full.log totals 70 passed / 0 failed / 2 ignored; `cargo test   # 70 passed, 2 ignored on purpose`.",
+      "proposed_fix": "In the pending HANDOFF update, change lines 11 and 25 to 331 KB / 339,214 bytes (or state that the figure is read from dist at build time), drop the STALE flags at lines 61 and 100, and point the refresh recipe at line 104 to `../engine/dist/context_engine.wasm` (or to `sh engine/build-wasm.sh`)."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 4,
+      "severity": "nit",
+      "claim": "The one console error on load is the Google Fonts stylesheet, the page's only non-embedded resource, refused by the sandbox's TLS interception; it is environmental, not a page defect, and the page falls back to its system font stack.",
+      "evidence": "shot.mjs at 1400\u00d7900, 6000 ms wait: exactly one console line, `[error] Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID`; no `[pageerror]`. A second run with a `requestfailed` listener attributes it: `https://fonts.googleapis.com/css2?family=Fraunces\u2026&family=Schibsted+Grotesk\u2026&family=JetBrains+Mono\u2026&display=swap :: net::ERR_CERT_AUTHORITY_INVALID`, which is index.template.html line 4. The only other external URLs in index.html are the two preconnect hosts (lines 2\u20133) and the SVG namespace. The live console is healthy: DOM `#mode-badge` text `engine \u00b7 live \u00b7 context-engine 0.1.0 (wasm32, sequential executor)`; the section screenshot (scratchpad/shots/pres-verify-console.png) shows Sovereign Root 6f626a64, block log t00 NEW / t01 DRAFT / COLLECT (crossing tax 2.5 cr) / VERIFY, the Porter at the door with `Sending costs 10.0 cr`, purse 755.0 cr of 800.0, \u03a6 97.3%; `data-fact=\"house-run\"` filled from the trace (`sends 14 of 15 \u2026 70 ticks \u2026 18.5 cr \u2026 \u03a6 67.1%, 35.0 cr paid in crossing tax`). The requested capture is at scratchpad/shots/pres-verify.png (hero only, since #console sits at y\u22488228).",
+      "proposed_fix": "No action required for the build. If the video will be recorded on a machine without network access, either self-host the three font files or accept the fallback stack; otherwise leave as is."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:copy:r2",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 218,
+      "severity": "should-fix",
+      "claim": "The sentence comparing the engine run with the Python house staff names the crossing tax and the door's hold as the differences, but omits the engine's four oracle payments (60 cr), which are larger than the tax (35 cr) and which the kernel's house staff never made.",
+      "evidence": "part2.template.html:218: \"the runs differ by the 2.5 cr tax on each send and by the door's hold, so they are not comparable task for task.\" The recorded trace (presentation/trace.json, house run) has STATE_SYNC events at ticks 11, 26, 41 and 56, each cost 15, and the final frame reports calibrations=4; 4 \u00d7 15 = 60 cr against 35.0 cr of tax. facts.md F04/F05: the Python house staff recorded 0.0 coordination and ended at \u03a6 0.6634 after 30 handovers with no oracle call. HANDOFF \u00a74.5 names only the tax as what \"the engine adds\", so the oracle spend is a third difference the page does not state.",
+      "proposed_fix": "\"...paying the same 10 cr per send, but no crossing tax, no wait at the door, and no oracle; the runs differ by the 2.5 cr tax on each send, by the door's hold, and by the engine's four oracle calls (60 cr), so they are not comparable task for task.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 39,
+      "severity": "should-fix",
+      "claim": "The concession tile presents a paraphrase in quotation marks as the other voice's words; DeepSeek did not say that sentence.",
+      "evidence": "part2.template.html:39: \u201cWithout fees or reputation the bid is advisory, closer to scheduling than to a market.\u201d attributed to \"DIALECTIC.md \u00b7 deepseek-v4-pro\". The model's actual round-3 text (dialectic-round-3.md:1) is: \"But without fees, reputation, or irreversible close, the bid is advisory, not a binding price or commitment\u2014closer to cooperative scheduling than to a market.\" DIALECTIC.md:9 gives the page's wording only as indirect speech (\"it said that without fees or reputation the bid is advisory, closer to scheduling than to a market\"), without quotation marks. facts.md F38 records the value as \"the bid is advisory: cooperative scheduling, not a market\".",
+      "proposed_fix": "Either quote round 3 verbatim, e.g. \u201c\u2026without fees, reputation, or irreversible close, the bid is advisory \u2026 closer to cooperative scheduling than to a market.\u201d with src \"dialectic-round-3.md \u00b7 deepseek-v4-pro\", or drop the quotation marks and write: Its concession: without fees or reputation the bid is advisory, closer to scheduling than to a market."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 330,
+      "severity": "should-fix",
+      "claim": "The page overclaims what law 1 proves and omits the seat trust boundary the handoff decided to state: HANDOFF \u00a74.7 and ledger #26 say the type cannot stop two seats sharing an Arc<Mutex>, yet the page says a seat can reach only copies it owns, and the DraftContext excerpt drops the crate's own paragraph saying so.",
+      "evidence": "part3.template.html:330: 'a seat can reach only copies it owns; the proof is a compile-time const'. part3.template.html:121\u2013136 reproduces node.rs's DraftContext doc comment but stops at \"things the type lets it say.\"; the crate's comment continues at engine/src/node.rs:465\u2013468: \"What remains a matter of trust: seats are host-installed Rust code in the engine's own process. A seat that smuggles a channel into its own struct (an `Arc<Mutex<_>>` shared with another seat) is outside what the type system can forbid; the host that installs it vouches for it.\" HANDOFF.md:81 (\u00a74.7): \"Seats are trusted host code... it cannot prevent a seat from sharing an `Arc<Mutex>` with another seat. Documented in `node.rs`.\" AUDIT-LEDGER.md:32 (#26): \"open by nature\". The test itself (tests/golden_invariant.rs:26\u201329) asserts only Send + 'static. Nowhere on the page is the trust boundary stated.",
+      "proposed_fix": "Restore the fourth paragraph of the doc comment in CODE.draftcontext (it is the crate's own text), and reword the proof line to what the test shows: 'a draft context holds no borrow of the engine, another node or the graph; the proof is a compile-time const. Seats themselves are trusted host code (ledger #26).' Optionally add #26 to the colophon's open list."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 50,
+      "severity": "should-fix",
+      "claim": "The tick lede attributes slashing to the court alone (\"the two court actions, slashing and rollback\"), while the page elsewhere says the Clearinghouse slashes at ten percent and that any gate may slash; in the engine every gate's Slashed verdict is applied to the graph inside verify(), not only the court's.",
+      "evidence": "part2.template.html:50: \"and the two court actions, slashing and rollback, applied as verdicts land.\" Diagram label part2.template.html:89: \"court verdicts / slash \u00b7 roll back\". Contradicted by part2.template.html:128: \"A node whose truth cannot back its net position is slashed at ten percent. Stage3Clearinghouse\" and :137: \"What a gate may do. Approve, hold, reject, or slash... Slashing takes reserves in the graph\". engine/src/tick.rs:823\u2013828 (inside fn verify): `for (env, amount, reason) in slashed { ... let taken = self.graph.slash(env.initiator, amount);` applies any strategy's Slashed verdict (the Stage 3 slash_rate 0.10 at boundary.rs:433); the court's own slash and rollback are separate, at tick.rs:862\u2013877.",
+      "proposed_fix": "\"...settlement and delivery in commit() and settle_netted(), and, as verdicts land in Verify, the gates' slashes and the court's rollback.\" Relabel the diagram arrow \"slash \u00b7 court roll-back\" (or \"verdicts: slash \u00b7 roll back\")."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 173,
+      "severity": "nit",
+      "claim": "The tick excerpt's header says the full function is 60 lines; after the fmt reflow it is 89.",
+      "evidence": "part3.template.html:173: `/// One temporal block. (Condensed; the full function is 60 lines.)`. engine/src/tick.rs: `pub async fn tick(&mut self)` opens at line 370 and closes at line 458 (`report\\n    }`), 89 lines. HANDOFF \u00a72 records that the crate was reflowed once by cargo fmt.",
+      "proposed_fix": "\"(Condensed; the full function is about 90 lines.)\" or drop the count."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 218,
+      "severity": "nit",
+      "claim": "\"ends after 70 ticks\" describes the recorder's cap, not the run's end: at tick 70 the fourteenth send is delivered and the house is still active with 18.5 cr, which is less than one more draft.",
+      "evidence": "part2.template.html:218 (and the regenerating template string at part3.template.html:610): \"ends after 70 ticks with 18.5 cr in the purse\". record_trace.mjs:27: `ticks = 70` is the loop bound; the loop breaks early only on halted or tasks_done == tasks_total, neither of which happened. trace.json house run, last frame: tick 70, events APPROVED/DELIVERED/TICK_COMMITTED, status \"active\", tasks_done 14/15, compute 18.5, held []. Editor's trace stats agree: \"status active\".",
+      "proposed_fix": "\"...the recording stops at tick 70 with 14 of 15 sent, the house still active and 18.5 cr in the purse, not enough for the fifteenth...\" (change both the template default and the string in fillStatic)."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 363,
+      "severity": "nit",
+      "claim": "\"ten cores\" appears three times but is not in facts.md or the handoff; the parity test that the page cites for it runs four worker threads.",
+      "evidence": "index.template.html:363: \"Runs on ten cores under Tokio\"; part2.template.html:256: \"on ten cores or one\"; part3.template.html:340: 'ten cores or one, identical sovereign roots' for tokio_executor_matches_sequential. tests/golden_invariant.rs:403: `#[tokio::test(flavor = \"multi_thread\", worker_threads = 4)]` (the number ten occurs only in that test's doc comment at :400). facts.md F45 records only \"executor tokio-multi-thread\"; HANDOFF \u00a71 says \"Tokio multi-core executor\". No fact records a core count.",
+      "proposed_fix": "\"Runs on every core under Tokio\" / \"on many cores or one\" / 'four Tokio threads or one, identical sovereign roots'."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 265,
+      "severity": "nit",
+      "claim": "The colophon's \"What is still open, from the audit ledger\" omits two open rows (#26, #32) and includes an item that is not a ledger row.",
+      "evidence": "part2.template.html:265 lists: rollback depth and coherence marker (#28), the Stage 3 LOD tension (#30), receiver-side DvP verification (#31), and \"the LLM seat has an adapter but no production backend\". AUDIT-LEDGER.md:38 (#32, Stage 5 settlement writes no ledger line to Oak Tables) is marked **open**; :32 (#26, shared Arc<Mutex> between seats) is **open by nature**; neither is listed. The LLM backend is HANDOFF.md:118 open-work item 5, not a ledger row (#27 at :33 is \"documented\").",
+      "proposed_fix": "Add \"Stage 5 settlement leaves no ledger line on the Oak Tables, so country roots are static\" and \"seats are trusted host code (a shared Arc<Mutex> is outside the type)\"; move the LLM-backend clause out of the \"from the audit ledger\" list or introduce it as the handoff's open work."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 216,
+      "severity": "nit",
+      "claim": "\"a Vault backend is the next open item\" overstates its priority; the handoff lists it fifth.",
+      "evidence": "part2.template.html:216: \"a Vault backend is the next open item.\" HANDOFF.md:118 (\u00a77, in priority order): 1 tests (done), 2 presentation, 3 frontend brief, 4 ledger open items, 5 \"A real `InferenceBackend` over the estate Vault route\", 6 persistence. The session task list likewise places it \"after the frontend\".",
+      "proposed_fix": "\"a Vault backend is an open item in the handoff.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 237,
+      "severity": "nit",
+      "claim": "The SovereignNode excerpt omits three runtime fields the struct has and is not labelled condensed, unlike the other two excerpts.",
+      "evidence": "part3.template.html:237\u2013267 (CODE.node) lists id \u2026 secret, receipts. engine/src/node.rs `pub struct SovereignNode` also has `pub burned_this_tick: f64`, `pub burn_history: VecDeque<f64>` and `pub liquidity_locked: f64`. Its code-head (part2.template.html:245) reads \"the node schema from doc 02, plus what the runtime needs\" with no \"excerpt\"/\"condensed\" marker, while the DraftContext and tick blocks are labelled \"excerpt\" (part2.template.html:106, :112).",
+      "proposed_fix": "Add the three fields under \"\u2500\u2500 Runtime \u2500\u2500\" (burned_this_tick, burn_history, liquidity_locked), or label the block \"excerpt\" like the others."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 7,
+      "severity": "nit",
+      "claim": "The measured lede says the engine's empirical anchors trace back to one of the three benchmarks, but one anchor (30.5%) comes from the runway experiment, which the same section classes as a separate \"smaller experiment\".",
+      "evidence": "part2.template.html:7: \"Three benchmarks ran in this folder... The engine's empirical anchors trace back to one of them\". facts.md F43: tax.rs `OBSERVED_JOB_MARKET_TAX_PCT: f64 = 30.5` with the comment \"Runway experiment 2: a market of jobs burned 30.5 % on handoffs\"; F34 sources it to ENERGETIC_RUNWAY_EXPERIMENTS.md. The page's own heading part2.template.html:31 (\"Benchmark 3, two smaller experiments, and a concession\") and tile :38 (src \"ENERGETIC_RUNWAY_EXPERIMENTS.md \u00b7 exp. 2\") treat it as not one of the benchmarks.",
+      "proposed_fix": "\"The engine's empirical anchors trace back to these benchmarks and to the two smaller experiments below; its crossing multipliers and its idle-decay rule come from the design docs instead...\""
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "line": 9,
+      "severity": "nit",
+      "claim": "The handoff's \u00a71 description (\"Commit (the only writer of the Sovereign Graph)\") and tick.rs:422 now contradict the page, which correctly says the graph is also written from Verify by slash and rollback; the page's STACK card repeats the older wording.",
+      "evidence": "HANDOFF.md:9: \"Commit (the only writer of the Sovereign Graph)\"; engine/src/tick.rs:422: \"COMMIT. The one write path into the Sovereign Graph.\" Versus part2.template.html:50/:99 (\"the graph is written only at the boundary: by Commit, and by the court's verdicts\"), backed by tick.rs:7\u201313 and the graph.slash at tick.rs:828 and rollback_to at :873 inside verify(). part3.template.html:347 still says \"Commit is single-writer\" (TECH-STACK-DECISION.md:14), which reads as the same superseded claim next to the new lede.",
+      "proposed_fix": "Update HANDOFF \u00a71 to \"Commit (settlement and delivery; the court's slash and rollback land from Verify)\" and fix the tick.rs:422 comment; on the page, gloss the STACK line as \"Commit runs single-threaded\" so it is not read as \"only writer\"."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 315,
+      "severity": "nit",
+      "claim": "The file-tree line for epistemics.rs says only \"drift, calibrated to the record\", eliding the doc-02 idle rule the page attributes carefully elsewhere.",
+      "evidence": "part3.template.html:315: ['src/epistemics.rs', 'drift, calibrated to the record']. HANDOFF.md:47 describes the file as \"handover drift (kernel formula), idle decay (doc 02 rule, DECAY_FACTOR literal), oracle trigger\". The page's own captions (part2.template.html:26, :42) insist the idle rule is \"a design rule, not a measurement\".",
+      "proposed_fix": "['src/epistemics.rs', 'handover drift, to the record; idle decay, doc 02\\'s rule; the oracle trigger']"
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:layout:r2",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 194,
+      "severity": "should-fix",
+      "claim": "The console shows the street-only control \"Change the truth: the courier now costs 12\" and its note \"every table still says 10 until it pays the oracle\" in the house scenario, at every width, because the div's inline display:flex overrides its hidden attribute.",
+      "evidence": "part2.template.html:194 is `<div id=\"street-actions\" hidden style=\"display:flex;\u2026\">`; part3.template.html:507 toggles `el.streetActions.hidden = !streetMode`, which the inline style defeats (UA `[hidden]{display:none}` loses to an inline `display`). Rendered in The house scenario at t01 under the Door panel in shots/lv/phone-18.png (bottom third), shots/el/desktop-room.png (bottom), shots/lv/tablet-11.png. Pre-existing: the .pre-repair template line 190 carries the same markup, so the editor's \"console not broken\" check missed it rather than introduced it.",
+      "proposed_fix": "Remove `display:flex` from the inline style and add a CSS rule `#street-actions:not([hidden]) { display:flex; gap:10px; flex-wrap:wrap; align-items:center }` (or set `el.streetActions.style.display = streetMode ? 'flex' : 'none'` at part3:507)."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 78,
+      "severity": "should-fix",
+      "claim": "The benchmark-2 drift chart is illegible at 390px: its 11-unit labels render at 6.3px because the 560-unit viewBox is scaled to a 320px box; the same defect the editor fixed for the tick diagram was left on the chart.",
+      "evidence": "DOM probe at 390: `measured svg[Confidence over twenty generations] renderedWidth=320 scale=0.571 minFontUser=11 -> 6.3px`. shots/el/phone-drift.png (2x capture): axis \"50%\u2026100%\", \"gen 1\u2026gen 20\" and \"60 cr of oracles\" are ~6px CSS. The tick diagram got `.diagram-scroll` + `min-width:780px` at index.template.html:178-179 (8.3px floor); the chart, drawn at part3:78 with W=560, has no equivalent.",
+      "proposed_fix": "Give `[data-chart=\"drift\"]` the same treatment: `@media (max-width:560px){ .fig-wrap[data-chart=\"drift\"]{overflow-x:auto} .fig-wrap[data-chart=\"drift\"] svg{min-width:480px} }` (\u22489.4px text), or draw with W=390 when `innerWidth<=560` so the labels stay \u22659px without scrolling."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 347,
+      "severity": "should-fix",
+      "claim": "The stack card's Async layer still says \"Commit is single-writer\", an orphan of the retired one-writer claim now that the page says the graph is also written from Verify by the court's verdicts.",
+      "evidence": "part3.template.html:347: \"Verify batches per gate, Commit is single-writer.\" vs part2.template.html:50 (\"Every write to the Sovereign Graph is in tick.rs \u2026 commit() and settle_netted(), and the two court actions, slashing and rollback\"), :99 (\"the graph is written only at the boundary: by Commit, and by the court's verdicts\") and the new court arrow at :89. The editor retired \"the one writer\" and \"writes \u00b7 only here\" from the diagram and the tick excerpt but not this line; visible in shots/el/desktop-stack.png, Backend card, ASYNC row. HANDOFF \u00a76 (6) says the STACK object is untouched, so this needs an explicit decision rather than a silent edit.",
+      "proposed_fix": "Change \"Commit is single-writer\" to \"Commit runs on one thread\" (the Tokio point the sentence is making), or keep the quoted record and append \"; the court's verdicts also write, from Verify\"."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 95,
+      "severity": "nit",
+      "claim": "The \"60 cr of oracles\" label is placed outside the chart's viewBox and, at 820px, runs 3px past the figure's own border.",
+      "evidence": "getBBox: label x=502..577 in `viewBox 0 0 560 250` (R=70 at part3:78 leaves 58 units for a 75-unit string); it is drawn at all only because index.template.html:131 sets `figure.viz svg { overflow: visible }`. Probe at 820: label right=790.1 vs figure right=787.2 (padding-right 18px), i.e. 2.9px past the card border; shots/el/tablet-drift.png, right edge, the final \"s\" sits on the border. At 1400 it ends 3px inside the border.",
+      "proposed_fix": "Raise R from 70 to 100 at part3:78, or anchor the two right-hand labels with `text-anchor: end` at x = W \u2212 4."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 179,
+      "severity": "nit",
+      "claim": "The tick diagram renders smaller on a tablet than on a phone: the 780px floor applies only at \u2264560px, so at 820px the SVG shrinks to 754px and its smallest text is 8.0px.",
+      "evidence": "Probe at 820: `engine svg[The four phases of a tick] renderedWidth=754 scale=0.725 minFontUser=11 -> 8.0px`, below the 8.3px the editor accepted as the phone floor. shots/el/tablet-tick.png: mono lines \"fields private \u00b7 acts recorded\", \"keyed by the job issued\", \"commit \u00b7 settle_netted\" and the red \"no path from a draft to the graph\" caption are at the limit of legibility. Rule at index.template.html:179 is `@media (max-width: 560px) { .diagram-scroll svg { min-width: 780px; } }`.",
+      "proposed_fix": "Make the floor unconditional: `.diagram-scroll svg { min-width: 900px }` (the desktop container is 1140px, so no scrollbar appears there) and drop the media query."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 53,
+      "severity": "nit",
+      "claim": "On a phone the tick diagram opens on its private half with no cue that it scrolls; the boundary half, which is what the F3 repair drew, is off-screen.",
+      "evidence": "shots/el/phone-tick.png: at rest the visible 358px shows Oak Table, Purse, DRAFT and half of COLLECT; VERIFY, COMMIT, the court arrow, the Sovereign Graph and the \"no path\" caption are only in shots/el/phone-tick-right.png after `scrollLeft = scrollWidth`. The \u2715 marker is cut at the right edge and there is no fade, hint or scrollbar affordance on `.diagram-scroll` (index.template.html:178).",
+      "proposed_fix": "At \u2264560px add a right-edge fade on `.diagram-scroll` (`mask-image: linear-gradient(90deg, #000 90%, transparent)`) and a one-line mono hint under the figure (\"scrolls sideways\"), or start the scroller centred on the divider."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 280,
+      "severity": "nit",
+      "claim": "The rewritten `cargo test` comment is still cut off at 390px: the reader sees \"# 70 passed, 2 ignored on purp\".",
+      "evidence": "Probe at 390: the line \"cargo test   # 70 passed, 2 ignored on purpose\" needs 363px; the pre's content width is 316px \u2192 CUT (fits at 820 and 1400). shots/el/phone-run.png, second line. The editor's note that the comment is \"visible without scrolling the block\" holds only above phone width.",
+      "proposed_fix": "Shorten to `cargo test   # __TESTS__ pass, __IGNORED__ ignored` (\u226440 characters), or put the comment on its own line above the command."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 362,
+      "severity": "nit",
+      "claim": "The hero's fact strip now carries a 17-word sentence with a semicolon and a subordinate clause; it breaks the strip's terse register and, at 1400px, orphans the third fact onto its own row.",
+      "evidence": "index.template.html:362: \"70 invariant tests, all green; 2 more, written against the Letter Slot's lock phase, are ignored on purpose.\" The other two spans are 6 and 16 words with no clauses. Probe at 1400: spans at top=740 (269px), top=740 (663px), top=772 (671px) inside a 1140px `.hero-meta` (CSS :105, flex-wrap), so \"Runs on ten cores\u2026\" wraps alone; shots/lv/desktop-00.png below the four laws. At 820 all three stack (shots/lv/tablet-00.png).",
+      "proposed_fix": "\"70 invariant tests, all green. 2 more are ignored on purpose.\" in the strip, with the Letter Slot detail in the Run it comment or the colophon; or split the fact into two spans so the strip wraps evenly."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 99,
+      "severity": "nit",
+      "claim": "The new figcaption has two colons in one sentence.",
+      "evidence": "part2.template.html:99: \"What the drawing insists on: a draft sees copies, \u2026 and the graph is written only at the boundary: by Commit, and by the court's verdicts.\"",
+      "proposed_fix": "\"\u2026and the graph is written only at the boundary, by Commit and by the court's verdicts. Everything else is bookkeeping.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 129,
+      "severity": "nit",
+      "claim": "The High Court rule's aside \"fail, five or more,\" has no noun; the reader cannot tell whether five failures or five verdicts are meant.",
+      "evidence": "part2.template.html:129: \"When more than half of a tick's liquidity verdicts at the algorithmic gates fail, five or more, the graph rolls back one tick\u2026\". The editor's own verification cites boundary.rs:544 `min_sample 5`, i.e. at least five verdicts in the sample, which the sentence does not say.",
+      "proposed_fix": "\"When a tick brings five or more liquidity verdicts at the algorithmic gates and more than half of them fail, the graph rolls back one tick, offenders lose a quarter of their reserves, and they trade under injunction.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 218,
+      "severity": "nit",
+      "claim": "The F1 sentence is 50 words and its participle does not parse: \"paying the same 10 cr per send, but no crossing tax and no wait at the door\".",
+      "evidence": "part2.template.html:218: \"The Python benchmark's house staff finished 15 of 15 on 788.2 cr paying the same 10 cr per send, but no crossing tax and no wait at the door; the runs differ by the 2.5 cr tax on each send and by the door's hold, so they are not comparable task for task.\" The page's other sentences in this paragraph are 15\u201330 words.",
+      "proposed_fix": "\"The Python benchmark's house staff finished 15 of 15 on 788.2 cr, paying the same 10 cr per send but no crossing tax, and never waiting at the door. The runs differ by the 2.5 cr tax on each send and by the door's hold, so they are not comparable task for task.\""
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 34,
+      "severity": "nit",
+      "claim": "Both benchmark-3 tiles say \"assumed\" twice (label and delta), and the first tile's delta is a five-line paragraph that repeats the provenance box's law_4 sentence, making the tile twice the height of its neighbours.",
+      "evidence": "part2.template.html:34: label \"\u2026as the battery assumed it\" + delta \"Assigned in the battery, not run; \u2026 The measured wait is the engine's law_4 test: 100 real ticks, 0.0 cr\"; :35: label \"\u2026as the battery assumed it: 0.5 cr per tick \u00d7 100\" + delta \"\u2026; assumed, not run\". The law_4 sentence already appears at :42 (\"The measurement that exists is the engine's own law_4_the_door_holds_at_zero_burn test, 100 real ticks at 0.0 cr\"). shots/el/desktop-tiles.png: first tile ~545px tall vs ~330px for the next four.",
+      "proposed_fix": "Tile 1 delta \u2192 \"Assigned in the battery, not run; 440.0 cr still in the purse when the person returned\"; tile 2 delta \u2192 \"10% of a 500-credit budget, spent on looking busy\"; leave the law_4 measurement to the provenance box, which already states it."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 42,
+      "severity": "nit",
+      "claim": "The provenance box grew to one ~330-word paragraph covering four unrelated corrections; on a phone it is 1.7 screens of 0.82rem text with no break.",
+      "evidence": "part2.template.html:42 is a single `<div class=\"provenance\">` (CSS index.template.html:173, font-size 0.82rem) running from the door table (33.0/467.0 vs 60.0/430.0) through the guild reclaim, the Coasean side ledger, benchmark 3's assigned figures and doc 02 \u00a72. shots/lv/phone-09.png and phone-10.png show it spanning both screens; shots/lv/desktop-04.png shows a 480px-wide wall of 25 lines.",
+      "proposed_fix": "Keep the bold lead and break the box into four short paragraphs, one per correction (door table; guild reclaim; Coasean ledger and cache misses; benchmark 3 and doc 02)."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 136,
+      "severity": "nit",
+      "claim": "The DraftContext excerpt drops exactly the one paragraph of the source doc comment that hedges the invariant, so the quoted comment reads more absolute than the file it is labelled as.",
+      "evidence": "engine/src/node.rs:465-468: \"What remains a matter of trust: seats are host-installed Rust code in the engine's own process. A seat that smuggles a channel into its own struct (an `Arc<Mutex<_>>` shared with another seat) is outside what the type system can forbid; the host that installs it vouches for it.\" The page's comment (part3:121-136) ends at \"\u2026things the type lets it say.\" and the code-head at part2:106 presents it as \"engine/src/node.rs \u00b7 excerpt\". The page is otherwise careful to keep hedges (\"a design rule, not a measurement\").",
+      "proposed_fix": "Restore the four lines after line 136, or insert a `/// [\u2026]` line so the cut is visible to the reader."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 313,
+      "severity": "nit",
+      "claim": "The stack cards' two-column layer grid has no phone override, so at 390px the prose column is about 190px wide and the Dissent layer runs twelve lines.",
+      "evidence": "index.template.html:313: `.stack .layer { grid-template-columns: 118px minmax(0, 1fr); gap: 12px; \u2026 }` with no `@media` rule (the only stack rule is :309, which stacks the two cards). shots/lv/phone-22.png and phone-23.png: labels LANGUAGE/ASYNC/HOSTS/NEXT/DISSENT occupy the left 130px, each layer's text wraps at ~30 characters.",
+      "proposed_fix": "`@media (max-width: 560px) { .stack .layer { grid-template-columns: 1fr; gap: 4px; } }` so the label sits above its text on phones."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 265,
+      "severity": "nit",
+      "claim": "The colophon still lists the High Court's rollback depth as open while the F4 edit now states the depth as one tick.",
+      "evidence": "part2.template.html:129 (new): \"the graph rolls back one tick\"; part2.template.html:265: \"What is still open, from the audit ledger: the High Court's rollback depth and coherence marker\". Read together on one page they contradict unless the reader knows one is the implementation and the other the design question.",
+      "proposed_fix": "\"the High Court's rollback depth (one tick today) and coherence marker\"."
+     }
+    ]
+   }
+  },
+  {
+   "label": "repair:r2",
+   "phase": "Repair",
+   "result": {
+    "built": true,
+    "trace_stats": "trace: house 70 frames, hidden 9, visible 13, street 30, 889 KB\nhouse final: 14/15 sent, 18.5 cr left, \u03a6 67.1%, status active\ncost visible: 6/10 (halted) \u00b7 hidden: 4/10 (halted)",
+    "build_stats": "index.html: 1440 KB (wasm 331 KB, trace 885 KB); tests 71 run + 2 ignored",
+    "edits": [
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R1 (should-fix) \u00b7 house-staff comparison names the engine's four oracle calls (4 \u00d7 15 cr = 60 cr, STATE_SYNC at ticks 11, 26, 41, 56 in trace.json) as the third difference (~line 218)",
+      "before": "The Python benchmark's house staff finished 15 of 15 on 788.2 cr paying the same 10 cr per send, but no crossing tax and no wait at the door; the runs differ by the 2.5 cr tax on each send and by the door's hold, so they are not comparable task for task.</p>",
+      "after": "The Python benchmark's house staff finished 15 of 15 on 788.2 cr paying the same 10 cr per send, but no crossing tax, no wait at the door, and no oracle; the runs differ by the 2.5 cr tax on each send, by the door's hold, and by the engine's four oracle calls, 60 cr in all, so they are not comparable task for task.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R2 (should-fix) \u00b7 concession tile quotes DeepSeek's round-3 sentence verbatim (clause extracted from dialectic-round-3.md by the repair script and asserted), sourced to dialectic-round-3.md; value styled 1rem/500 so the longer quote does not tower over the row (line 39)",
+      "before": "<div class=\"value\" style=\"font-size:1.25rem;line-height:1.3\">\u201cWithout fees or reputation the bid is advisory, closer to scheduling than to a market.\u201d</div><div class=\"src\">DIALECTIC.md \u00b7 deepseek-v4-pro</div>",
+      "after": "<div class=\"value\" style=\"font-size:1rem;line-height:1.4;font-weight:500\">\u201c\u2026without fees, reputation, or irreversible close, the bid is advisory, not a binding price or commitment\u2014closer to cooperative scheduling than to a market.\u201d</div><div class=\"src\">dialectic-round-3.md \u00b7 deepseek-v4-pro</div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "R3 (should-fix) \u00b7 CODE.draftcontext: the doc comment's fourth paragraph, the seat trust boundary, restored from node.rs:465\u2013468 and reflowed to the column width (backticks around Arc<Mutex<_>> dropped, as the excerpt already does for Send and 'static)",
+      "before": "/// and cannot forge a signature, because none of those are\n/// things the type lets it say.\n#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]\npub struct DraftContext {",
+      "after": "/// and cannot forge a signature, because none of those are\n/// things the type lets it say.\n///\n/// What remains a matter of trust: seats are host-installed\n/// Rust code in the engine's own process. A seat that smuggles\n/// a channel into its own struct (an Arc<Mutex<_>> shared with\n/// another seat) is outside what the type system can forbid;\n/// the host that installs it vouches for it.\n#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]\npub struct DraftContext {"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "R3 \u00b7 PROOFS law 1 says what golden_invariant.rs:26\u201329 asserts (Send + 'static, no borrow) and names the trust boundary (~line 330)",
+      "before": "['law_1_drafts_are_isolated_by_type', 'a seat can reach only copies it owns; the proof is a compile-time const'],",
+      "after": "['law_1_drafts_are_isolated_by_type', 'a draft context holds no borrow of the engine, another node or the graph; the proof is a compile-time const. Seats themselves are trusted host code (ledger #26)'],"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R3 \u00b7 colophon's open list carries ledger #26, open by nature (line 265)",
+      "before": "receiver-side verification in a DvP swap; the LLM seat has an adapter but no production backend.</p>",
+      "after": "receiver-side verification in a DvP swap; the LLM seat has an adapter but no production backend; and, open by nature, the seat trust boundary: the type cannot stop two host-installed seats sharing an <code>Arc&lt;Mutex&gt;</code> (ledger #26).</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R4 (should-fix) \u00b7 tick lede: any gate's Slashed verdict is applied inside verify() (tick.rs:823\u2013828); only the rollback is the court's (line 50)",
+      "before": "settlement and delivery in <code>commit()</code> and <code>settle_netted()</code>, and the two court actions, slashing and rollback, applied as verdicts land. A draft has no path to any of them.</p>",
+      "after": "settlement and delivery in <code>commit()</code> and <code>settle_netted()</code>, and, as verdicts land in Verify, the gates' slashes and the court's rollback. A draft has no path to any of them.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R4 \u00b7 diagram: the Verify\u2192graph arrow relabelled, HTML comment to match (line 89); labels checked in the capture, no overlap with the writes arrow at x=915",
+      "before": "<!-- the court's writes land from Verify: slash, or roll the graph back one tick -->\n      <path d=\"M770 240 H796 V366 H818\" \u2026/><text x=\"804\" y=\"330\" class=\"al hot\">court verdicts</text><text x=\"804\" y=\"344\" class=\"al hot\">slash \u00b7 roll back</text>",
+      "after": "<!-- verdicts write from Verify: any gate's slash, or the court rolling the graph back one tick -->\n      <path d=\"M770 240 H796 V366 H818\" \u2026/><text x=\"804\" y=\"330\" class=\"al hot\">gates: slash</text><text x=\"804\" y=\"344\" class=\"al hot\">court: roll back</text>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R4 \u00b7 diagram aria-label (line 54)",
+      "before": "Verify routes each envelope to its gate and holds or rejects, and the court's slash and rollback land there;",
+      "after": "Verify routes each envelope to its gate and holds or rejects, and a gate's slash or the court's rollback lands there;"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R4 \u00b7 diagram figcaption (line 99)",
+      "before": "the gate decides, and the graph is written only at the boundary: by Commit, and by the court's verdicts. Everything else is bookkeeping.",
+      "after": "the gate decides, and the graph is written only at the boundary: by Commit, and by the verdicts that slash or roll back. Everything else is bookkeeping."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "R4 \u00b7 tick excerpt (declared condensed): the Verify phase comment (line 191)",
+      "before": "    // \u2500\u2500 Phase 3: VERIFY. The gates; court slash and rollback. \u2500\u2500",
+      "after": "    // \u2500\u2500 Phase 3: VERIFY. The gates; slashes land, the court may roll back. \u2500\u2500"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "R5 (should-fix) \u00b7 street-actions loses the inline display:flex that defeated its hidden attribute (line 194)",
+      "before": "<div id=\"street-actions\" hidden style=\"display:flex;gap:10px;flex-wrap:wrap;align-items:center\">",
+      "after": "<div id=\"street-actions\" hidden>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "R5 \u00b7 CSS: the flex styling moves to a #street-actions rule (after line 293)",
+      "before": "  .street-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }\n  @media (max-width: 560px) { .street-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }",
+      "after": "  .street-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }\n  @media (max-width: 560px) { .street-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }\n  #street-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "R5 \u00b7 CSS reset: [hidden] always hides, so no author display rule (.door and .street-grid are display:grid, which also beat the UA [hidden] rule) can defeat the attribute (after line 36)",
+      "before": "  * { box-sizing: border-box; }\n  html { scroll-behavior: smooth; }",
+      "after": "  * { box-sizing: border-box; }\n  [hidden] { display: none !important; }\n  html { scroll-behavior: smooth; }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "R6 (should-fix) \u00b7 phone: the benchmark-2 drift chart scrolls at 480px (11px labels render at 9.4px, measured) instead of shrinking to 320px (6.3px); the tooltip is a body-level element positioned in page coordinates, so the overflow clips nothing (after line 179)",
+      "before": "  @media (max-width: 560px) { .diagram-scroll svg { min-width: 780px; } }",
+      "after": "  @media (max-width: 560px) { .diagram-scroll svg { min-width: 780px; } }\n  @media (max-width: 560px) { .fig-wrap[data-chart=\"drift\"] { overflow-x: auto; -webkit-overflow-scrolling: touch; } .fig-wrap[data-chart=\"drift\"] svg { min-width: 480px; } }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "R7 (should-fix) \u00b7 STACK Async row: the thread claim the sentence is making, without the retired one-writer phrase (line 347; the string is single-quoted JS, hence the escaped apostrophe)",
+      "before": "Verify batches per gate, Commit is single-writer.",
+      "after": "Verify batches per gate, Commit runs on the engine\\'s one thread."
+     }
+    ],
+    "console_errors": "One console error per load, at 1400\u00d7900 and 390\u00d7844, verbatim: \"[error] Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID\". It is the Google Fonts stylesheet refused by the sandbox's TLS interception; the page falls back to its system font stack. No pageerror, no warnings. (My first build had a pageerror, \"Unexpected identifier 's'\", from an unescaped apostrophe in the single-quoted STACK string; fixed and rebuilt before any capture was inspected.)",
+    "notes": "All seven findings were verified against the sources and every one was real; all are fixed. Verification: R1 by trace.json (four STATE_SYNC events at ticks 11, 26, 41, 56, cost 15 each) against 35.0 cr of tax, and output/ael_experiment_results.json house_staff (spent_on_coordination 0.0, final_confidence 0.6634, no calibration recorded). R2 by dialectic-round-3.md:1 (the verbatim clause) versus DIALECTIC.md:9 (indirect speech only); the repair script extracts the clause from the source file with a regex and asserts the page's quotation contains it byte for byte, em dash included. R3 by node.rs:465\u2013468 (the fourth paragraph), HANDOFF \u00a74.7, AUDIT-LEDGER #26 (\"open by nature\") and tests/golden_invariant.rs:26\u201329 (asserts only Send + 'static). R4 by tick.rs:823\u2013828 (self.graph.slash applied for any strategy's Slashed verdict inside fn verify) and boundary.rs:485 (Stage 3 at slash_rate 0.10) and :597 (Stage 4's own statute slashes a quarter of the unbacked amount as a gate verdict), with the court's rollback separate in apply_court_order at :862\u2013877. R5 by the markup at part2:194 and part3:507, then in the browser: #street-actions computes to display none in the house scenario and flex after clicking \"The street\", at both widths. R6 by DOM probe: at 390 the drift svg now renders 480px wide in a 320px scroll box, 11px labels at 9.4px (was 6.3px). R7 by part3:347 against the page's own tick section.\n\nDecisions worth flagging. (1) R5 is fixed with a global `[hidden] { display: none !important; }` rather than only the street-actions rule, because .door and .street-grid also carry author display rules that beat the UA [hidden] rule; probed: the door shows at t01 (a real hold), hides after \"Yes, send it\" (display none, hidden=true), the recorded-run banner stays hidden while the wasm is live, the street tiles show only in street mode. (2) R7 is an explicit decision, not a silent edit: engine/docs/TECH-STACK-DECISION.md:14 still says \"Commit is single-writer\" in its concurrency sense (one thread), which is true; the page's card summarises the decision rather than quoting it, and the page must not contradict its own tick section, so the card now says \"Commit runs on the engine's one thread\". HANDOFF \u00a76 (6) asked for the STACK object to be replaced with the decision doc's content, which remains the case in substance. (3) R4's diagram label is \"gates: slash / court: roll back\" rather than the reviewer's exact wording; same meaning, and it fits between the reject label and the writes arrow without overlap (checked in the capture).\n\nTest count: the page now says 71 run + 2 ignored, up from the editor's 70, because tests/serve_smoke.rs (1 test) was added by another task in this session. I ran `cargo test --no-fail-fast` myself: 71 passed, 0 failed, 2 ignored across all binaries. build.py's count matches what cargo runs.\n\nHANDOFF \u00a76's six items still hold: (1) the doc 02 attribution stays in the door card and the provenance box, untouched; (2) the gates lede with asked_human is untouched; (3) the benchmark-1 caption and the 19.99% correction are untouched; (4) the camera log line is untouched; (5) the send-fee-10 paragraph stays, only its last sentence gained the oracle clause; (6) the STACK object is still the decision doc's content, with the one wording change recorded above. The Python house-staff numbers (15/15, 788.2, 5/15, 800.0, 159.9) remain as labelled history. I changed nothing under engine/; cargo test only wrote to engine/target, which is untracked.\n\nScreenshots: the instructed command produced /tmp/claude-0/-home-user-agentic-economy/cb18da94-1b1d-5696-9695-4826407a9893/scratchpad/shots/pres-repair.png (1400\u00d714035). As the editor found, Playwright's fullPage capture of this page tiles and repeats content (the hero appears twice), so I also captured clipped 2000px bands at a page-tall viewport (shots/r3/band-00 \u2026 band-07) and per-region captures at desktop and phone: shots/r3/{desktop,phone}-{tick,drift,tiles,room,room-street,stack,code,draftctx,herometa}.png. Inspected: the tick diagram's new labels, the drift chart at phone width, the concession tile, the house room with the Door panel and no street control, the DraftContext excerpt with the restored trust paragraph, the stack card's Async row, the proofs list, and the hero's \"71 invariant tests \u2026 2 more \u2026 ignored on purpose\". Phone: documentElement.scrollWidth 390 on a 390 viewport, nothing overflows the page; desktop: scrollWidth 1400, console badge \"engine \u00b7 live \u00b7 context-engine 0.1.0 (wasm32, sequential executor)\", house-run sentence filled from the embedded trace (14 of 15, 70 ticks, 18.5 cr, \u03a6 67.1%, 35.0 cr tax).\n\nNot changed, for the next operator: tick.rs:422's own comment still reads \"The one write path into the Sovereign Graph\" and tick.rs:7\u201313's header still attributes slashing to Commit and the court only, while the code slashes inside verify(); a two-line engine comment fix. The DraftContext excerpt's `pub const GOLDEN_INVARIANT_LAW_1` line still runs past its pre's edge and scrolls (pre-existing, not among the findings).\n\nFiles changed, none committed: presentation/index.template.html, part2.template.html, part3.template.html, trace.json (re-recorded, identical numbers), index.html (1,480,736 bytes, built from engine/dist/context_engine.wasm). Backups of the pre-repair templates are in the scratchpad as *.pre-repair2; the repair script is scratchpad/repair3.py and the exact strings are in scratchpad/repair3-edits.json."
+   }
+  },
+  {
+   "label": "verify:build:r3",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/presentation/index.html",
+      "line": 366,
+      "severity": "should-fix",
+      "claim": "index.html was built from engine/dist/context_engine.wasm as instructed, but that dist file is three commits stale: it was built 21:10 from the source at 01b0b10, while HEAD (a242ae3) rebuilds to a different 349,035-byte module (341 KB) whose engine_new dispatches scenarios 3, 4 and 5. The page therefore embeds and advertises (\"331 KB of WebAssembly inside this page\", line 366; \"331 KB, zero imports, no bindgen. That is what is running on this page\", line 1044) an engine that does not correspond to the crate whose 10,644 lines and 71 tests the same colophon counts from HEAD, nor to the CODE excerpts (tick.rs, node.rs) the page quotes from HEAD.",
+      "evidence": "engine/dist/context_engine.wasm: 339,214 bytes, mtime 2026-09-28 21:10:23, last commit 01b0b10 (21:17:35, 'Untrack engine/target; keep the wasm artefact in engine/dist with a build script'); git log shows no later commit touching engine/dist. Commits touching engine/src since then: fad61e2 (cargo fmt; verified format-only: running rustfmt 1.8.0 on the parent tree reproduces the commit's src/ and tests/ exactly), 5b0961d (src: bin/serve.rs only), af24472 (src/wasm_abi.rs +11/-1: `3 => scenarios::city(...)`, `4 => scenarios::forged_country(...)`, `5 => scenarios::world(...)`; plus bins). `cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown` at HEAD (written only to the untracked engine/target) produced 349,035 bytes, identical to the pre-existing target/wasm32-unknown-unknown/wasm/context_engine.wasm (22:18:06) and differing from dist at byte 10; rounded 341 KB. Embedded-wasm checks pass: base64 prefix `AGFzbQEAAAAB1gRTYAJ/fwBgA39/fwBgAX8AYAF/AX9gBX9/f39/AGACf38Bf2AD` at index.html offset 67009, full 452,288-char base64 and its tail present; index.html:366 renders `<span class=\"num\" data-fact=\"wasm-kb\">331</span> KB`. Impact is limited today: export tables of dist and HEAD wasm are identical (engine_authorize, engine_events, engine_new, engine_out_ptr, engine_reject, engine_set_truth_price, engine_state, engine_tick, engine_top_up, engine_version, engine_zoom, memory); the page calls engine_new only with `cfg.scenario === 'street' ? 2 : 1` (index.html:1072), and a trace recorded from the HEAD wasm is byte-identical to trace.json (all four runs, same version string). But the dist-era engine_new maps any other scenario to the house (`_ => scenarios::house`, 01b0b10:wasm_abi.rs:40), so the page's existing 1\u20135 sidebar/camera affordances would silently get a house if ever wired to scenario 3\u20135 against this module.",
+      "proposed_fix": "Run `sh engine/build-wasm.sh` (rebuilds and copies target/.../wasm/context_engine.wasm to engine/dist, 349,035 bytes), then `node presentation/record_trace.mjs ../engine/dist/context_engine.wasm trace.json` (will be byte-identical, verified) and `python3 presentation/build.py`; __WASM_KB__ becomes 341 automatically at index.html:366 and :1044. Commit engine/dist with the page so the embedded engine and the counted/quoted source are the same commit. Alternatively, if dist must stay at 01b0b10 for now, say so in the colophon rather than 'That is what is running on this page'."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/build.py",
+      "line": 21,
+      "severity": "nit",
+      "claim": "build.py's printed build stats are character counts, not byte sizes, so the log understates the files: it printed 'index.html: 1440 KB' and 'trace 885 KB' for files that are 1,480,736 bytes (1,446 KB) and 910,427 bytes (889 KB, the figure record_trace.mjs prints from statSync). The editor's report quotes both '1440 KB' and '1,480,736 bytes' for the same file, which this explains.",
+      "evidence": "build.py:21: `print(f\"index.html: {len(out)/1024:.0f} KB (wasm {wasm.stat().st_size/1024:.0f} KB, trace {len(trace)/1024:.0f} KB); ...\")` where `out` and `trace` are str. Measured: len(index.html as str) = 1,474,128 chars vs `ls -l` 1,480,736 bytes; len(trace.json as str) = 906,033 chars vs 910,427 bytes. record_trace.mjs prints '889 KB' from `fs.statSync(outPath).size`. Only the wasm figure (331 KB) is byte-based, which is why it agrees with the page.",
+      "proposed_fix": "Use byte lengths in the log line: `len(out.encode())/1024` and `len(trace.encode())/1024`, so build.py and record_trace.mjs report the same trace size and the index.html figure matches the file on disk."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 364,
+      "severity": "nit",
+      "claim": "The colophon's 'Written in Rust. One crate, 10,644 lines.' counts tests/*.rs (3,499 lines, 33% of the total) and src/bin/*.rs (651 lines) as the crate's line count, while the very next sentence cites the tests separately as '71 invariant tests'; a reader takes 10,644 as engine source when engine src/ (including bins) is 7,145 lines. The number is exactly what build.py computes, so this is a labelling choice, not a broken substitution.",
+      "evidence": "build.py:12 sums `wc -l` over `(eng/'src').rglob('*.rs')` plus `(eng/'tests').glob('*.rs')`. Measured: src (incl. bins) 7,145; src/bin only 651; tests 3,499; src+tests 10,644 = the page's `<span class=\"num\" data-fact=\"loc\">10,644</span>` (index.html:364). The other substitutions check out against cargo: 73 `#[test]`/`#[tokio::test` attributes minus 2 `#[ignore` lines (tests/stage2_letter_slot.rs:809, :861) = 71, and `cargo test --no-fail-fast` reports 16+0+0+14+5+1+10+9+8+8 = 71 passed, 2 ignored, 0 failed.",
+      "proposed_fix": "Either count only engine/src in build.py's `loc` (7,145 \u2192 '6,494 lines' if bins are also excluded) or change the template wording to 'One crate, 10,644 lines including its tests.' so the figure and the sentence agree."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:copy:r3",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "presentation/build.py",
+      "line": 6,
+      "severity": "should-fix",
+      "claim": "The page embeds a stale engine: build.py prefers engine/dist/context_engine.wasm, which was built at commit 01b0b10 (21:10) before tick.rs changed by 603 lines and wasm_abi.rs gained the city/country/world scenarios, so the hero's WebAssembly size contradicts HANDOFF and 'the crate you just read ... embedded here' is not literally true.",
+      "evidence": "build.py:5-6 `dist = here.parent / \"engine/dist/context_engine.wasm\"; wasm = dist if dist.exists() else ...target...`. engine/dist/context_engine.wasm is 339,214 bytes (Sep 28 21:10); target/wasm32-unknown-unknown/wasm/context_engine.wasm is 349,035 bytes (22:18). `git diff --stat 01b0b10 HEAD -- engine/src` shows tick.rs +603 lines and wasm_abi.rs +37 (\"3 => scenarios::city(...)\", \"4 => forged_country\", \"5 => world\"). Instantiating both: dist `engine_new(3)` yields \"2 nodes, scale House\", the fresh build \"9 nodes, scale City\". The page prints `__WASM_KB__` = 331 at index.template.html:366 (\"Runs on ten cores under Tokio and as 331 KB of WebAssembly inside this page\") and part3.template.html:354 (\"331 KB, zero imports\"), while HANDOFF.md:11 says \"354 KB\" and HANDOFF.md:27 \"354,339 bytes\"; part2.template.html:147 says \"The crate you just read was compiled for wasm32-unknown-unknown ... and embedded here\". HANDOFF \u00a76's refresh recipe (HANDOFF.md:88-91) builds to target/ and never touches dist/, so the stale artefact is embedded silently. Mitigating fact, verified: both wasms replay the 800/15/seed-7 house run to the same root eabd5102 (14/15, 18.5 cr, \u03a6 67.1%, tax 35.0, syncs at 11/26/41/56), so the page's run numbers are unaffected.",
+      "proposed_fix": "Run `engine/build-wasm.sh` (which copies target \u2192 dist) before `python3 build.py`, or make build.py pick whichever of dist/target is newer and warn when dist is older than any src/*.rs; add the build-wasm.sh step to HANDOFF \u00a76's refresh recipe. Then rebuild so the page's KB figure matches the crate it describes (and reconcile HANDOFF \u00a71/\u00a72's 354 KB with the actual build size)."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 218,
+      "severity": "should-fix",
+      "claim": "The house-staff comparison says the two runs \"differ by the 2.5 cr tax on each send, by the door's hold, and by the engine's four oracle calls, 60 cr in all\", but the trace shows a fourth difference of the same order: the engine's seats buy cheaper calls once the purse runs low with the price visible, saving 49.2 cr, which the Python staff never did.",
+      "evidence": "trace.json house run BURN events: Scout 11 \u00d7 28.0 and 3 \u00d7 16.8; Scribble 10 \u00d7 9.75 and 4 \u00d7 5.85 (ticks 51, 56, 61, 66, purse 163.4 \u2192 28.5). engine/src/agents/statistical.rs:57 `if ctx.cost_visible() && ctx.purse().compute < nominal * 1.5` \u2192 :63 `lookup_tokens * 0.6`, and :122-132 the same 0.6 for Scribble. Python house staff paid 28.0 + 9.75 + 4.8 on every task (facts.md F03: 15 \u00d7 (28.0 + 9.75 + 4.8 + 10.0) = 788.25). Arithmetic: 546.5 drafts + 140 sends + 35 tax + 60 oracle = 781.5 = 800 \u2212 18.5; at Python prices the 14 drafted tasks would have cost 595.7, i.e. the engine would have halted before 14. The sentence's enumeration is therefore incomplete; its conclusion (\"not comparable task for task\") still holds.",
+      "proposed_fix": "Extend the clause: \"... by the engine's four oracle calls, 60 cr in all, and by the seats' thrift when the purse runs low and the price is on the table (seven cheaper calls from tick 51, 49.2 cr less than the staff would have paid), so they are not comparable task for task.\" Or drop the enumeration and say only that the engine charges what the kernel did not and economises where the kernel could not."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 7,
+      "severity": "should-fix",
+      "claim": "\"The engine's empirical anchors trace back to one of them [the three benchmarks]\" contradicts the crate's own anchors table, which traces its constants to benchmark 1, benchmark 2, benchmark 3 and runway experiment 2.",
+      "evidence": "engine/src/lib.rs:54-61 (\"## Empirical anchors\" table): OBSERVED_CONFIDENCE_AFTER_20_HANDOVERS 0.5636 \"benchmark 2\"; DECAY_RATE \"fitted to the above\"; OBSERVED_MARKET_TAX_PCT 19.99 % \"benchmark 1, Coasean market\"; OBSERVED_JOB_MARKET_TAX_PCT 30.5 % \"runway experiment 2\"; ORACLE_COST 15 \"benchmark 2, calibrated\"; door holding cost 0.0 \"benchmark 3\". facts.md F43 and F60 say the same. The page's own provenance box (part2:42) also cites benchmark 1's 19.99% and exp. 2's 30.5% as what justifies the tax, and its benchmark-3 tile cites the 0.0 door cost.",
+      "proposed_fix": "Rewrite: \"The engine's empirical anchors trace back to them: the drift curve and the oracle price to benchmark 2, the door's zero holding cost to benchmark 3, and the two tax percentages to benchmark 1 and a runway experiment; its crossing multipliers and its idle-decay rule come from the design docs instead ...\""
+     },
+     {
+      "file": "presentation/part3.template.html",
+      "line": 338,
+      "severity": "should-fix",
+      "claim": "The proofs list describes law_3 as \"the sovereign root is unchanged until a verdict is Approved\", which contradicts the tick section's statement that Slashed verdicts and the court's rollback also write the graph from Verify.",
+      "evidence": "part3.template.html:338 `['law_3_graph_moves_only_through_a_gate', 'the sovereign root is unchanged until a verdict is Approved']` versus part2.template.html:50 \"as verdicts land in Verify, the gates' slashes and the court's rollback\" and part2.template.html:99 \"the graph is written only at the boundary: by Commit, and by the verdicts that slash or roll back\". engine/src/tick.rs:823-828 `let taken = self.graph.slash(env.initiator, amount)` runs for any Slashed verdict inside verify(); tests/golden_invariant.rs:91-112 only asserts \"no approval, no graph change\" in a scenario with no slashes, so the test name (\"through a gate\") is right and the page's gloss is too narrow.",
+      "proposed_fix": "Change the description to match both the test and the tick section: \"the sovereign root does not move until a gate hands down a verdict: unchanged with the door unanswered, changed when a swap settles through the Letter Slot\"."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 50,
+      "severity": "should-fix",
+      "claim": "\"Every write to the Sovereign Graph is in tick.rs, at the boundary\" is contradicted by the page's own street console, whose \"Change the truth\" button writes the graph's courier price from scenarios/drift.rs, outside tick.rs and outside any gate.",
+      "evidence": "part2.template.html:194 `<button ... id=\"btn-truth\">Change the truth: the courier now costs 12</button>`; part3.template.html:585 `Eng.setTruth(12)` \u2192 part3:399 `engine_set_truth_price` \u2192 engine/src/wasm_abi.rs:99-101 `scenarios::move_truth(e, \"courier\", price)` \u2192 engine/src/scenarios/drift.rs:40 `e.graph.service_prices.insert(service.into(), price)`. Scenario builders also write it at scenarios/mod.rs:41 and :90. tick.rs:7-13's own header claims exactly two Commit writers plus the court, which the editor already noted as stale; the page's sentence is the same overstatement one step further (it also omits that the truth price is set from outside).",
+      "proposed_fix": "Scope the claim: \"Every write the tick makes to the Sovereign Graph is in tick.rs, at the boundary: ... The one thing written from outside the tick is the world's own truth, the courier's real price, which the scenario sets and which the street console's 'Change the truth' button moves; no draft can reach it either.\""
+     },
+     {
+      "file": "presentation/part3.template.html",
+      "line": 212,
+      "severity": "should-fix",
+      "claim": "The VerificationStrategy excerpt's comment \"Batch hook. Stage 3 overrides it with netting.\" contradicts the source and the audit ledger: Stage 2 also overrides verify_batch, and that override is ledger #11's fix.",
+      "evidence": "part3.template.html:212 `/// Batch hook. Stage 3 overrides it with netting.` versus engine/src/boundary.rs:228 `/// Batch hook. Default: one by one. Stages 2 and 3 override it.` AUDIT-LEDGER.md:17 row 11: \"Letter Slot lock reserved nothing ... **fixed**: per-batch locked map in `Stage2LetterSlot::verify_batch`\". The excerpt carries no 'condensed' label (part2.template.html:134 renders it bare), so it reads as the file's own words. The same excerpt also drops the trait's `fn describe(&self) -> String;` (boundary.rs:232), harmless but part of the same fidelity gap.",
+      "proposed_fix": "Use the source's comment: `/// Batch hook. Default: one by one. Stages 2 and 3 override it: the Letter Slot to lock per batch, the Clearinghouse to net.` and give the block a code-head like the other excerpts (\"engine/src/boundary.rs \u00b7 excerpt\")."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 265,
+      "severity": "should-fix",
+      "claim": "The colophon's \"What is still open, from the audit ledger\" list omits ledger #32 (Stage 5 settlement writes no ledger line to Oak Tables, so country roots are static) and includes an item that is not an open ledger row (the LLM seat's missing production backend is HANDOFF \u00a77 open work; ledger #27 is 'documented').",
+      "evidence": "part2.template.html:265 lists: rollback depth and coherence marker (#28), Stage 3 tension (#30), receiver-side DvP verification (#31), \"the LLM seat has an adapter but no production backend\", and #26. AUDIT-LEDGER.md:38 row 32 \"Stage 5: settlement writes no ledger line to Oak Tables, so country roots are static | policy | **open** (lane 5 report; the Chancellor seat compensates)\" is absent. AUDIT-LEDGER.md:33 row 27 is \"**documented**\", not open; the backend item is HANDOFF.md:112 \u00a77 item 5. HANDOFF \u00a77 item 4's parenthetical has the same omission, so the page inherited it.",
+      "proposed_fix": "Add \"the Stage 5 heartbeat settles nothing into the countries' Oak Tables, so their roots stay static (ledger #32)\" and move the LLM-backend clause out of the ledger list: \"... and, from the handoff, the LLM seat has an adapter but no production backend.\""
+     },
+     {
+      "file": "presentation/part3.template.html",
+      "line": 179,
+      "severity": "nit",
+      "claim": "The tick excerpt says \"(Condensed; the full function is 60 lines.)\" but tick() is 89 lines after the cargo fmt reflow.",
+      "evidence": "engine/src/tick.rs:370 `pub async fn tick(&mut self) -> TickReport {` to :458 `}` = 89 lines. HANDOFF.md:31-33 records that the closing `cargo fmt` reflowed the crate once, which is when the count moved. The excerpt also drops the job-keyed reconciliation the page elsewhere stresses (real code: tick.rs:396-400 `DraftJob { node: id, ctx, seats }` and :408 `self.collect(outcome.node, ...)`, excerpt: `DraftJob { ctx, seats: staff.clone() }` and `self.collect(ctx, ...)`), and its Verify/Commit comments differ from tick.rs:419/422 while the section is titled \"The tick, in its own words\" (part2.template.html:110).",
+      "proposed_fix": "Say \"(Condensed; the full function is about 90 lines.)\" or drop the count; keep `node: id` in the DraftJob line so the excerpt shows the key the Collect box in the diagram talks about; and fix tick.rs:419/422's comments in the engine so the excerpt and the file agree (the editor already flagged this for the next operator)."
+     },
+     {
+      "file": "presentation/index.template.html",
+      "line": 365,
+      "severity": "nit",
+      "claim": "\"71 invariant tests, all green\" counts every test cargo runs, including 16 unit tests and the HTTP smoke test for serve's 404, which are not invariant tests.",
+      "evidence": "build.py:15-17 counts every `#[test]`/`#[tokio::test]` attribute minus `#[ignore` lines. HANDOFF.md:16-24: unit 16, golden_invariant 14, law_1_forgery 5, serve_smoke 1, stage2 10, stage3 9, stage4 8, stage5 8 = 71. tests/serve_smoke.rs is the `404 {\"ok\":false,...}` test from AUDIT-LEDGER.md:39 row 33.",
+      "proposed_fix": "\"71 tests, all green\" or \"71 tests, the four laws among them, all green\"."
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 26,
+      "severity": "nit",
+      "claim": "\"Its separate idle-decay rule, doc 02's, uses k = 0.02867 per tick\" attributes the engine's refit constant to doc 02, which prints 0.0287.",
+      "evidence": "game_design_docs/02_ENTITY_STATE_MACHINE.md:44 `decay_rate = 0.0287 # Empirically derived exponential decay`; engine/src/epistemics.rs:27 `pub const DECAY_RATE: f64 = 0.028_67;` with the comment \"Doc 02 rounds this to 0.0287\" (facts.md F41, discrepancy D8: exp(\u22120.0287 \u00d7 20) = 0.5633, not 0.5636).",
+      "proposed_fix": "\"Its separate idle-decay rule is doc 02's; the engine refits doc 02's 0.0287 to k = 0.02867 per tick so that twenty idle ticks land exactly where the twentieth handover did: a design rule, not a measurement of waiting.\""
+     },
+     {
+      "file": "presentation/part2.template.html",
+      "line": 216,
+      "severity": "nit",
+      "claim": "\"a Vault backend is the next open item\" overstates its place in the handoff's priority order, where it is fifth.",
+      "evidence": "HANDOFF.md:112 \u00a77 \"Open work, in priority order\": 1 adapt tests (done), 2 refresh and publish the presentation, 3 hand the designer brief over, 4 ledger open items, 5 \"A real `InferenceBackend` over the estate Vault route\". The session's task list also places the VaultBackend \"after the frontend\".",
+      "proposed_fix": "\"a Vault backend is on the open list\" or \"is open work in the handoff\"."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:layout:r3",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 181,
+      "severity": "should-fix",
+      "claim": "At 390px the benchmark-2 drift chart's right third is off-screen inside the new scroll box, so the two endpoint annotations the caption cites (\"56.4%\" at gen 20, \"100% / 60 cr of oracles\") and the gen 15 and gen 20 ticks are not visible without a horizontal scroll, and nothing cues the reader that the chart continues.",
+      "evidence": "Screenshot shots/l3/phone-r-drift.png (and phone-05.png): the uncalibrated curve is cut at about gen 12, the last x-axis label reads a clipped \"gen\", and neither endpoint dot's label is in view; the figcaption directly beneath says \"confidence fell to 56.4% by the twentieth handover. Four oracle calls ... held it at one\", both drawn off-screen. DOM probe at 390: the drift svg is 480px wide in a 320px .fig-wrap (rule added at index.template.html:181, R6). Headless capture hides scrollbars and touch browsers show none at rest, so the only cue is the cut curve.",
+      "proposed_fix": "Either keep the chart whole at phone width and fix legibility in the SVG's text instead of the box: drop the min-width/overflow rule and add `@media (max-width: 560px) { figure.viz svg text, figure.viz svg .axis text, figure.viz svg .label, figure.viz svg .label.small { font-size: 17px } }` (17px in the 560-unit viewBox renders at about 9.7px at 320px) and widen drawDrift's right margin R (part3.template.html:78) so the enlarged \"60 cr of oracles\" label still fits; or, if the scroll box stays, initialise it scrolled to the end (`wrap.scrollLeft = wrap.scrollWidth`) so the annotated endpoints are what a phone reader sees first, and add an edge fade or a one-line \"scroll for gen 15 to 20\" note in .fig-sub at that width."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 155,
+      "severity": "nit",
+      "claim": "On desktop the six benchmark-3 tiles lay out five plus one, so the concession tile, now carrying the longer verbatim quote from R2, sits alone on a second row in a 216px column with the quotation wrapped over seven lines beside an empty 900px.",
+      "evidence": "Screenshot shots/l3/desktop-03.png: five tiles across the first row (x 150 to 1290), then the lone concession tile at x 150 to 367, y 307 to 587. `.tiles { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) }` at index.template.html:155 gives (1140 + 14) / 224 = 5 columns at 1400; at 820 it is 3 + 3 (tablet-03.png) and at 390 a single column, both fine. Pre-existing grid; the R2 quote at part2.template.html:39 makes the orphan taller and more conspicuous.",
+      "proposed_fix": "Use `repeat(auto-fit, minmax(340px, 1fr))`, which gives 3 + 3 at the 1140px desktop measure, 2 + 2 + 2 at 754px and one column at 358px, so no width leaves a lone tile."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "line": 336,
+      "severity": "nit",
+      "claim": "The law-1 line in the \"What the scaffold already proves\" list now ends with a capitalised second sentence, \"Seats themselves are trusted host code (ledger #26)\", which is a caveat about what the test does not prove rather than what it proves, and is the only entry in the list written as two sentences; the same trust boundary is now stated three times on the page.",
+      "evidence": "part3.template.html:336 versus the other twelve entries at 337 to 348, each a single lowercase clause after the middle dot (\"another node's table changes only when an approved envelope is delivered\", \"same seed, same roots, tick for tick\"). The boundary is also in the DraftContext excerpt at part3.template.html:138-142 and in the colophon at part2.template.html:265. Screenshot shots/l3/desktop-11.png shows the law-1 line wrapping to two lines with the sentence break mid-entry.",
+      "proposed_fix": "End the proof line at \"the proof is a compile-time const\" and let the excerpt and the colophon carry the caveat; or, if the list must carry it, keep the list's shape: \"...the proof is a compile-time const; seats themselves are trusted host code (ledger #26)\"."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "line": 89,
+      "severity": "nit",
+      "claim": "The relabelled Verify-to-graph arrow uses colon pairs (\"gates: slash\", \"court: roll back\") where every other label in the diagram is a plain phrase joined with a middle dot or an arrow, so the new labels read as a key rather than in the drawing's voice.",
+      "evidence": "part2.template.html:89 versus the neighbouring labels at :85 (\"held at the door \u00b7 0.0 cr\", \"re-verified next tick\"), :87 (\"rejected \u2192 destroyed, compute sunk\") and :92 (\"writes \u00b7 settle, deliver, sync\"). Rendered without overlap at all three widths (shots/l3/desktop-05.png, tablet-r-tick.png); this is wording only.",
+      "proposed_fix": "Match the existing label grammar, for example \"a gate slashes,\" on the first line and \"the court rolls back\" on the second, or \"slash \u00b7 a gate\" / \"roll back \u00b7 the court\"; both fit the same two 11px lines at x=804."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "line": 180,
+      "severity": "nit",
+      "claim": "The tick diagram is legible only with qualifications on small screens: at 390 it scrolls horizontally with no cue and the right half (Verify, Commit, the Sovereign Graph and the new slash / roll-back labels) is off-screen by default; at 820 it does not scroll and its mono captions render at 8.0px. Pre-existing, not introduced by this round.",
+      "evidence": "Screenshot shots/l3/phone-r-tick.png and phone-09.png: only \"INSIDE THE HOUSE \u00b7 PRIVATE\", Oak Table, Purse, 1 \u00b7 DRAFT and a cut-off 2 \u00b7 COLLECT are visible in the 358px box; DOM probe at 390 reports the svg at 780px (min-width rule at index.template.html:180) with the smallest text at 8.3px, and at 820 the svg is 754px wide with the smallest text at 8.0px (shots/l3/tablet-r-tick.png, \"effective gate = max(own, camera)\").",
+      "proposed_fix": "Give the scroll box a cue at \u2264560px (an edge fade, or a short \"scroll for Verify and Commit\" line in the figcaption) and consider raising `.m`, `.al` and `.k` from 11px to 13px inside a `@media (max-width: 900px)` rule so the tablet render lands near 9px, since the viewBox has slack around those labels."
+     }
+    ]
+   }
+  },
+  {
+   "label": "repair:r3",
+   "phase": "Repair",
+   "result": {
+    "built": true,
+    "trace_stats": "trace: house 70 frames, hidden 9, visible 13, street 30, 889 KB\nhouse final: 14/15 sent, 18.5 cr left, \u03a6 67.1%, status active\ncost visible: 6/10 (halted) \u00b7 hidden: 4/10 (halted)",
+    "build_stats": "index.html: 1454 KB (wasm 341 KB, trace 885 KB); tests 71 run + 2 ignored",
+    "edits": [
+     {
+      "file": "/home/user/agentic-economy/engine/dist/context_engine.wasm",
+      "item": "F1/F8 (should-fix) \u00b7 the tracked wasm artefact rebuilt from HEAD's sources with `sh engine/build-wasm.sh` (cargo reported the target build fresh, 0.03s; dist now byte-identical to target); the page embeds this build, so __WASM_KB__ is 341 at index.template.html:366 and part3.template.html:354",
+      "before": "339,214 bytes, built 21:10 from commit 01b0b10 (engine_new maps scenarios 3\u20135 to the house)",
+      "after": "349,035 bytes, built from HEAD a242ae3's engine/src (engine_new dispatches 3 \u2192 city, 4 \u2192 forged_country, 5 \u2192 world); the re-recorded trace.json is byte-identical to the committed one"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F3 (should-fix) \u00b7 measured lede: the anchors trace to all three benchmarks and one runway experiment, as lib.rs's anchors table says (line 7)",
+      "before": "The engine's empirical anchors trace back to one of them; its crossing multipliers and its idle-decay rule come from the design docs instead, and the provenance note below names them.",
+      "after": "The engine's empirical anchors trace back to them, and to one runway experiment: the drift curve and the oracle price to benchmark 2, the two tax percentages to benchmark 1 and the runway experiment, and the door's zero holding cost to benchmark 3, where the note below says it was assigned rather than run; its crossing multipliers and its idle-decay rule come from the design docs instead, and the same note names them."
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F5 (should-fix) \u00b7 tick lede: the write claim is scoped to the tick, and the truth price written from outside it (scenarios/mod.rs:41, drift.rs:40 via the street console) is named (line 50)",
+      "before": "Every write to the Sovereign Graph is in <code>tick.rs</code>, at the boundary: settlement and delivery in <code>commit()</code> and <code>settle_netted()</code>, and, as verdicts land in Verify, the gates' slashes and the court's rollback. A draft has no path to any of them.</p>",
+      "after": "Every write the tick makes to the Sovereign Graph is in <code>tick.rs</code>, at the boundary: settlement and delivery in <code>commit()</code> and <code>settle_netted()</code>, and, as verdicts land in Verify, the gates' slashes and the court's rollback. The one thing written from outside the tick is the world's own truth, the courier's real price: the scenario sets it when it builds the street, and the street console's \u201cChange the truth\u201d button moves it. A draft has no path to any of them.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F2 (should-fix) \u00b7 house-staff comparison names the fourth difference: seven cheaper calls from tick 51 when the purse ran low with the price visible, 49.2 cr (trace.json BURN events; statistical.rs:57-63, :122-132) (line 218)",
+      "before": "the runs differ by the 2.5 cr tax on each send, by the door's hold, and by the engine's four oracle calls, 60 cr in all, so they are not comparable task for task.</p>",
+      "after": "the runs differ by the 2.5 cr tax on each send, by the door's hold, by the engine's four oracle calls, 60 cr in all, and by the seats' thrift: with the price on the table and the purse running low, they bought seven cheaper calls from tick 51, 49.2 cr less than the staff would have paid, so they are not comparable task for task.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F7 (should-fix) \u00b7 colophon's open list carries ledger #32 in the row's own terms and attributes the LLM-backend item to the handoff, not the ledger (line 265)",
+      "before": "receiver-side verification in a DvP swap; the LLM seat has an adapter but no production backend; and, open by nature, the seat trust boundary: the type cannot stop two host-installed seats sharing an <code>Arc&lt;Mutex&gt;</code> (ledger #26).</p>",
+      "after": "receiver-side verification in a DvP swap; at Stage 5, settlement writes no ledger line to a country's Oak Table, so the roots the heartbeat aggregates stay static (ledger #32); and, open by nature, the seat trust boundary: the type cannot stop two host-installed seats sharing an <code>Arc&lt;Mutex&gt;</code> (ledger #26). From the handoff, not the ledger: the LLM seat has an adapter but no production backend.</p>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part2.template.html",
+      "item": "F6 (should-fix) \u00b7 the strategy excerpt carries a code-head naming its file and declaring it condensed, like the other excerpts (line 134); the wrapper is display:grid with min-width:0 like the other excerpts, so the pre's longest line cannot widen the single-column grid at phone width",
+      "before": "    <pre class=\"code\" data-code=\"strategy\"></pre>",
+      "after": "    <div style=\"display:grid;align-content:start;min-width:0\"><div class=\"code-head\"><span class=\"path\">engine/src/boundary.rs</span><span class=\"mono\" style=\"color:var(--ink-3)\">excerpt, condensed</span></div><pre class=\"code\" data-code=\"strategy\"></pre></div>"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F6 \u00b7 CODE.strategy: the batch-hook doc comment is boundary.rs:228's own words (Stages 2 and 3 override it) and `fn describe` (:232) is restored (line 212)",
+      "before": "    /// Batch hook. Stage 3 overrides it with netting.\n    fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {\n        envs.iter().map(|e| self.verify(e, view)).collect()\n    }\n}",
+      "after": "    /// Batch hook. Default: one by one. Stages 2 and 3 override it.\n    fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {\n        envs.iter().map(|e| self.verify(e, view)).collect()\n    }\n    fn describe(&self) -> String;\n}"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F4 (should-fix) \u00b7 PROOFS law 3 says what golden_invariant.rs:91-112 asserts: root unchanged with the door unanswered, changed when a swap settles through the Letter Slot (line 338)",
+      "before": "['law_3_graph_moves_only_through_a_gate', 'the sovereign root is unchanged until a verdict is Approved'],",
+      "after": "['law_3_graph_moves_only_through_a_gate', 'the sovereign root does not move until a gate hands down a verdict: unchanged with the door unanswered, changed when a swap settles through the Letter Slot'],"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F9 (should-fix) \u00b7 drawDrift: at the phone breakpoint the margins make room for the enlarged labels (line 78); the desktop right margin grows from 70 to 90 so the '60 cr of oracles' label (right edge 577) sits inside the 560-unit viewBox instead of the figure's padding",
+      "before": "  const W = 560, H = 250, L = 44, R = 70, T = 16, B = 32;",
+      "after": "  const phone = matchMedia('(max-width: 560px)').matches; // the stylesheet enlarges this chart's labels at that width, so the margins make room for them\n  const W = 560, H = 250, L = phone ? 50 : 44, R = phone ? 100 : 90, T = 16, B = 32;"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F9 \u00b7 drawDrift: the oracle label breaks onto two lines at the phone breakpoint so it fits the right margin (line 95)",
+      "before": "  txt(svg, x(20) + 12, y(1) + 17, '60 cr of oracles', { class: 'label small' });",
+      "after": "  if (phone) { txt(svg, x(20) + 12, y(1) + 21, '60 cr of', { class: 'label small' }); txt(svg, x(20) + 12, y(1) + 38, 'oracles', { class: 'label small' }); }\n  else txt(svg, x(20) + 12, y(1) + 17, '60 cr of oracles', { class: 'label small' });"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/part3.template.html",
+      "item": "F9 \u00b7 the drift chart is redrawn when the viewport crosses the phone breakpoint (line 618)",
+      "before": "  drawDrift($('[data-chart=\"drift\"]'));",
+      "after": "  drawDrift($('[data-chart=\"drift\"]'));\n  matchMedia('(max-width: 560px)').addEventListener('change', () => { const c = $('[data-chart=\"drift\"]'); c.replaceChildren(); hideTip(); drawDrift(c); }); // the phone layout has its own margins"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/index.template.html",
+      "item": "F9 \u00b7 CSS: the phone scroll box (R6) is replaced by larger label text for the drift chart, 17px and 16px in the 560-unit viewBox, 9.7px and 9.1px rendered at 320px (measured) (line 181)",
+      "before": "  @media (max-width: 560px) { .fig-wrap[data-chart=\"drift\"] { overflow-x: auto; -webkit-overflow-scrolling: touch; } .fig-wrap[data-chart=\"drift\"] svg { min-width: 480px; } }",
+      "after": "  @media (max-width: 560px) { .fig-wrap[data-chart=\"drift\"] svg text, .fig-wrap[data-chart=\"drift\"] svg .label { font-size: 17px; } .fig-wrap[data-chart=\"drift\"] svg .axis text, .fig-wrap[data-chart=\"drift\"] svg .label.small { font-size: 16px; } }"
+     },
+     {
+      "file": "/home/user/agentic-economy/presentation/build.py",
+      "item": "F1/F8 (should-fix) \u00b7 build.py warns on stderr when engine/dist/context_engine.wasm is older than any crate source or than the target build, naming engine/build-wasm.sh (lines 5-6); exercised against a 2020-dated copy of dist in the scratchpad, where it printed the warning",
+      "before": "dist = here.parent / \"engine/dist/context_engine.wasm\"\nwasm = dist if dist.exists() else here.parent / \"engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm\"\n",
+      "after": "dist = here.parent / \"engine/dist/context_engine.wasm\"\ntarget = here.parent / \"engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm\"\nwasm = dist if dist.exists() else target\nif wasm == dist:  # the tracked artefact; say so if the crate has moved since it was built (an mtime check, so a fresh checkout may warn spuriously)\n    crate = list((here.parent / \"engine/src\").rglob(\"*.rs\")) + [here.parent / \"engine/Cargo.toml\"]\n    newer = [p for p in crate + ([target] if target.exists() else []) if p.stat().st_mtime > dist.stat().st_mtime]\n    if newer:\n        print(f\"warning: engine/dist/context_engine.wasm is older than {len(newer)} file(s) it should be built from (e.g. {newer[0].relative_to(here.parent)}); run `sh engine/build-wasm.sh` first or the page embeds a stale engine\", file=sys.stderr)\n"
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "item": "F1 \u00b7 HANDOFF \u00a76 refresh recipe builds through engine/build-wasm.sh (which copies to engine/dist, the file build.py embeds) and records from dist (lines 103-104)",
+      "before": "cd engine && cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown\ncd ../presentation && node record_trace.mjs ../engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm trace.json && python3 build.py\n",
+      "after": "cd engine && sh build-wasm.sh          # builds, then copies the artefact to engine/dist, which is tracked and is what build.py embeds\ncd ../presentation && node record_trace.mjs ../engine/dist/context_engine.wasm trace.json && python3 build.py\n"
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "item": "F1 \u00b7 HANDOFF \u00a71: the wasm size is what HEAD builds, 349,035 bytes = 341 KB (line 11)",
+      "before": "`wasm32-unknown-unknown` (354 KB, zero imports, raw C ABI in `src/wasm_abi.rs`)",
+      "after": "`wasm32-unknown-unknown` (341 KB, zero imports, raw C ABI in `src/wasm_abi.rs`)"
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "item": "F1 \u00b7 HANDOFF \u00a72: the recorded build size is what HEAD builds (line 25)",
+      "before": "cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown   OK, 354,339 bytes",
+      "after": "cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown   OK, 349,035 bytes (engine/dist holds this build)"
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "item": "F7 \u00b7 HANDOFF \u00a77 item 4's parenthetical lists ledger #32 with the other open policy rows, so the page and the handoff agree (line 118)",
+      "before": "(policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; #33,",
+      "after": "(policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; Stage 5 settlement writing no ledger line to Oak Tables, #32; #33,"
+     }
+    ],
+    "console_errors": "One console error per load, at 1400\u00d7900 and 390\u00d7844, verbatim: \"[error] Failed to load resource: net::ERR_CERT_AUTHORITY_INVALID\". It is the Google Fonts stylesheet refused by the sandbox's TLS interception; the page falls back to its system font stack. No pageerror, no warnings, at either width or across the breakpoint-crossing resize.",
+    "notes": "All nine findings were verified against the sources and every one was real; all are fixed. Findings 1 and 8 are the same defect (a stale engine/dist) and were fixed once. Verification: F1/F8 by `cmp` (dist and target differed at byte 10; dist 339,214 bytes from 01b0b10, target 349,035) and `git log -- engine/dist` (only 01b0b10); after `sh engine/build-wasm.sh` cargo reported the wasm profile fresh in 0.03s (the target was already built from HEAD's engine/src, which git shows unchanged) and dist is now byte-identical to it; the re-recorded trace.json is byte-identical to the committed file (no diff), so every number on the page is unchanged. F2 by the trace's 42 BURN events: Scout 11 \u00d7 28.0 + 3 \u00d7 16.8, Scribble 10 \u00d7 9.75 + 4 \u00d7 5.85, Inspector 14 \u00d7 4.8 = 546.5 cr of drafting; the seven cheap calls are Scribble at tick 51 and Scout + Scribble at 56, 61, 66, each preceded by a \"purse is light\" THOUGHT at those ticks; savings 3 \u00d7 11.2 + 4 \u00d7 3.9 = 49.2 cr; 546.5 + 140 + 35 + 60 = 781.5 = 800 \u2212 18.5. F3 by lib.rs:54-61. F4 by golden_invariant.rs:91-112. F5 by drift.rs:40 (move_truth, a host action), scenarios/mod.rs:41 and :90, wasm_abi.rs:99-101, and a grep of every `graph.` writer in engine/src: outside tick.rs only those three service_prices writes exist (the top-up button touches the node's purse, never the graph; add_node's set_liquidity is build time). F6 by boundary.rs:224-232 (the source comment, and `fn describe`) and the Stage2LetterSlot override at :399; the excerpt also elides `fn stage` and the door's counters, hence \"condensed\" in its new code-head, as the tick excerpt declares in its own first line. F7 by AUDIT-LEDGER rows 27 and 32 and HANDOFF \u00a77 item 5. F9 by DOM probe before and after.\n\nDecisions worth flagging. (1) HANDOFF.md was edited, four lines, because finding 1 asks for the recipe and the byte count and the doc is what the next operator builds from; \u00a76's six copy items are untouched and all still hold (doc 02 attribution in the door card and provenance box; the gates lede with asked_human; the benchmark-1 caption and 19.99% correction; the camera log line; send fee 10, where only the comparison sentence gained the thrift clause; the STACK object as the decision doc's content). I did not touch \u00a73/\u00a76's \"STALE\" status lines: they belong to the operator who publishes. (2) build.py warns rather than fails on a stale dist, because the check is by mtime and a fresh checkout can order mtimes arbitrarily; the warning names build-wasm.sh. (3) F6's wrapper: my first wrapper was a plain div, and at 390px it widened the page to 958px (a block wrapper's min-content is the pre's longest line; the other excerpts' wrappers are display:grid, where a scroll-container item's automatic minimum is zero). Fixed with the same grid style plus min-width:0; documentElement.scrollWidth is 390 again. (4) F9 took the reviewer's first option, the chart kept whole at phone width with larger text, because a scroll box hides half the curve either way. The font rule is scoped to the drift chart only, since the coasean bar chart's row labels would collide at 17px; its phone labels stay small (pre-existing, not among the findings). The label sizes are set by CSS at the breakpoint and the margins by JS from the same media query, with a redraw on crossing it: probed desktop x(56.4%) = 482 \u2192 phone 472 with the two-line label \u2192 desktop 482 with the one-line label, one svg each time. Measured at 390: svg 320px wide in a 320px wrap (no scroll), every label inside the viewBox (max right edge 526 of 560), rendered 9.7px (labels, y-axis) and 9.1px (x-axis, \"60 cr of / oracles\"). At desktop the right margin is 90 rather than 70 because \"60 cr of oracles\" ended at 577 in a 560-unit viewBox (pre-existing; it drew into the figure padding); now 557. (5) The colophon's #32 clause uses the ledger row's own terms (settlement writes no ledger line to a country's Oak Table) rather than the reviewer's \"heartbeat settles nothing\", which misattributes the write. (6) F5's sentence names the truth price as the one outside-the-tick write; \"A draft has no path to any of them\" now covers it, which drift.rs's comment asserts (law 1).\n\nTest count: unchanged at 71 run + 2 ignored; no engine code changed (git diff of engine/src and engine/tests is empty), so cargo test was not re-run.\n\nNot changed, for the next operator: tick.rs:7-13's header and :422's \"The one write path\" comment still describe Commit and the court as the only writers while verify() slashes (engine comment, two lines); HANDOFF \u00a71's \"Commit (the only writer of the Sovereign Graph)\" has the same overstatement; the DraftContext excerpt's `pub const GOLDEN_INVARIANT_LAW_1` line still scrolls past its pre's edge; the coasean and door charts' phone labels are still 6\u20137px.\n\nScreenshots: the instructed command produced /tmp/claude-0/-home-user-agentic-economy/cb18da94-1b1d-5696-9695-4826407a9893/scratchpad/shots/pres-repair.png (1400\u00d714374; Playwright's fullPage capture of this page tiles content, as the previous rounds found), so I also captured 2400px clipped bands (shots/r4/bands/band-00 \u2026 band-05) and per-region captures at desktop and phone: shots/r4/{desktop,phone}-{measured_lede,drift,tick_lede,strategy,strategy_head,housestaff,colophon,herometa,stack}.png plus desktop-housestaff-para.png. Inspected: the phone drift chart whole with \"100% / 60 cr of / oracles\", \"56.4%\" and gen 1\u202620 in view; the desktop drift chart; the measured and tick ledes; the strategy excerpt with \"engine/src/boundary.rs \u00b7 excerpt, condensed\" and `fn describe` at both widths; the colophon with #32 and the handoff attribution; the house-staff paragraph with the thrift clause; the hero's \"10,644 lines \u2026 71 invariant tests \u2026 341 KB of WebAssembly\"; the proofs list with the new law 3 gloss; the stack card's \"341 KB, zero imports\". Console badge \"engine \u00b7 live \u00b7 context-engine 0.1.0 (wasm32, sequential executor)\" at both widths; house-run sentence filled from the embedded trace.\n\nFiles changed, none committed: engine/dist/context_engine.wasm (rebuilt), engine/docs/HANDOFF.md, presentation/build.py, index.template.html, part2.template.html, part3.template.html, index.html (1,495,597 bytes). trace.json re-recorded, byte-identical. Backups of the pre-repair files are in the scratchpad as *.pre-repair3; the repair script is scratchpad/repair4.py and the exact strings are in scratchpad/repair4-edits.json; the probes are scratchpad/probe4.mjs, probe-width.mjs, bands.mjs, para.mjs."
+   }
+  }
+ ]
+}

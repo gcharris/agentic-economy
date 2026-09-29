@@ -1,0 +1,250 @@
+{
+ "workflow": "wf_ac6a4486-a5f",
+ "started": [
+  {
+   "agentId": "aa81740aabe82bf17",
+   "label": "build:vault",
+   "phase": "Build"
+  },
+  {
+   "agentId": "abe7c5a685d0eda30",
+   "label": "verify:security:r1",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "afb7561147aa5a6f7",
+   "label": "verify:spend:r1",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a579e0607bbacf9a2",
+   "label": "verify:contract:r1",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a207348c3e05aec8c",
+   "label": "repair:r1",
+   "phase": "Repair"
+  },
+  {
+   "agentId": "a12008ededae66e6c",
+   "label": "verify:security:r2",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "ac5b8ffd86a8b1dac",
+   "label": "verify:spend:r2",
+   "phase": "Verify"
+  },
+  {
+   "agentId": "a10a84bf2abc0c97d",
+   "label": "verify:contract:r2",
+   "phase": "Verify"
+  }
+ ],
+ "results": [
+  {
+   "label": "build:vault",
+   "phase": "Build",
+   "result": {
+    "green": true,
+    "test_summary": "cargo test (default features): 75 passed, 0 failed (2 pre-existing ignored; tests/vault_backend.rs correctly skipped via required-features; tests/llm_reservation.rs runs: 4 passed). cargo test --features vault: 99 passed, 0 failed (7 new unit tests in src/agents/vault.rs; 16 mock-server tests in tests/vault_backend.rs; the no_run doctest compiles). cargo clippy --all-targets --features vault: clean for the new code; the only warning is pre-existing (too_many_arguments in src/scenarios/high_court.rs:118). cargo fmt --check: clean. cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown: Finished (349 KB context_engine.wasm); the vault module is behind #[cfg(feature = \"vault\")] and carries a compile_error! for wasm32, so it is never compiled for the browser. cargo doc --features vault: no new warnings (5 pre-existing ones untouched). No live call was made anywhere; the tests use a fixed string \"not-a-real-key-...\" written to a temp file that is removed after construction.",
+    "files": [
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "what": "NEW. VaultBackend + VaultConfig (url, tenant, key_source: KeySource::{File(PathBuf), Env(String)}, models: TierModels of ModelRoute{provider, model} with the three defaults, system_prompt, max_tokens 3072, retries 2, retry_pause 0.5 s, timeout 60 s, breaker_threshold 5, breaker_cooldown 60 s, max_in_flight 3). The key is read once in VaultBackend::new into a private Secret whose Debug prints <redacted>; VaultBackend has a custom Debug; every Err is scrubbed for the key. complete() POSTs {tenant, provider, model, system_prompt, user_prompt, temperature: null, max_tokens} to {url}/api/v1/llm/review with X-Director-Key on tokio::task::spawn_blocking (inline fallback when no runtime, so executor::block_on works), returns `content` or unwraps a `result` envelope, empty content is Err. Retries only on 5xx/transport with widening pause (x1, x3, x9, capped 30 s); never on 4xx (incl. 429); 3xx never followed (max_redirects 0) so the key is never sent elsewhere; never a different model/provider. Errors carry status + typed detail.code/cause only, never the body. Circuit breaker counts consecutive failed attempts, opens for the cooldown, answers Err(\"vault circuit open\") without calling, admits one probe after cooldown. tokio Semaphore caps in-flight calls. Loopback URLs bypass HTTPS_PROXY. Module docs cover host construction (VaultBackend::new(VaultConfig::default())?) and the spend controls. 7 unit tests."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/llm.rs",
+      "what": "Reservation rule: LlmSeat gains pub max_tokens_estimate: u32 (DEFAULT_MAX_TOKENS_ESTIMATE = 512), LlmSeat::new(seat, tier, rigor, backend), pub estimate_tokens(text), pub reservation(prompt_tokens) = ResourceUnit::burn(tier, prompt_tokens + max_tokens_estimate, false).credits() (the same rule DraftContext::burn/Purse::burn apply), and prompt() made pub. draft() now checks ctx.purse().can_burn(reservation) before calling the backend; if it cannot, it thinks \"cannot reserve N cr for this call; purse holds M\" and returns ctx untouched (no burn, no receipt, no halt). Existing post-call behaviour unchanged. Module docs updated (how to install VaultBackend, the reservation rule). No other construction sites existed (grep across src and tests)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/mod.rs",
+      "what": "#[cfg(feature = \"vault\")] pub mod vault; (plain comment, not an outer doc, so the module's intra-doc links resolve in its own scope)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/Cargo.toml",
+      "what": "New feature vault = [\"native\", \"dep:ureq\"]; ureq = { version = \"3.4.2\", optional = true, default-features = false, features = [\"rustls\"] }; new [[test]] vault_backend with required-features = [\"vault\"]. (cargo add had inserted a bare `ureq` feature; replaced by `vault`.)"
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/Cargo.lock",
+      "what": "31 new packages from ureq 3.4.2 with rustls/ring/webpki-roots (no gzip, no json)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/tests/vault_backend.rs",
+      "what": "NEW, #![cfg(feature = \"vault\")]. Loopback mock server (std::net::TcpListener on 127.0.0.1:0, one request per connection, scripted (status, body) responses, request counter, captured requests over mpsc). 16 tests: happy path asserts POST /api/v1/llm/review, X-Director-Key == key from the temp file (trailing newline trimmed), Content-Type, all 7 body fields incl. explicit temperature null and max_tokens 3072, and content \"hello from the vault\"; per-tier provider/model routing; result-envelope unwrap + trailing-slash URL; 500 then 200 = exactly one retry with identical body; 4x503 = 3 attempts, error names status+code, no key; 401 = 1 request, Err contains 401 and code, never the key or body; 429 not retried; 302 not followed; 200 with empty content = Err with execution provenance, not retried; five 500s (retries 0) open the breaker, sixth call returns \"vault circuit open\" with server count still 5, cooldown then a probe succeeds; breaker cuts a retry loop short; Debug ({:?} and {:#?}) contains <redacted> and not the key, config Debug has no key; KeySource::Env works and Debug shows only the var name; construction errors (missing file, empty key, unset env) without the key; inline path under executor::block_on (no runtime); connection refused = transport error with bounded retries."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/tests/llm_reservation.rs",
+      "what": "NEW, default features. TrapBackend panics if called; CountingBackend counts. 4 tests: purse 10 cr cannot afford the ~55 cr estimate -> backend not called, no receipts/burn/halt, one Thought \"cannot reserve ... ; purse holds 10.00\"; reservation equals the burn rule on prompt+allowance for a custom max_tokens_estimate; purse 1000 -> called once, one inference receipt, paper, handover; a purse holding exactly the estimate (cost hidden, so the prompt is balance-independent) proceeds and one cent less is refused."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/README.md",
+      "what": "One paragraph on the vault feature: what it is, how a host constructs it, the spend controls, and that tests run against a loopback mock (cargo test --features vault)."
+     }
+    ],
+    "deps_added": "ureq 3.4.2 (optional, gated by the `vault` feature; default-features = false, features = [\"rustls\"] -> rustls with ring + webpki-roots; no gzip/json). Fetched successfully through the proxy; reqwest was not needed. 31 transitive packages added to Cargo.lock.",
+    "notes": "Design choices beyond the letter of the brief, all documented in src/agents/vault.rs: (1) VaultConfig also carries system_prompt (the route wants system_prompt + user_prompt; the seat's text is the user prompt), retry_pause (so tests do not sleep 0.5 s; default 0.5 s, x3 per retry, cap 30 s) and max_in_flight (default 3, tokio Semaphore, because the doc says the route 429s above ~3 parallel calls and a 429 is a non-retried 4xx here). (2) The breaker counts consecutive failed attempts (retries included) and is checked before every attempt, so an open breaker also stops a retry loop; after the cooldown one probe is admitted and a failed probe re-opens it at once; breaker_threshold 0 disables it. (3) A 200 with empty content and a 3xx are final failures (no retry, counted toward the breaker); redirects are never followed so the Director key cannot be forwarded to a host named by a response. (4) The doc's advice to retry a 422 once without temperature (for pre-opt-out engines) was NOT implemented because the brief forbids retrying any 4xx; the production engine accepts temperature null. (5) TLS roots are webpki (public roots): correct for the Cloud Run host from the Director's laptop; a host behind a TLS-intercepting proxy (like this sandbox) would need ureq's platform-verifier feature \u2014 not needed for the tests, which use plain http on loopback. (6) The reservation rule lives in LlmSeat so it holds for every backend; LlmSeat::max_tokens_estimate (512) is the seat's own estimate, set it to VaultConfig.max_tokens for a hard reservation; the post-call burn still prices actual tokens as before. (7) Only seven pre-existing cargo doc warnings remain (SovereignNode, Engine::* private links), none from the new code. (8) The key never appears in any file, log or output: tests use a constant fake string, written to a temp file that is deleted right after VaultBackend::new reads it; assertions check every Err and Debug string for its absence. No git commit was made; HANDOFF.md \u00a77 item 5 was read but not edited (not asked) \u2014 it can now be marked done."
+   }
+  },
+  {
+   "label": "verify:spend:r1",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/llm.rs",
+      "line": 158,
+      "severity": "blocking",
+      "claim": "The reservation does not bound the call: the seat reserves prompt + max_tokens_estimate (default 512) but VaultBackend asks the route for max_tokens 3072 (default), so with the documented construction a reply the Vault has already been paid for can fail the post-call burn, halt the node, discard the reply, and leave the ledger showing 0 credits for a charged call. The overshoot outcome is neither documented nor bounded by the request.",
+      "evidence": "llm.rs:46 DEFAULT_MAX_TOKENS_ESTIMATE = 512; vault.rs:198 max_tokens: 3072; vault.rs:19 doctest constructs `LlmSeat::new(\"Scout\", ..., backend)` with VaultConfig::default(), i.e. exactly this pairing. llm.rs:41 `fn complete(&self, tier, prompt)` carries no allowance, so nothing ties the two numbers. Probe (temporary test, removed): purse holding exactly the reservation, MockBackend reply of 3072*4 bytes -> `reservation=54.3 burned=0 halted=Some(\"inference (Scout, 3103 tok on fast_quantized)\") receipts=1 status=\"halted (runway exhausted)\" credits_in_receipt=0 papers=0 thoughts=[]`, actual cost 310.3 cr. node.rs:609-611 writes credits 0.0 on the halted receipt; tick.rs:543-556 halts the node RunwayExhausted. llm.rs:21 documents only the remedy (\"Set max_tokens_estimate to the backend's real completion allowance\"), not the consequence; vault.rs:33-36 presents the reservation as an enforced spend control. No test sends a reply longer than the allowance (largest mock reply in tests/llm_reservation.rs is 40 bytes). Even with the two numbers equal, estimate_tokens is bytes/4 (llm.rs:85) while the route's max_tokens is provider tokens, so a margin is still needed. cargo test --features vault: 99 passed, 0 failed, 2 ignored (all green, none covers this path).",
+      "proposed_fix": "Carry the allowance through the trait: `fn complete(&self, tier, prompt, max_tokens: u32)` (or `fn max_completion_tokens(&self) -> Option<u32>` on InferenceBackend that LlmSeat::new reads) so VaultBackend sends min(config.max_tokens, seat allowance) and the reservation is a hard bound; make LlmSeat::new default max_tokens_estimate from the backend; give the seat a bytes-per-token margin (e.g. reserve 5 bytes/token) or clamp the burn to the reservation with the excess recorded as an overrun receipt rather than credits 0.0; document in llm.rs what happens when a reply exceeds the allowance; add a test with a reply longer than the allowance asserting the ledger shows the call."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 404,
+      "severity": "should-fix",
+      "claim": "A timeout, and a 2xx whose body could not be read, are classified Retriable, so the client resubmits a generation the provider may have (timeout) or certainly has (2xx) already completed and charged; the design doc the spend-control paragraph links forbids exactly this.",
+      "evidence": "vault.rs:403-407 every ureq send error -> Attempt::Retriable; vault.rs:450 ureq::Error::Timeout is one of them; vault.rs:418-422 a body-read failure after any status, including 200, -> Attempt::Retriable; vault.rs:381-386 the loop retries up to config.retries (2) with identical body. 2026-09-23--design--execution-spend-controls.md \u00a7Submission 4: 'A crash or timeout after possible submission leaves the reservation unresolved; do not release it or automatically buy another generation'; \u00a7Retry: 'A 502/503 alone does not establish whether generation was submitted or charged.' The module docs (vault.rs:40-44) call this 'bounded retries ... only on a 5xx or a transport error' without naming the double-spend.",
+      "proposed_fix": "Treat ureq::Error::Timeout and a 2xx-with-unreadable-body as Attempt::Final (unresolved, not retried), keep retries for connection-refused/host-not-found/5xx-before-execution; or, if retrying timeouts is a deliberate trade, say so in the module docs and in the README sentence 'Bounded retries', and count each attempt in the ledger (see the llm.rs:168 finding)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/llm.rs",
+      "line": 168,
+      "severity": "should-fix",
+      "claim": "Failed calls debit nothing: on Err the seat only records a Thought, so up to three Vault submissions (retries 2) that may each have been charged \u2014 a 200 with empty content after the reasoning budget was consumed, a 5xx after the provider ran, a timeout after submit \u2014 appear in the purse as 0 credits. The reservation rule as stated ('prevents any call the purse cannot pay for') holds only for the one successful reply.",
+      "evidence": "llm.rs:155-169: `Ok(text)` -> burn; `Err(e) => ctx.think(...)` with no burn and no receipt. vault.rs:370-389: one `complete` may run retries+1 = 3 attempts, each a real POST with the key. The doc's gotcha 2 and 4 (calling-vault-models-from-an-agent.md:158-165) describe the empty-content 200 as a completed, charged call; vault.rs:432-435 turns it into an Err that the seat then burns nothing for. Design doc \u00a7Retry: 'cumulative cost including failed and schema-invalid responses'; \u00a7Submission 6: 'Preserve possible charges for failed/unknown attempts.' Pre-existing `Err => think` behaviour, but now presented as a spend control (vault.rs:33-36, README.md line 7).",
+      "proposed_fix": "On Err, push a receipt for the reserved amount with status 'failed (charged?)' and burn it (or burn the prompt-side estimate at minimum) so failed attempts are visible in the ledger and the purse cannot fund unbounded failed calls; alternatively have VaultBackend return the attempt count in the Err and have the seat burn per attempt. At minimum document that retries multiply real spend up to 3x per call while the purse sees at most 1x."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 467,
+      "severity": "should-fix",
+      "claim": "The success path discards execution.provider, execution.model and execution.request_id, so the ledger cannot show which model actually answered or attribute the charge; 'no fallback to another model' is true of the request but is never checked against the engine's attestation.",
+      "evidence": "vault.rs:463-478 extract_content returns only `content`/`result`; execution_note (vault.rs:481-502) is consulted only on the empty-content error path. Doc line 64: the 2xx envelope is `{\"content\", \"execution\": {provider, model, request_id}}`; doc line 83 (bold): 'Record execution.request_id as provenance'; doc line 166: the engine reports `actual_execution.model` on a substitution. Design doc \u00a7Required execution data, Result row: 'actual model, provider job/request ID'; acceptance test 2: 'An outage cannot cause an undeclared premium fallback.' The InferenceBackend trait returns a bare String (llm.rs:37), so nothing downstream can carry it either.",
+      "proposed_fix": "In attempt(), on 2xx compare execution.provider/model with the requested route and return Attempt::Final(\"vault answered with <p>/<m>, requested <p>/<m>\") on mismatch; surface request_id (e.g. a `Completion { text, request_id, provider, model }` result or a note appended to the paper/receipt) so the seat's receipt records the actual model and provider id."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 264,
+      "severity": "nit",
+      "claim": "The module docs say 'one probe call is let through' after the cooldown, but the breaker has no half-open guard: the first admit clears open_until and every concurrent caller then passes until the next failure lands, so up to max_in_flight (and any callers already past the pre-gate admit) probes go out.",
+      "evidence": "vault.rs:259-268 admit(): when now >= until it sets open_until = None and consecutive_failures = threshold-1 and returns Ok for this and every subsequent caller; vault.rs:657 admit is called before the semaphore and again per attempt at vault.rs:373; the only re-open is a later failure() (vault.rs:271-276). vault.rs:47 documents a single probe. Spend impact is bounded by the gate (max_in_flight 3) and each probe passed the seat's reservation, so this is a doc/semantics nit.",
+      "proposed_fix": "Either add a `probe_in_flight: bool` to Breaker set on the transition and cleared in success()/failure(), refusing further admits while it is set; or reword vault.rs:47 to 'up to max_in_flight probe calls are let through'."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/resources.rs",
+      "line": 88,
+      "severity": "nit",
+      "claim": "Credits are tier-blind (tokens / 10), so the reservation caps token volume, not money: a FrontierDeep call reserves exactly what a FastQuantized call of the same size does although its joules are 17.5x higher. 'No dearer-than-configured path' holds because the route is fixed per tier (vault.rs:143-151), not because the purse could detect a dearer call.",
+      "evidence": "resources.rs:88-94 credits() = round(tokens/10, 2) with no tier term; resources.rs:44-64 tier specs differ only in joules/flops/ms; tests/llm_reservation.rs:99 comment: '1000 tokens of allowance ... = 100.0 cr, whatever the tier.' The README (line 7) and vault.rs:33 describe the reservation as a spend control against a real metered route. Pre-existing kernel accounting, not introduced by this change.",
+      "proposed_fix": "State in llm.rs 'The reservation rule' docs that credits price tokens, not tier, so the reservation bounds the token volume of a call and the real cost of a FrontierDeep call is not reflected in the purse; if a money cap is wanted, price the reservation from joules (tier.spec().joules_per_tok) or a per-route rate."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:security:r1",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 397,
+      "severity": "should-fix",
+      "claim": "The Director key reaches any `log`-crate sink a host enables at TRACE level: ureq-proto hex-dumps the raw request prelude, including `x-director-key: <key>`, so the module's claim at vault.rs:52-58 (\"It is never logged\") does not hold for a host binary with e.g. env_logger and RUST_LOG=trace.",
+      "evidence": "ureq-proto-0.6.4/src/client/sendreq.rs:44-45 writes the request line and headers through `Writer`; ureq-proto-0.6.4/src/util.rs:66-76 `impl Drop for Writer` calls `log_data`, which emits `trace!(\"{:?}\", Row(row))` per 16 bytes with an ASCII column printing every alphanumeric/punctuation byte, i.e. the full key charset admitted at vault.rs:231. Reproduced with a scratch crate (scratchpad/tracelog) that installs a trace-level `log::Log` and calls `VaultBackend::complete` against a loopback mock: reconstructing the ASCII columns of the `TRACE@ureq_proto::util` records yields `...host:.127.0.0.1:43177..x-director-key:.<KEY>..content-type:...` with the full fake key present (`contains(FAKE_KEY) == true`). ureq's own debug-level request log is safe (util.rs:198-256 redacts headers outside NON_SENSITIVE_HEADERS; probe shows `\"<NOTICE>\": \"1 HEADERS ARE REDACTED\"`), so the leak is TRACE only. The engine installs no logger itself (grep for env_logger/tracing_subscriber/log::set in src and tests: none), but `log` 0.4 is a mandatory dependency of ureq (ureq-3.4.2/Cargo.toml `[dependencies.log]`) and the sink is the host's choice.",
+      "proposed_fix": "Compile the trace level out of the whole binary via cargo feature unification: in /home/user/agentic-economy/engine/Cargo.toml add `log = { version = \"0.4\", features = [\"max_level_debug\"] }` (or `release_max_level_debug` if debug builds may keep trace) alongside the ureq dependency, gated by the `vault` feature if preferred (`vault = [\"native\", \"dep:ureq\", \"dep:log\"]` with `optional = true`). Validated: re-running the same probe with `log` at `max_level_debug` gives 0 leaking records and the reconstructed dump no longer contains the key. Also amend the module docs at vault.rs:54-56 to state the guarantee precisely (\"the key is never in this module's output; ureq's wire tracing is compiled out\")."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 596,
+      "severity": "should-fix",
+      "claim": "`VaultBackend::new` accepts any `url` scheme, so a host that overrides `VaultConfig.url` with a plain `http://` non-loopback URL sends `X-Director-Key` in cleartext (and, since `is_loopback_url` is false, through `HTTP_PROXY`/`ALL_PROXY` if set); nothing validates https.",
+      "evidence": "vault.rs:593-604 builds the endpoint with `format!(\"{}{}\", config.url.trim_end_matches('/'), REVIEW_PATH)` and configures ureq with `timeout_global`, `http_status_as_error(false)`, `max_redirects(0)`, `user_agent`, and `proxy(None)` for loopback only; grep for `https|scheme|starts_with(\"http` in vault.rs hits only the DEFAULT_URL constant (line 77), a doc comment (547) and a test (776). ureq exposes `ConfigBuilder::https_only(bool)` (ureq-3.4.2/src/config.rs:499) which defaults to `false` (config.rs:277-282) and is not set. The tests legitimately use `http://127.0.0.1:<port>` (tests/vault_backend.rs:83, 165-173), so loopback must stay allowed.",
+      "proposed_fix": "In `VaultBackend::new`, before building the agent: `if !config.url.starts_with(\"https://\") && !is_loopback_url(&config.url) { return Err(format!(\"vault url must be https (got scheme of {})\", config.url)); }` \u2014 fail at construction so the key is never handed to a cleartext request and no retry loop runs. Add `.https_only(!is_loopback_url(&config.url))` on the builder as belt-and-braces (ureq's `RequireHttpsOnly(String)` Display carries the URI, not headers, and the string is scrubbed anyway). Add a unit test that `new` with `http://example.invalid` is an `Err` and `http://127.0.0.1:9` is `Ok`."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 390,
+      "severity": "nit",
+      "claim": "Only the `Err` path is scrubbed; an `Ok(content)` that echoes the request header is returned verbatim and `LlmSeat::draft` writes it into a paper and a Thought on the record (llm.rs:164-165).",
+      "evidence": "vault.rs:390 is `outcome.map_err(|e| self.key.scrub(e))` with no `map` on the success side; `extract_content` (vault.rs:463-482) returns the server's `content` string unchanged. Reproduced with the scratch probe in ECHO mode (mock server copies the `x-director-key` request header into `content`): `complete()` returned `Ok` and `Ok(content) from complete() contains the key: true`. The production Vault route would not echo the header, and a misdirected URL already implies the key was sent, so this is a defence-in-depth gap rather than a live leak.",
+      "proposed_fix": "Scrub both sides: `outcome.map(|t| self.key.scrub(t)).map_err(|e| self.key.scrub(e))`. Cost is one `contains` on the response text; the scrub function already short-circuits when the key is absent."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 221,
+      "severity": "nit",
+      "claim": "The key file's permissions are not checked before reading, so a world- or group-readable `~/.ces-director-key` is accepted silently.",
+      "evidence": "`Secret::load` (vault.rs:219-235) calls `std::fs::read_to_string(path)` directly; grep for `metadata|permissions|mode()|0o` in vault.rs returns nothing. The lens marks this as nice-to-have.",
+      "proposed_fix": "On unix, before reading: `let mode = std::fs::metadata(path).map_err(...)?.permissions().mode(); if mode & 0o077 != 0 { return Err(format!(\"vault key file {} is readable by others (mode {:o}); chmod 600 it\", path.display(), mode & 0o777)); }` behind `#[cfg(unix)]`, plus a unit test writing a 0o644 temp file and asserting the `Err` names the path and not the content."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/tests/vault_backend.rs",
+      "line": 457,
+      "severity": "nit",
+      "claim": "The negative assertion `assert!(!dbg.contains(FAKE_KEY), \"{dbg}\")` prints the full Debug output to the test's stdout on exactly the failure it guards against, i.e. when the Debug output contains the key.",
+      "evidence": "tests/vault_backend.rs:457 passes `dbg` as the panic payload of the `!contains(FAKE_KEY)` check. Harmless today (the key is the fixed test string and the assertion passes; the nocapture grep found 0 occurrences), but the file header (lines 1-2) presents these tests as the pattern for the backend, and copying it against a real key file would print the key on regression.",
+      "proposed_fix": "Drop the payload on the negative assertions or mask it: `assert!(!dbg.contains(FAKE_KEY), \"{}\", dbg.replace(FAKE_KEY, \"<KEY>\"))`. Keep `\"{dbg}\"` on the positive `<redacted>` check at line 456 where the output cannot contain the key by construction."
+     }
+    ]
+   }
+  },
+  {
+   "label": "verify:contract:r1",
+   "phase": "Verify",
+   "result": {
+    "findings": [
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/llm.rs",
+      "line": 145,
+      "severity": "should-fix",
+      "claim": "A reservation refusal never pauses the house: the seat returns only a Thought, so a house whose purse is below the estimate is re-drafted every tick, emits one 'cannot reserve' Thought per tick, never reaches NodeStatus::Halted / HaltReason::RunwayExhausted, and the Door/top-up path never learns it is short.",
+      "evidence": "llm.rs:145-154 returns ctx with just ctx.think(...) and no halted_doing. tick.rs:543-557 turns a node into Halted (RunwayExhausted{shortfall}) only when out.halted_doing is Some; tick.rs:391-397 skips only non-draftable (Halted/WaitingAtDoor/Packed) nodes, so the refused house stays draftable and is pushed into `drafted`, which also exempts it from decay_idle (tick.rs:426,1180) although it did nothing. node.rs:393-403 resumes a house on top_up only from Halted+RunwayExhausted. Before this change the same house would have hit ctx.burn Err and halted (node.rs:594-596); the pre-check removes the paid call (good) but also removes the pause signal. tests/llm_reservation.rs:74 asserts `halted_doing.is_none()`, locking the gap in.",
+      "proposed_fix": "Give DraftContext a way to record a reservation halt (e.g. `ctx.halt_short(seat, requested, available)` setting halted_doing and an explicit shortfall), and in tick.rs use that shortfall instead of `node.receipts.last()` (which is wrong when no receipt was written). Then LlmSeat::draft halts with RunwayExhausted{shortfall: reservation - compute} so the house pauses at zero cost and resumes on top_up. Update the llm_reservation tests accordingly (or, if the no-halt behaviour is intended, document in the llm.rs module docs that hosts must watch for the 'cannot reserve' Thought because the engine will not pause the house)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/docs/HANDOFF.md",
+      "line": 52,
+      "severity": "should-fix",
+      "claim": "HANDOFF.md still describes the pre-vault engine: the module map says src/agents/llm.rs has 'no live backend', the Cargo.toml line lists only the `native` feature, and \u00a77 item 5 (a real InferenceBackend over the Vault route) is still listed as open work, while README.md now documents the `vault` feature.",
+      "evidence": "docs/HANDOFF.md:39 `Cargo.toml  features: native (default; tokio) \u00b7 build wasm with --no-default-features`; :52 `src/agents/llm.rs  LlmSeat + InferenceBackend trait + MockBackend (no live backend)`; :111 `5. A real InferenceBackend over the estate Vault route (...)`. README.md:7 describes the vault feature; src/agents/vault.rs and tests/vault_backend.rs exist and pass.",
+      "proposed_fix": "Update HANDOFF.md: line 39 add `vault` (implies native; ureq; never in the wasm build; `cargo test --features vault`); line 52 drop '(no live backend)' and add a row for src/agents/vault.rs (VaultBackend, loopback-mock tests) and the reservation rule in LlmSeat; line 111 mark item 5 done (with the caveat that no live call has been made and TLS roots are webpki)."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/dist/context_engine.wasm",
+      "severity": "nit",
+      "claim": "The tracked wasm artefact no longer matches a build of the working tree.",
+      "evidence": "A `cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown` of `git archive HEAD` is byte-identical to engine/dist/context_engine.wasm (build is deterministic), but the same build of the working tree differs in 100 bytes (first at offset 54620; same 349,035 size), so the src/agents/llm.rs change alters the browser binary. docs/HANDOFF.md:103 says engine/dist is the tracked artefact that build.py embeds and is refreshed with `sh build-wasm.sh`.",
+      "proposed_fix": "Run `cd engine && sh build-wasm.sh` before committing this change (or fold it into the pending 'update HANDOFF.md, commit and push' task) so dist/ and the presentation embed the engine that the sources describe."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 259,
+      "severity": "nit",
+      "claim": "The half-open breaker admits more than the 'one probe' the module doc promises under concurrency, and a retry loop sleeps its pause before discovering that the failure it just recorded opened the breaker.",
+      "evidence": "vault.rs:47 says 'one probe call is let through'. Breaker::admit (vault.rs:259-268) clears open_until for the first caller after the cooldown and sets consecutive_failures = threshold-1, but any further caller arriving before that probe fails also sees open_until == None and is admitted, so up to max_in_flight (3) probes can be in flight. In Inner::call (vault.rs:378-387) the order is note_failure \u2192 check attempt > retries \u2192 std::thread::sleep(pause) \u2192 loop \u2192 admit, so when the failure opened the breaker the thread still sleeps the widened pause (up to 30 s) before returning CIRCUIT_OPEN.",
+      "proposed_fix": "Add a half-open flag (probe_in_flight: bool) to Breaker: admit() sets it when letting the probe through and refuses others until success()/failure() clears it; or reword the doc to 'up to max_in_flight probes'. In call(), check self.admit() (or breaker.is_open) immediately after note_failure and before sleeping."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/src/agents/vault.rs",
+      "line": 481,
+      "severity": "nit",
+      "claim": "execution.request_id (and provider/model) provenance is surfaced only on the empty-content error and discarded on every successful call, although the reference doc asks callers to record it.",
+      "evidence": "calling-vault-models-from-an-agent.md:83-85 'Record execution.request_id as provenance for who computed the output'. vault.rs:481 attaches execution_note only to the Err path; extract_content returns Ok(content) with the execution object dropped, and InferenceBackend::complete (llm.rs) returns only String, so LlmSeat's inference receipt cannot carry it.",
+      "proposed_fix": "Record it as a known gap in the vault.rs module docs (the trait has no channel for it), or extend the backend result to a small struct {content, request_id: Option<String>} and put request_id into the SeatReceipt/Thought that LlmSeat writes, so a receipt can name the provider execution."
+     },
+     {
+      "file": "/home/user/agentic-economy/engine/tests/vault_backend.rs",
+      "line": 468,
+      "severity": "nit",
+      "claim": "std::env::set_var/remove_var are called in a multi-threaded test binary while sibling tests concurrently read the environment (HOME via VaultConfig::default \u2192 default_key_path), which std documents as potentially unsound on Unix.",
+      "evidence": "tests/vault_backend.rs:468 `std::env::set_var(&name, FAKE_KEY)` and :475 `remove_var`; every other test in the file calls `..VaultConfig::default()` (tests/vault_backend.rs:171), which reads HOME through `std::env::var_os` (vault.rs:110-115). Cargo runs these tests on parallel threads; the tests pass today.",
+      "proposed_fix": "Set the variable once before any thread exists (e.g. run the env-var case as a separate integration test binary or via a spawned child process with `Command::env`), or drop the env test and cover KeySource::Env with a unit test in vault.rs that runs under `--test-threads=1`; alternatively accept and leave a comment."
+     }
+    ]
+   }
+  }
+ ]
+}
