@@ -37,3 +37,7 @@
 body[data-take] #hud, body[data-take] #ticker, body[data-take] #banner { display: none; }
 #labels .label { position: absolute; left: 0; top: 0; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--paper-ink); background: var(--pill); border: 1px solid var(--oak-dark); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
 #labels .label.caption { background: color-mix(in srgb, var(--gold) 85%, white); }
+/* DESIGN §2b.4: a soft vignette at Balanced and above, so the town reads as a model on a table. */
+body[data-quality="balanced"]::after, body[data-quality="high"]::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(ellipse at 50% 48%, transparent 55%, rgba(14, 10, 6, 0.55) 100%); }
+#hud, #labels, #ticker, #banner { z-index: 2; }

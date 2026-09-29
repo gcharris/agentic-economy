@@ -12,7 +12,7 @@ import { houseYaw } from '../../engine/layout/layoutCity.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import { buildCottage, setChimney, setLantern, SLOT_LOCAL, PLINTH_TOP, type Cottage } from './cottage.ts';
 import { BEAT_EDGES, beatsStart, Courier, courierAt, STATIC, staticAt, type Run } from './couriers.ts';
-import { buildKerb, buildRoad, meetingStone } from './kerb.ts';
+import { buildKerb, buildRoad, contactShadow, dyeFor, meetingStone } from './kerb.ts';
 
 /** The street band draws up to the city's dissolve edge; the city takes over above it. */
 export const STREET_VISIBLE_UP_TO = 2.5;
@@ -20,7 +20,7 @@ export const STREET_VISIBLE_UP_TO = 2.5;
 export const LID_ON_AT = 1.5;
 const COURIER_CAP = 64;
 const SLOT_REST = new THREE.Color('#b98626'), CYAN = new THREE.Color('#2aa5b8'), GOLD_LIGHT = new THREE.Color('#f2cb7a'), INK3 = new THREE.Color('#8a7a64');
-const EDGE = new THREE.Color('#4c3f30'), SAGE = new THREE.Color('#6a9a6e');
+const SAGE = new THREE.Color('#6a9a6e');
 
 interface HouseState { status: NodeStatus; heat: number; delivered: number; staticAt: number; settledAt: number }
 
@@ -33,6 +33,7 @@ export class StreetBand implements SceneBand {
   private readonly houses = new Map<NodeId, HouseState>();
   private readonly rims = new Map<NodeId, THREE.MeshLambertMaterial>();
   private readonly cells = new Map<NodeId, Axial>();
+  private readonly dyes = new Map<NodeId, THREE.Color>();
   private readonly fx = new THREE.Group();
   private ctx!: SceneContext;
   private layoutKey = '';
@@ -50,7 +51,7 @@ export class StreetBand implements SceneBand {
     const { store } = this.ctx;
     const layout = store.layout.current;
     for (const c of this.cottages.values()) this.group.remove(c.group);
-    this.cottages.clear(); this.cells.clear(); this.rims.clear();
+    this.cottages.clear(); this.cells.clear(); this.rims.clear(); this.dyes.clear();
     for (const o of [...this.group.children]) if (o !== this.fx) this.group.remove(o);
     this.group.add(buildRoad({ q: 0, r: 0 }, Math.max(1, layout.radius)));
     for (const [sid, st] of layout.streets) {
@@ -65,13 +66,19 @@ export class StreetBand implements SceneBand {
       const w = toWorld(cell);
       c.group.position.set(w.x, 0, w.z);
       c.group.rotation.y = houseYaw(cell);
-      // Each rim gets its own edge material so a settle can tick one house --sage.
-      const rim = new THREE.MeshLambertMaterial({ color: EDGE.clone(), flatShading: true });
+      // Each rim gets its own material: dyed by its street (DESIGN §2b.3), ticked --sage by a settle.
+      const street = [...layout.streets].find(([, st]) => st.cells.some((x) => x.q === cell.q && x.r === cell.r))?.[0];
+      const dye = new THREE.Color(street === undefined ? '#4c3f30' : dyeFor(street));
+      this.dyes.set(id, dye);
+      const rim = new THREE.MeshLambertMaterial({ color: dye.clone(), flatShading: true });
       (c.group.children[0] as THREE.Mesh).material = rim;
       this.rims.set(id, rim);
       this.cottages.set(id, c);
       this.cells.set(id, cell);
       this.group.add(c.group);
+      const shadow = contactShadow(7.2);
+      shadow.position.x = w.x; shadow.position.z = w.z;
+      this.group.add(shadow);
     }
   }
 
@@ -190,7 +197,7 @@ export class StreetBand implements SceneBand {
       else if (t - h.delivered < 0.3) { slot.emissive.copy(GOLD_LIGHT); slot.color.copy(GOLD_LIGHT); slot.emissiveIntensity = 1.0; }
       else { slot.emissive.copy(SLOT_REST); slot.color.copy(SLOT_REST); slot.emissiveIntensity = 0.25; }
       const rim = this.rims.get(id)!;
-      rim.color.copy(t - h.settledAt < 0.3 ? SAGE : EDGE);
+      rim.color.copy(t - h.settledAt < 0.3 ? SAGE : this.dyes.get(id)!);
     }
   }
 

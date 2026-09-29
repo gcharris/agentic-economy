@@ -42,14 +42,16 @@ async function makeSource(q: URLSearchParams): Promise<EngineSource> {
 async function main(): Promise<void> {
   const q = new URLSearchParams(location.search);
   const quality = (['low', 'balanced', 'high'].includes(q.get('quality') ?? '') ? q.get('quality') : 'balanced') as QualityPreset;
-  const preset = (LIGHTING_PRESETS.includes(q.get('lighting') as LightingPreset) ? q.get('lighting') : 'golden') as LightingPreset;
+  // No ?lighting=: DESIGN §2b picks per band (Golden in the room, Noon outdoors).
+  const preset = LIGHTING_PRESETS.includes(q.get('lighting') as LightingPreset) ? (q.get('lighting') as LightingPreset) : null;
   const reducedMotion = q.get('motion') === 'reduced' || matchMedia('(prefers-reduced-motion: reduce)').matches;
   const manual = q.get('clock') === 'manual';
+  document.body.dataset.quality = quality;
   const source = await makeSource(q);
   const renderer = new ThreeRenderer(document.querySelector<HTMLCanvasElement>('#stage')!, quality, q.get('stats') === '1');
   const app = await App.boot({
     source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion,
-    lighting: { preset, blend: 0, cycle: false }, bands: [new RoomBand(), new StreetBand()],
+    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand()],
   });
   if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
   const take = q.get('take');

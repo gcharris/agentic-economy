@@ -9,7 +9,8 @@ import type { NodeStatus } from '../../engine/contract/state.ts';
 
 const flat = (color: string, extra: THREE.MeshLambertMaterialParameters = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra });
 const M = {
-  edge: flat('#4c3f30'), plinth: flat('#2b2117'), bevel: flat('#4a3826'), wall: flat('#2c2219'), timber: flat('#5a422f'),
+  edge: flat('#4c3f30'), plinth: flat('#2b2117'), bevel: flat('#4a3826'), wall: flat('#e3d6bb'), // limewash in daylight (DESIGN §2b)
+  timber: flat('#5a422f'),
   roof: flat('#7d4a34'), door: flat('#4a3525'), brass: flat('#a8842e'), pot: flat('#3e3a34'), step: flat('#3e2d1f'),
 };
 const EAVES = 3.2, RIDGE = 1.6;
@@ -48,6 +49,7 @@ export function buildCottage(id: number): Cottage {
   const plinth = new THREE.Mesh(G.plinthBase, M.edge);
   const top = new THREE.Mesh(G.plinthTop, [M.bevel, M.plinth, M.edge]);
   plinth.receiveShadow = top.receiveShadow = true;
+  plinth.castShadow = top.castShadow = true;
   group.add(plinth, top);
 
   const house = new THREE.Group();
@@ -62,6 +64,7 @@ export function buildCottage(id: number): Cottage {
     house.add(p);
   }
   const gable = new THREE.Mesh(G.gable, M.wall);
+  gable.castShadow = true;
   house.add(gable);
   const tilt = Math.atan2(RIDGE, G.half);
   for (const s of [-1, 1]) {

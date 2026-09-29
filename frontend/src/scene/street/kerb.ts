@@ -1,5 +1,5 @@
 // The kerb (DESIGN §6): a #4c3f30 stone ribbon 1.2 m wide through a street's kerb stones, one --brass stud
-// (r 0.12) per tile at 5.0 m from its centre toward the ring centre. The road inside is #221c16.
+// (r 0.12) per tile at 5.0 m from its centre toward the ring centre. The ground plate is limestone (§2b).
 
 import * as THREE from 'three';
 import type { Axial } from '../../engine/layout/hex.ts';
@@ -8,7 +8,8 @@ import { kerbStone } from '../../engine/layout/layoutCity.ts';
 
 const KERB = new THREE.MeshLambertMaterial({ color: '#4c3f30', flatShading: true });
 const STUD = new THREE.MeshLambertMaterial({ color: '#a8842e', emissive: '#a8842e', emissiveIntensity: 0.2 });
-const ROAD = new THREE.MeshLambertMaterial({ color: '#221c16' });
+/** The ground plate at Stages 2–3: warm limestone (DESIGN §2b; the baize returns at night and at Stages 4–5). */
+const ROAD = new THREE.MeshLambertMaterial({ color: '#a8977a' });
 export const KERB_HEIGHT = 0.32;
 
 /** The stones of a street's cells, in ring order; closed when the street fills its ring. */
@@ -54,4 +55,30 @@ export function meetingStone(a: Axial, b: Axial): THREE.Vector3 {
   if (l < 1e-3) m.set(-sa.z, 0, sa.x).setLength(r); // opposite houses: go round, not through the middle
   else m.setLength(r);
   return m.setY(KERB_HEIGHT);
+}
+
+/** DESIGN §2b.3: one rim dye per street, from a muted set, assigned by street id. It names a district; it orders nothing. */
+export const STREET_DYES = ['#8c3b2e', '#b0802c', '#3f4a63', '#5d6b3a'] as const; // madder, ochre, indigo-grey, moss
+export const dyeFor = (streetId: number): string => STREET_DYES[Number(BigInt(streetId) % BigInt(STREET_DYES.length))];
+
+/** A soft contact shadow (DESIGN §2b.4): a radial falloff texture shared by every plinth and figure. */
+let softTex: THREE.DataTexture | null = null;
+export function softShadowTexture(): THREE.DataTexture {
+  if (softTex) return softTex;
+  const n = 64, d = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const r = Math.hypot(x - n / 2 + 0.5, y - n / 2 + 0.5) / (n / 2);
+    const a = Math.max(0, Math.min(1, (1 - r) / 0.35));
+    d.set([0, 0, 0, Math.round(255 * a * a)], (y * n + x) * 4);
+  }
+  softTex = new THREE.DataTexture(d, n, n);
+  softTex.needsUpdate = true;
+  return softTex;
+}
+export function contactShadow(radius: number, opacity = 0.45): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: softShadowTexture(), transparent: true, opacity, depthWrite: false }));
+  m.position.y = 0.004;
+  m.renderOrder = -1;
+  return m;
 }

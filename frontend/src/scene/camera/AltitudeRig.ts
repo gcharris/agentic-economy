@@ -53,6 +53,9 @@ export class AltitudeRig {
   rows = 1080;
   private readonly target = new THREE.Vector3();
   private readonly smoothTarget = new THREE.Vector3();
+  /** The view height used on the last update (the key light's shadow frustum follows it). */
+  viewH = 14;
+  get lookTarget(): THREE.Vector3 { return this.smoothTarget; }
   private yaw = 0;
   private lastT = -1;
   private tick = 0;
@@ -149,6 +152,7 @@ export class AltitudeRig {
     const row = BANDS[Math.min(4, Math.max(0, Math.round(a) - 1))];
     const H = this.take ? this.rows / this.take.ppm
       : heightAt(a, BANDS.map((b, i) => (i === 0 ? this.rows / ROOM_PPM : i === 1 ? this.streetH : i === 2 ? this.cityH : b.H)));
+    this.viewH = H;
     const fov = row.fovDeg;
     const d = dolly(H, fov);
     const p = row.pitchDeg * DEG;

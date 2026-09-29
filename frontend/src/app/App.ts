@@ -13,7 +13,7 @@ import { NOOP_UI, Store, type UiLayer } from '../engine/store/Store.ts';
 import type { LayoutHandle } from '../engine/layout/layoutCity.ts';
 import { AltitudeRig } from '../scene/camera/AltitudeRig.ts';
 import { Labels } from '../ui/labels.ts';
-import { WorldLights } from './lighting.ts';
+import { presetForBand, WorldLights } from './lighting.ts';
 import type { Renderer } from './Renderer.ts';
 
 export type { SceneEvent } from '../engine/store/bus.ts';
@@ -100,13 +100,13 @@ export class App {
       layout: app.store.layout, store: app.store, bus: app.store.bus, clips: app.store.clips,
       project: (p) => app.project(p),
       quality: opts.quality ?? 'balanced',
-      lighting: opts.lighting ?? { preset: 'golden', blend: 0, cycle: false },
+      lighting: opts.lighting ?? { preset: presetForBand(1, null), blend: 0, cycle: false },
       reducedMotion: opts.reducedMotion ?? false,
     };
     const ui = opts.ui ?? (async (a: App) => (await import('../ui/index.ts')).createUi(a, opts.root ?? document));
     app.ui = typeof ui === 'function' ? await ui(app) : ui;
     app.labels = new Labels((opts.root ?? (typeof document !== 'undefined' ? document : null))?.querySelector?.<HTMLElement>('#labels') ?? null, app.store.bus, app.now, (p) => app.project(p));
-    app.lights = new WorldLights(app.ctx.lighting);
+    app.lights = new WorldLights(app.ctx.lighting, app.ctx.quality !== 'low' && renderer.kind === 'webgl');
     renderer.scene.add(app.lights.group);
     app.rig.onZoom = (b) => { if (source.live) void app.command({ decision: 'zoom', stage: b }); };
     for (const b of opts.bands ?? []) app.register(b);
@@ -176,7 +176,14 @@ export class App {
       this.tickBand = band;
       this.store.tickSeconds = TICK_SECONDS_BY_BAND[band];
       if (this.clock) this.clock.tickSeconds = TICK_SECONDS_BY_BAND[band];
+      // DESIGN §2b: Golden in the room, Noon outdoors, unless the person chose a preset; the key casts only outdoors.
+      if (this.lights) {
+        this.lights.setPreset(presetForBand(band, this.opts.lighting?.preset ?? null));
+        this.lights.key.castShadow = this.lights.shadows && band >= 2;
+        this.ctx!.lighting = { ...this.ctx!.lighting, preset: this.lights.preset! };
+      }
     }
+    this.lights?.follow(this.rig.lookTarget, this.rig.viewH);
     const a = this.rig.visualA;
     for (const b of this.bands) { b.setAltitude(a); b.animate?.(t); }
     this.labels?.frame(t);
