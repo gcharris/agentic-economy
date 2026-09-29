@@ -31,6 +31,17 @@ The brief's eleven tokens and the world bible's oak set are kept verbatim. Added
 
 **Quality**: **Low** (DPR 1, no shadow map, one noise octave, courier cap 256); **Balanced**, the default and the 60 fps / 5,000-tile floor (DPR ≤ 1.5, one 1024² shadow from L1 at band 1, octaves 3 / 2 / 1 by band, cap 1,024, contact shadows); **High** (DPR ≤ 2, 2048² at bands 1–2, a half-res bloom pass on the verification layer, 200 dust points in L1's cone). Below High, glow is halo geometry, cyan only. Three point lights at most (L1, L2, L4) plus key and hemisphere.
 
+## 2b. Exterior light and materials (amendment, 2026-09-29)
+
+Decided by the design session under the Director's delegation after the first room screenshots read as a monochrome model. The ruling behind §2 stands: no sci-fi kit, no blue-grey plates, cyan for verification only, gold for the boundary. What changes is the range of tone and hue outdoors, so the street and the city read like a lit town rather than a dark diorama.
+
+1. **Lighting default.** Golden stays for Stage 1 and the thumbnail take. Stages 2–5 default to **Noon**: key 200° / 62°, `#f4e6c8` × 2.4; hemisphere sky `#e9dfc6`, ground `#3a2f24`, × 0.9; real cast shadows at Balanced. Night stays available for the shot where the lanterns come up.
+2. **Exterior materials**, a craftsman's set added to the oak: limewash `#e3d6bb` for cottage walls in daylight (oak timber corners stay), fired clay `--roof #7d4a34` for roofs, slate `#4a4f57` for data yards, warm limestone `#a8977a` for the ground plate at Stages 2–3 (the baize returns at night and at Stages 4–5). Brass for every boundary object, unchanged.
+3. **One rim dye per street**, from a muted set, so districts read at a glance as in the colony reference: madder `#8c3b2e`, ochre `#b0802c`, indigo-grey `#3f4a63`, moss `#5d6b3a`, assigned by street id. The dye identifies the street; status is still the lantern, and nothing about the dye orders streets against each other.
+4. **Depth at Balanced and above:** contact shadows under every plinth and cat, a soft vignette so the town still reads as a model on a table, bloom on cyan only.
+
+The room (§4) is unchanged; light it per `REVIEW-ROOM-2026-09-29.md`.
+
 ## 3. Type and the HUD
 
 Fraunces 400 for display, Schibsted Grotesk for UI (17 px / 1.55; eyebrows 0.78 rem 600 uppercase in `--gold`), JetBrains Mono at `0.86em`, tabular, for receipts, hashes, ids, Φ and credits. Credits two decimals (`754.95 cr`), costs one (`10.0 cr`), Φ one-decimal percent, hashes first 8 hex. Canvas draws no glyph; DOM draws every one, patched in `reduce()` and on clip boundaries, never per render frame, except `transform` on at most eight projected labels.
