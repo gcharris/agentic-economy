@@ -43,15 +43,18 @@ export class CountryBand implements SceneBand {
     this.country = root && root.stage === 'Country' ? root : null;
     if (!this.country) return;
     const c = this.country, y = c.top + 0.03;
-    const line = new THREE.Mesh(new THREE.RingGeometry(c.r - 4.5, c.r - 3.0, 192).rotateX(-Math.PI / 2), this.inlay);
+    // The line reads at country scale: 0.3 m in DESIGN §8's card model, here a fixed share of the rim (≥ 1.5 m).
+    const w = Math.max(1.5, c.r * 0.022), inset = Math.max(3.0, c.r * 0.03);
+    const line = new THREE.Mesh(new THREE.RingGeometry(c.r - inset - w, c.r - inset, 192).rotateX(-Math.PI / 2), this.inlay);
     line.position.set(c.cx, y, c.cz);
     line.renderOrder = 2;
     const n = Math.round((2 * Math.PI) / PIN_STEP);
-    this.pins = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.6, 0.6, 0.5, 10).translate(0, 0.25, 0),
+    const pinR = Math.max(0.6, c.r * 0.009);
+    this.pins = new THREE.InstancedMesh(new THREE.CylinderGeometry(pinR, pinR, pinR, 10).translate(0, pinR / 2, 0),
       new THREE.MeshLambertMaterial({ color: '#a8842e', emissive: '#a8842e', emissiveIntensity: 0.25 }), n);
     const m = new THREE.Matrix4();
     for (let i = 0; i < n; i++) {
-      const t = i * PIN_STEP, rr = c.r - 3.75;
+      const t = i * PIN_STEP, rr = c.r - inset - w / 2;
       this.pins.setMatrixAt(i, m.makeTranslation(c.cx + Math.cos(t) * rr, c.top, c.cz + Math.sin(t) * rr));
     }
     this.sweep = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 128).rotateX(-Math.PI / 2), this.sweepMat);

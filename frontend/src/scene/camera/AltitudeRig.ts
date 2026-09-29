@@ -114,7 +114,7 @@ export class AltitudeRig {
       this.cityH = Math.min(1600, Math.max(140 * k, 1.3 * layout.radius));
     }
     this.countryCentre.set(0, 0, 0);
-    this.countryH = Math.max(40 * k, 2.0 * layout.radius); // the whole tree; at 55° pitch a disc stands taller in frame
+    this.countryH = Math.max(40 * k, 1.6 * layout.radius); // the whole tree; at 55° pitch a disc stands taller in frame
     if (!frame) return;
     this.tick = frame.tick;
     const scale = STAGE_LEVEL[frame.state.active_scale];

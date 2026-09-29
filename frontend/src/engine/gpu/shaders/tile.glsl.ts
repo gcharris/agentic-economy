@@ -74,8 +74,10 @@ void main() {
   if (aSlot >= 0.0) {
     Truth t = fetchTruth(aSlot);
     fog = clamp(1.0 - visiblePhi(t, unit * 0.5), 0.0, 1.0);
-    packed = t.status == 3 || iB.w >= 1.5; // a sealed street is one smooth plate too (DESIGN §2c.2)
-    fold = packed ? clamp((uTime - t.packT) / 0.6, 0.0, 1.0) : 0.0; // PACKED folds a bulb into its parent over 600 ms
+    // PACKED folds a packed bulb into its parent over 600 ms; a sealed street (its children packed) keeps its size but
+    // is one smooth plate, rim unfrayed (DESIGN §2c.2). packT is written on the parent too, so fold only the packed node.
+    fold = t.status == 3 ? clamp((uTime - t.packT) / 0.6, 0.0, 1.0) : 0.0;
+    packed = t.status == 3 || iB.w >= 1.5;
   }
 #ifdef SPECK
   // Detached specks off a foggy rim (fog > 0.5): a tiny instance ring round each plate.
