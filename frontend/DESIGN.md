@@ -42,6 +42,18 @@ Decided by the design session under the Director's delegation after the first ro
 
 The room (§4) is unchanged; light it per `REVIEW-ROOM-2026-09-29.md`.
 
+## 2c. Bulbs, not hexes: the fractal layout (amendment, 2026-09-29)
+
+The Director's ruling, replacing the hex zoning of doc 03 §3 and §6–§7 wherever they say "hex": the layout is the fractal thesis made literal. **A node is a round plate; its children bud from its rim, smaller, the way bulbs bud from the Mandelbrot cardioid; the same rule at every scale.** House plates bud from a street plate, street plates from the city plate whose centre is the Clearinghouse, city plates from the country, country plates from the world sphere. Zooming in is the rim of one plate filling the frame and its bulbs becoming plates: the continuous, self-similar zoom of the reference images.
+
+1. **The plate.** A bevelled disc in the stage's materials (§2b), its rim a circle displaced by low-amplitude noise seeded by the node id, so no two plates are the same shape and none is a polygon. Grandchildren bud only from the outer half of a child's rim (within ±100° of the outward direction), so structure branches outward.
+2. **The edge is the epistemics.** The rim's displacement amplitude and detail grow with fog = 1 − Φ: at Φ 1.0 a clean bevelled circle; at Φ 0.56 a frayed, filamentary coastline with small detached specks, the Mandelbrot boundary; the `STATE_SYNC` sweep smooths it back to a circle. A packed street is one smooth plate with nothing moving inside. This replaces hatching and grain as the primary fog cue; the desaturation stays.
+3. **Sizes from the leaf up.** The house plate keeps radius 6.5 m at every zoom, so the room never changes scale. A parent's radius follows from its children: R = r_child / f(n), f(n) = min(0.42, 0.85 / √n); children sit on the parent's rim at equal angular spacing in ascending-id order with a small seeded jitter, centre at R + 0.6·r from the parent's centre (a 0.4·r overlap, so each bulb visibly grows out of the rim). Weighting a bulb's radius by its purse is a later option.
+4. **Fixtures follow the rim.** Kerb stones sit on the street plate's rim between houses; the Letter Slot faces the street's centre; tubes run from each street's attach point along the city plate to the dome; foundries and data yards are small satellite plates in the unused arc gaps of the city's outer rim; the High Court's line is the inlay along a country plate's rim; countries are plates on the sphere.
+5. **Density for the video.** Scenario 3 is 2 streets × 3 houses by construction, which is why the city looks empty. The video's city should be about 6 streets × 8 houses; that needs a sized city export in the engine (`engine_new_city(streets, houses, budget, tasks)`), an engine-lane change of ten lines.
+
+The room (§4) is untouched. Everything else in §6–§10 that says "hex", "ring", "axial" or "spiral" reads "plate", "rim", "centre and radius", "bulbs".
+
 ## 3. Type and the HUD
 
 Fraunces 400 for display, Schibsted Grotesk for UI (17 px / 1.55; eyebrows 0.78 rem 600 uppercase in `--gold`), JetBrains Mono at `0.86em`, tabular, for receipts, hashes, ids, Φ and credits. Credits two decimals (`754.95 cr`), costs one (`10.0 cr`), Φ one-decimal percent, hashes first 8 hex. Canvas draws no glyph; DOM draws every one, patched in `reduce()` and on clip boundaries, never per render frame, except `transform` on at most eight projected labels.

@@ -569,6 +569,26 @@ export function kerbStone(c: Axial) { const w = toWorld(c); const l = Math.hypot
 
 Worked example, `scenarios::city(config, 2, 3, …)`: Street 1 (the lower id) takes ring 1, its three houses contiguous from `rot₁`; Street 2 takes ring 2, three of twelve cells from `rot₂`; the City at `(0, 0)`; ground to ring 4; foundries on ring 3's corners, yards on ring 4's. The recorded `street` run (`The City` → `Elm Street` → six houses whose ids arrive out of name order) lays out by id, not by name, and the snapshot test pins it. Properties a test pins: pure (no `Math.random`, no `Date`), O(n log n), identical for identical `(id, parent, stage)` triples regardless of array order, stable across ticks; recomputed only when the `(id, parent)` set changes. `layoutCountry`: the Country at `(0, 0)` of its own grid, cities on rings, `HEX_SIZE × 7`; `layoutWorld`: countries by ascending id spaced evenly on the sphere's 30° N great circle.
 
+### 7.3 Amendment 2026-09-29: the bulb layout replaces §7.1–7.2 (DESIGN §2c)
+
+`src/engine/layout/` becomes plate-based; `hex.ts` and the axial math go, `layoutCity.ts` becomes `layoutBulbs.ts`, pure and keyed by `NodeId`:
+
+```ts
+export interface Plate { id: NodeId; parent: NodeId | null; stage: Stage; cx: number; cz: number; r: number; theta: number /* angle of attachment on the parent, radians */; seed: number /* hash(id) in 0–1 */ }
+export interface BulbLayout { plates: Map<NodeId, Plate>; root: NodeId; radius: number }
+export const HOUSE_R = 6.5;
+export const f = (n: number) => Math.min(0.42, 0.85 / Math.sqrt(Math.max(n, 1)));
+export function layoutBulbs(nodes: NodeView[]): BulbLayout;   // leaf-up radii, then top-down placement
+export function attachPoint(p: Plate, parent: Plate): { x: number; z: number };   // where the bulb meets the rim
+export function rimPoint(p: Plate, theta: number): { x: number; z: number };      // for kerb stones, slots, tubes
+```
+
+Placement: for a parent of radius R with children c₁…cₙ in ascending id, child i has r = R·f(n), θᵢ = θ₀ + 2π·i/n + jitter(seedᵢ)·π/(4n), centre = parent centre + (R + 0.6·r)·(cos θᵢ, sin θᵢ); θ₀ is the parent's own outward direction (0 for the root) and the children of a non-root plate use only θ ∈ θ₀ ± 100°. Radii are computed leaf-up so `HOUSE_R` holds: R_street = HOUSE_R / f(houses), R_city = max(R_street) / f(streets), and so on. Snapshot tests replace the hex ring tests; the 5,000-node fixture must lay out in < 50 ms.
+
+Tile mesh: the instanced geometry becomes a disc fan (48 segments, bevel ring, no bottom); per-instance attributes `aCenter` (vec2), `aRadius`, `aSeed`, `aKind`, `aSlot`, `aFold` replace `aAxial`. The vertex shader displaces the rim: `r' = r · (1 + fog · (0.05·n₁(θ·3 + seed) + 0.03·n₂(θ·9 + seed) + 0.015·n₃(θ·27 + seed)))`, with the three octaves fading in as fog rises (0.02, 0.30, 0.60 thresholds) so a crisp plate is a circle and a foggy one is a coastline; detached specks are a second, tiny instance ring at fog > 0.5. `sweepFront` gates the displacement so the STATE_SYNC front visibly smooths the rim. The truth buffer, clips, bus and bands are unchanged; street/city bands re-place their fixtures with `rimPoint`/`attachPoint`.
+
+Engine lane: `engine_new_city(streets: u32, houses: u32, budget: f64, tasks: u32, seed: u64, cost_visible: u32)` in `wasm_abi.rs` (calls `scenarios::city(config, streets, houses, budget, tasks)`), and `--streets`/`--houses` flags on `serve` and `house`; scenario code 3 keeps its 2 × 3 default.
+
 ## 8. The altitude camera (`src/scene/camera/`)
 
 One `PerspectiveCamera`, never swapped. `A ∈ [1, 5]`; the integer part names the nearest band, the fraction the progress. Position `pos = T + d · (−cos p · sin y, sin p, cos p · cos y)`, `lookAt(T)`, with `d = H / (2 · tan(fov / 2))`, `near = d / 50`, `far = 4d`; the camera stands south-west of the focus so the house's north and east walls (Archives, Desk, the Door) are the far walls.
