@@ -30,13 +30,15 @@ cargo fmt --check            clean (default rustfmt, no rustfmt.toml; the crate 
 
 **The reflow, for the record.** Commit `01b0b10` was authored wide and never formatted; the closing `cargo fmt` this file prescribes reflowed the crate once, whitespace only, and that reflow was committed on its own ("cargo fmt: reflow the crate once") before the test adaptations, so both diffs read cleanly. No `rustfmt.toml` was added: no stable configuration reproduces the authored style, and `disable_all_formatting` is a policy the Director sets, not a repair. `cargo fmt --check` is clean from here on.
 
+**Since the handoff, cloud session of 2026-09-28/29, in commit order:** `engine/target` untracked, the wasm kept in `engine/dist` (`build-wasm.sh`); the six tests adapted and `serve` answering 404 (§5); `engine_new(3|4|5)` and `--scenario city|country|world` expose the city, the forged country and the world to the browser and the server; the presentation refreshed and published (§6); `serve` honours `PORT` and `--bind` for a hosted run; `frontend/DESIGN.md` and `frontend/ARCHITECTURE.md` written (§9); a `VaultBackend` behind the `vault` feature, checkpointed with review findings open (§7 item 2); the frontend scaffold's engine layer, checkpointed (§9). Verified after the checkpoints: `cargo test` passed=75 failed=0 ignored=2; `cargo test --features vault` passed=99 failed=0 ignored=2.
+
 **The six lane tests are adapted (§5), and the suite is green.** They were written by parallel lane agents against the pre-audit engine and encoded behaviours that were then changed on purpose (see §4); §5 records each adaptation as applied.
 
 ## 3. Layout
 
 ```
 engine/
-  Cargo.toml                 features: native (default; tokio) · build wasm with --no-default-features
+  Cargo.toml                 features: native (default; tokio) · build wasm with --no-default-features · vault (native only; ureq; cargo test --features vault)
   src/lib.rs                 the Golden Invariant, module map, empirical anchors table
   src/node.rs                SovereignNode · DraftContext (PRIVATE fields, getters, recorded acts) · Agent trait
   src/tick.rs                Engine: tick(), collect(), verify(), commit(), settle_netted(), LOD, heartbeat, state_view()
@@ -49,7 +51,8 @@ engine/
   src/tax.rs                 CoordinationTax 1.0/1.25/1.40 (doc 04) + the two observed percentages
   src/lod.rs                 PackedStatisticalState (active children only), unpack weights
   src/agents/statistical.rs  Scout, Scribble, Inspector, Steward (Penny), Porter
-  src/agents/llm.rs          LlmSeat + InferenceBackend trait + MockBackend (no live backend)
+  src/agents/llm.rs          LlmSeat + InferenceBackend trait + MockBackend (the purse reservation rule; MockBackend)
+  src/agents/vault.rs        VaultBackend, feature `vault`: the estate Vault route, key redacted, retries, breaker; WIP, see §7 item 2
   src/scenarios/             house, street, city, drift (move_truth), high_court (forged_*), world
   src/wasm_abi.rs            engine_new/tick/authorize/reject/top_up/zoom/set_truth_price/state/events/out_ptr/version
   src/bin/house.rs           terminal demo (--door interactive|auto|reject|hold:N, --hidden-cost, --scenario street)
@@ -59,6 +62,7 @@ engine/
   docs/workflow/             raw outputs of the 121-agent audit/panel/lane workflow (lane reports with diffs, 6 stack proposals, facts, audit)
   docs/references/           the Director's three mood images (see §6)
 ../presentation/             index.template.html + part2/part3 fragments, build.py, record_trace.mjs, trace.json, index.html (STALE, see §7)
+../frontend/                 DESIGN.md · ARCHITECTURE.md · the scaffold's engine layer (WIP); status in §9
 ```
 
 Run it:
@@ -106,9 +110,29 @@ cd ../presentation && node record_trace.mjs ../engine/dist/context_engine.wasm t
 
 The six copy corrections listed at the 2026-09-29 handoff (decay attribution, the Letter Slot caveat, the coordination-tax correction, the camera log line, send fee 25 → 10, the STACK object) are applied; three review rounds also fixed the measured lede, the tick lede, the house-staff comparison, the colophon's open list and the drift chart's phone labels. Palette for charts was validated on the dark ground: gold `#b98626`, cyan `#2aa5b8`.
 
-## 7. Open work, in priority order
+## 7. Open work, in priority order (updated 2026-09-29)
 
-1. Adapt the six tests (§5): done. 2. Refresh and publish the presentation (§6): done, URL above. 3. Hand `docs/FRONTEND-DESIGNER-BRIEF.md` to the frontend agent (the Director does this). 4. Open items in `docs/AUDIT-LEDGER.md` marked *open* (policy questions: court rollback depth and coherence marker; Stage 3 LOD tension; receiver-side DvP verification; Stage 5 settlement writing no ledger line to Oak Tables, #32; #33, `serve` answering 404 for unheld envelopes, is done). 5. A real `InferenceBackend` over the estate Vault route (read `context-engine-studio/knowledge/reference/dev-docs/calling-vault-models-from-an-agent.md` first; never print a key). 6. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
+1. **The frontend build** (`../frontend/`, brief §6). The spec is written (`DESIGN.md`, `ARCHITECTURE.md`) and the scaffold's engine layer is in (contract types, the three `EngineSource`s and the worker, store/reducer/clips/bus, hex layout, 69 unit tests). Not started: the GPU/app layer (truth buffer, tile mesh, shaders, `App`, camera rig, `main.ts`), the ui lane (HUD, the Door dialog, the Note, receipts), the room, street, city and atlas bands, the design-system page, `RECORDING-PLAN.md`, the Door-at-recorded-tick tests. Build order: ARCHITECTURE §14. Run: `cd frontend && npm install && npm run copy-assets && npm test`.
+2. **VaultBackend review findings** (commit ab260bb): bound the request's `max_tokens` by the seat's reservation (blocking); do not retry a timeout or an unreadable 2xx body; debit failed attempts in the ledger; compile `log` at `max_level_debug` so ureq's TRACE wire dump can never print the key; require https except loopback; halt the house on a reservation refusal. Then `cargo test --features vault`. No live call has been made; the Director key is not in this environment.
+3. Policy questions in `docs/AUDIT-LEDGER.md` (#28 court rollback depth, #30 Stage 3 LOD tension, #31 receiver-side DvP, #32 Stage 5 ledger lines): the Director's.
+4. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
+5. A hosted demo (`serve` on Cloud Run) is Controlled work behind the stop line: needs a docket. `serve` already honours `PORT` and `--bind`; `frontend/ARCHITECTURE.md` §12 has the service shape.
+
+## 9. Frontend status (2026-09-29)
+
+| deliverable (brief §6) | state |
+|---|---|
+| design-system page | spec only (`frontend/DESIGN.md`) |
+| playable Stage 1 and 2 against `serve` and the trace, Door flow complete | data layer only; no renderer, no UI |
+| Stage 3 hex city with the `NETTED` pulse | not started (scenario 3 is in the wasm and in `serve`) |
+| recording plan | not started |
+| headless test: the Door at the recorded tick | harness in place (vitest projects, jsdom dialog polyfill); the test not written |
+
+Share of this handoff's total effort done: about half. The engine side is near complete, the presentation is published, and the frontend is a spec plus its data layer; its rendering is most of what remains.
+
+## 10. Usage record
+
+Cloud session `session_017K6GES9PnR23AwS2vThJFM` (2026-09-28 21:02 to 2026-09-29): five subagent workflows, 50 agent runs, about 7.3M subagent tokens; the session's own record reports USD 252.78 of usage on the overage pool, with the seven-day limit in `rejected` state from about 23:41 UTC on 28 September until 11:00 UTC on 29 September. Two workflows (the Vault repair round and the frontend scaffold) died on that limit; their partial work is the two WIP checkpoint commits. `TECH-STACK-DECISION.md` records the previous local session's judges stopping on the same limit the day before.
 
 ## 8. Provenance you will be asked about
 
