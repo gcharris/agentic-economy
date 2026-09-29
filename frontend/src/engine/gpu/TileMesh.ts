@@ -85,7 +85,8 @@ export class TileMesh {
     this.specks = this.instance(this.speckGeometry.clone(), this.speckMaterial, speckable, SPECKS_PER_PLATE);
     this.street = this.mesh.geometry.getAttribute('iB') as THREE.InstancedBufferAttribute;
     this.sage = this.mesh.geometry.getAttribute('iC') as THREE.InstancedBufferAttribute;
-    this.group.add(buildGround(layout.radius), this.mesh, this.specks);
+    // One ground under every root (the world's countries stand apart along +x).
+    this.group.add(buildGround(Math.max(layout.radius, ...layout.trees.map((t) => Math.hypot(t.cx, t.cz) + t.extent))), this.mesh, this.specks);
     return this.group;
   }
 

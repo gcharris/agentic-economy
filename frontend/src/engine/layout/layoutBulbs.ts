@@ -32,7 +32,10 @@ export interface BulbLayout {
   /** Extent: the farthest plate edge from the root's centre (metres). */
   radius: number;
   satellites: Satellite[];
+  /** Every root (Stage 5: the world's countries) by ascending id, its centre and extent. The first is `root`, at 0, 0. */
+  trees: Tree[];
 }
+export interface Tree { id: NodeId; cx: number; cz: number; extent: number }
 
 export const HOUSE_R = 6.5;
 /** Half-width of the attachment arc no child may use (DESIGN §2c.1). */
@@ -53,22 +56,21 @@ export function seedOf(id: number): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-export const EMPTY: BulbLayout = { plates: new Map(), root: null, radius: 0, satellites: [] };
+export const EMPTY: BulbLayout = { plates: new Map(), root: null, radius: 0, satellites: [], trees: [] };
 
 export function layoutBulbs(nodes: readonly Shape[]): BulbLayout {
-  if (nodes.length === 0) return { ...EMPTY, plates: new Map(), satellites: [] };
+  if (nodes.length === 0) return { ...EMPTY, plates: new Map(), satellites: [], trees: [] };
   const byParent = new Map<NodeId | null, Shape[]>();
   for (const n of nodes) { const l = byParent.get(n.parent); if (l) l.push(n); else byParent.set(n.parent, [n]); }
   for (const l of byParent.values()) l.sort((a, b) => a.id - b.id);
   const kids = (id: NodeId) => byParent.get(id) ?? [];
   const roots = byParent.get(null);
-  if (!roots?.length) return { ...EMPTY, plates: new Map(), satellites: [] };
-  const root = roots[0];
+  if (!roots?.length) return { ...EMPTY, plates: new Map(), satellites: [], trees: [] };
 
   // Leaf-up radii and reaches (iterative post-order, so a deep graph cannot overflow the stack).
   const radius = new Map<NodeId, number>(), reach = new Map<NodeId, number>();
   const order: Shape[] = [];
-  const stack: Shape[] = [root];
+  const stack: Shape[] = [...roots];
   while (stack.length) { const n = stack.pop()!; order.push(n); for (const c of kids(n.id)) stack.push(c); }
   for (let i = order.length - 1; i >= 0; i--) {
     const n = order[i];
@@ -80,30 +82,46 @@ export function layoutBulbs(nodes: readonly Shape[]): BulbLayout {
     reach.set(n.id, R + 1.6 * r);
   }
 
-  // Top-down placement: the root round its whole rim, every other plate round its rim minus the attachment arc.
+  // Top-down placement: the root round its whole rim, every other plate round its rim minus the attachment arc. Several
+  // roots (the world's countries) stand apart along +x on the flat ground, six extents clear, so one country's
+  // relief never shows in another's frame; at the World they are beacons on the globe instead (scene/atlas/globe.ts).
   const plates = new Map<NodeId, Plate>();
-  plates.set(root.id, { id: root.id, parent: null, stage: root.stage, cx: 0, cz: 0, r: radius.get(root.id)!, theta: 0, seed: seedOf(root.id), depth: 0, base: 0, top: topAt(0) });
-  let extent = radius.get(root.id)!;
-  const queue: NodeId[] = [root.id];
-  while (queue.length) {
-    const pid = queue.shift()!;
-    const p = plates.get(pid)!;
-    const cs = kids(pid);
-    const n = cs.length;
-    const span = p.parent === null ? 2 * Math.PI : 2 * Math.PI - 2 * ATTACH;
-    const start = p.parent === null ? p.theta : p.theta + Math.PI + ATTACH; // just past the arc that faces the parent
-    cs.forEach((c, i) => {
-      const s = seedOf(c.id);
-      // A small seeded jitter (±1/24 of the spacing): larger, and neighbours seated at the minimum radius touch.
-      const theta = start + (span * (i + (p.parent === null ? 0 : 0.5))) / n + ((s * 2 - 1) * span) / (24 * n);
-      const r = radius.get(c.id)!;
-      const d = p.r + 0.6 * r;
-      const depth = p.depth + 1;
-      const plate: Plate = { id: c.id, parent: pid, stage: c.stage, cx: p.cx + d * Math.cos(theta), cz: p.cz + d * Math.sin(theta), r, theta, seed: s, depth, base: p.top, top: topAt(depth) };
-      plates.set(c.id, plate);
-      extent = Math.max(extent, Math.hypot(plate.cx, plate.cz) + r);
-      queue.push(c.id);
-    });
+  const trees: Tree[] = [];
+  for (const root of roots) {
+    const placed = placeTree(root);
+    const prev = trees[trees.length - 1];
+    const cx = prev ? prev.cx + 6 * (prev.extent + placed.extent) : 0;
+    for (const id of placed.ids) plates.get(id)!.cx += cx;
+    trees.push({ id: root.id, cx, cz: 0, extent: placed.extent });
+  }
+
+  function placeTree(root: Shape): { ids: NodeId[]; extent: number } {
+    plates.set(root.id, { id: root.id, parent: null, stage: root.stage, cx: 0, cz: 0, r: radius.get(root.id)!, theta: 0, seed: seedOf(root.id), depth: 0, base: 0, top: topAt(0) });
+    let extent = radius.get(root.id)!;
+    const ids: NodeId[] = [root.id];
+    const queue: NodeId[] = [root.id];
+    while (queue.length) {
+      const pid = queue.shift()!;
+      const p = plates.get(pid)!;
+      const cs = kids(pid);
+      const n = cs.length;
+      const span = p.parent === null ? 2 * Math.PI : 2 * Math.PI - 2 * ATTACH;
+      const start = p.parent === null ? p.theta : p.theta + Math.PI + ATTACH; // just past the arc that faces the parent
+      cs.forEach((c, i) => {
+        const s = seedOf(c.id);
+        // A small seeded jitter (±1/24 of the spacing): larger, and neighbours seated at the minimum radius touch.
+        const theta = start + (span * (i + (p.parent === null ? 0 : 0.5))) / n + ((s * 2 - 1) * span) / (24 * n);
+        const r = radius.get(c.id)!;
+        const d = p.r + 0.6 * r;
+        const depth = p.depth + 1;
+        const plate: Plate = { id: c.id, parent: pid, stage: c.stage, cx: p.cx + d * Math.cos(theta), cz: p.cz + d * Math.sin(theta), r, theta, seed: s, depth, base: p.top, top: topAt(depth) };
+        plates.set(c.id, plate);
+        extent = Math.max(extent, Math.hypot(plate.cx, plate.cz) + r);
+        ids.push(c.id);
+        queue.push(c.id);
+      });
+  }
+  return { ids, extent };
   }
 
   // Foundries and data yards on every city plate, one between each pair of neighbouring streets, alternating. A city
@@ -128,7 +146,7 @@ export function layoutBulbs(nodes: readonly Shape[]): BulbLayout {
       n++;
     });
   }
-  return { plates, root: root.id, radius: extent, satellites };
+  return { plates, root: trees[0].id, radius: trees[0].extent, satellites, trees };
 }
 
 /** Where a bulb meets its parent's rim. */

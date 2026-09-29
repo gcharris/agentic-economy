@@ -42,28 +42,33 @@ export class CountryBand implements SceneBand {
     const root = layout.root === null ? undefined : layout.plates.get(layout.root);
     this.country = root && root.stage === 'Country' ? root : null;
     if (!this.country) return;
-    const c = this.country, y = c.top + 0.03;
-    // The line reads at country scale: 0.3 m in DESIGN §8's card model, here a fixed share of the rim (≥ 1.5 m).
-    const w = Math.max(1.5, c.r * 0.022), inset = Math.max(3.0, c.r * 0.03);
-    const line = new THREE.Mesh(new THREE.RingGeometry(c.r - inset - w, c.r - inset, 192).rotateX(-Math.PI / 2), this.inlay);
-    line.position.set(c.cx, y, c.cz);
-    line.renderOrder = 2;
+    // Every country carries its court's line (the world has several); the unwind plays on the first.
+    const countries = layout.trees.map((t) => layout.plates.get(t.id)!).filter((p) => p.stage === 'Country');
     const n = Math.round((2 * Math.PI) / PIN_STEP);
-    const pinR = Math.max(0.6, c.r * 0.009);
+    const pinR = Math.max(0.6, this.country.r * 0.009);
     this.pins = new THREE.InstancedMesh(new THREE.CylinderGeometry(pinR, pinR, pinR, 10).translate(0, pinR / 2, 0),
-      new THREE.MeshLambertMaterial({ color: '#a8842e', emissive: '#a8842e', emissiveIntensity: 0.25 }), n);
+      new THREE.MeshLambertMaterial({ color: '#a8842e', emissive: '#a8842e', emissiveIntensity: 0.25 }), n * countries.length);
     const m = new THREE.Matrix4();
-    for (let i = 0; i < n; i++) {
-      const t = i * PIN_STEP, rr = c.r - inset - w / 2;
-      this.pins.setMatrixAt(i, m.makeTranslation(c.cx + Math.cos(t) * rr, c.top, c.cz + Math.sin(t) * rr));
-    }
+    countries.forEach((c, k) => {
+      // The line reads at country scale: 0.3 m in DESIGN §8's card model, here a fixed share of the rim (≥ 1.5 m).
+      const w = Math.max(1.5, c.r * 0.022), inset = Math.max(3.0, c.r * 0.03);
+      const line = new THREE.Mesh(new THREE.RingGeometry(c.r - inset - w, c.r - inset, 192).rotateX(-Math.PI / 2), this.inlay);
+      line.position.set(c.cx, c.top + 0.03, c.cz);
+      line.renderOrder = 2;
+      this.group.add(line);
+      for (let i = 0; i < n; i++) {
+        const t = i * PIN_STEP, rr = c.r - inset - w / 2;
+        this.pins!.setMatrixAt(k * n + i, m.makeTranslation(c.cx + Math.cos(t) * rr, c.top, c.cz + Math.sin(t) * rr));
+      }
+    });
+    const c = this.country;
     this.sweep = new THREE.Mesh(new THREE.RingGeometry(0.92, 1.0, 128).rotateX(-Math.PI / 2), this.sweepMat);
-    this.sweep.position.set(c.cx, y + 0.05, c.cz);
+    this.sweep.position.set(c.cx, c.top + 0.08, c.cz);
     this.sweep.renderOrder = 3;
     this.veil = new THREE.Mesh(new THREE.CircleGeometry(c.r, 128).rotateX(-Math.PI / 2), this.veilMat);
     this.veil.position.set(c.cx, c.top + 0.02, c.cz);
     this.veil.renderOrder = 1;
-    this.group.add(line, this.pins, this.sweep, this.veil);
+    this.group.add(this.pins, this.sweep, this.veil);
   }
 
   onFrame(frame: Frame): void {

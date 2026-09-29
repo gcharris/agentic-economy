@@ -52,3 +52,8 @@ body[data-take="zoom"] dialog#door { display: none; }
 #ticker.rewind .tab { animation: rewind 900ms ease-in-out; }
 @keyframes rewind { 0% { transform: none; opacity: 1; } 45% { transform: translateX(-24px); opacity: 0.35; } 100% { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #ticker.rewind .tab { animation: none; } }
+
+/* The STARK heartbeat (DESIGN §3, §8): the confirmed tick's tab lands in --cyan. */
+#ticker .tab.stark { color: var(--cyan-2); border-top-color: var(--cyan); animation: land 600ms ease-out; }
+@keyframes land { 0% { transform: translateY(-10px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #ticker .tab.stark { animation: none; } }

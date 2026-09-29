@@ -20,6 +20,7 @@ import { RoomBand } from './scene/room/RoomBand.ts';
 import { StreetBand } from './scene/street/StreetBand.ts';
 import { CityBand } from './scene/city/CityBand.ts';
 import { CountryBand } from './scene/atlas/CountryBand.ts';
+import { WorldBand } from './scene/atlas/WorldBand.ts';
 
 const TAKES = {
   /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
@@ -62,7 +63,7 @@ async function main(): Promise<void> {
   let clockT = performance.now() / 1000;
   const app = await App.boot({
     source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion, now: manual ? () => clockT : undefined,
-    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand(), new CountryBand()],
+    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand(), new CountryBand(), new WorldBand()],
   });
   if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
   const take = q.get('take');

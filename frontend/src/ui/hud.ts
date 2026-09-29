@@ -34,6 +34,8 @@ export class Hud {
   private netted = '';
   /** The High Court's last unwind, written by ROLLED_BACK (DESIGN §8). */
   private rolled = '';
+  /** Ticks the STARK heartbeat confirmed: their ticker tabs are cyan (DESIGN §3, §8). */
+  private readonly stark = new Set<number>();
 
   constructor(private readonly deps: HudDeps) {
     this.buildLadder();
@@ -49,6 +51,7 @@ export class Hud {
       const tk = this.$('ticker'); // the ticker rewinds: its tabs slide back (CSS), replayed on every rollback
       tk.classList.remove('rewind'); void tk.offsetWidth; tk.classList.add('rewind');
     }
+    for (const e of frame.events) if (e.type === 'GLOBAL_STATE_CONFIRMED') this.stark.add(e.tick);
     const net = frame.events.find((e) => e.type === 'NETTED');
     if (net && net.type === 'NETTED') this.netted = `netted ${net.envelopes} envelopes · gross ${fmtCost(net.gross)} → net ${fmtCost(net.net)}`;
     this.block(s, store);
@@ -172,12 +175,12 @@ export class Hud {
   }
 
   private ticker(s: StateView): void {
-    const key = s.root_history.map(([t]) => t).join(',');
+    const key = s.root_history.map(([t]) => (this.stark.has(t) ? `${t}*` : t)).join(',');
     if (key === this.tickerKey) return;
     this.tickerKey = key;
     this.$('ticker').replaceChildren(...[...s.root_history].reverse().map(([t, root]) => {
       const span = document.createElement('span');
-      span.className = 'tab';
+      span.className = this.stark.has(t) ? 'tab stark' : 'tab';
       span.title = `tick ${t}`;
       span.textContent = root;
       return span;

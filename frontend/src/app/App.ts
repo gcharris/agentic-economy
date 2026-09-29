@@ -16,7 +16,7 @@ import { Labels } from '../ui/labels.ts';
 import { presetForBand, WorldLights } from './lighting.ts';
 import { TruthBuffer } from '../engine/gpu/TruthBuffer.ts';
 import { EDGE_GAIN, TileMesh } from '../engine/gpu/TileMesh.ts';
-import { Dissolve, weight } from '../scene/camera/Dissolve.ts';
+import { Dissolve, globeWeight, weight } from '../scene/camera/Dissolve.ts';
 import { createUniforms, uploadPulses, type SharedUniforms } from '../engine/gpu/uniforms.ts';
 import type { Renderer } from './Renderer.ts';
 
@@ -30,6 +30,8 @@ export interface SceneBand {
   onFrame(frame: Frame): void;
   onEvent(ev: SceneEvent): void;
   setAltitude(a: number): void;
+  /** The band's root object, when it has one (App hides the flat bands under the globe). */
+  readonly group?: THREE.Object3D;
   /** Per render frame: advance clip-driven motion to app time `t` (seconds). Reads clips and uniforms only. */
   animate?(t: number): void;
   dispose(): void;
@@ -204,7 +206,7 @@ export class App {
       // DESIGN §2b: Golden in the room, Noon outdoors, unless the person chose a preset; the key casts only outdoors.
       if (this.lights) {
         this.lights.setPreset(presetForBand(band, this.opts.lighting?.preset ?? null));
-        this.lights.key.castShadow = this.lights.shadows && band >= 2;
+        this.lights.key.castShadow = this.lights.shadows && band >= 2 && band <= 4; // no shadow map a globe wide
         this.ctx!.lighting = { ...this.ctx!.lighting, preset: this.lights.preset! };
       }
     }
@@ -226,6 +228,10 @@ export class App {
     if (this.store.pulses.dirty) { uploadPulses(u, this.store.pulses.uPulses, this.store.pulses.uPulseData); this.store.pulses.markClean(); }
     const a = this.rig.visualA;
     for (const b of this.bands) { b.setAltitude(a); b.animate?.(t); }
+    // The globe (DESIGN §10, 4 → 5): at the veil's peak the flat world, plates and every lower band, gives way to it.
+    const flat = globeWeight(a) < 0.5;
+    this.tiles.group.visible = flat;
+    if (!flat) for (const b of this.bands) if (b.stage < 5 && b.group) b.group.visible = false;
     this.labels?.frame(t);
     this.renderer.render();
   }
