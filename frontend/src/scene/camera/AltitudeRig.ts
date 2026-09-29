@@ -60,6 +60,7 @@ export class AltitudeRig {
   private lastT = -1;
   private tick = 0;
   private snap = false;
+  private opened = false;
   private focusId: number | null = null;
 
   /** The altitude bands should draw at: A, held at the band edge while a zoom is pending. */
@@ -96,7 +97,9 @@ export class AltitudeRig {
         e.type === 'PACKED' || e.type === 'UNPACKED' || (e.type === 'TICK_COMMITTED' && STAGE_LEVEL[e.active_scale] === this.pending!.band));
       if (confirmed || scale === this.pending.band) this.pending = null;
     }
-    if (recorded && frame.tick <= 1 && this.a === 1.0 && scale !== 1) this.setBand(scale as Band, true); // a recorded run opens at its scale
+    // Any run opens at the engine's scale, without a zoom call (zoom/3 on the city world would pack it).
+    if (!this.opened) { this.opened = true; if (scale !== this.band) this.setBand(scale as Band, true); }
+    void recorded;
   }
 
   setTake(take: Take | null): void {
@@ -107,7 +110,7 @@ export class AltitudeRig {
   /** Jump or glide to a band's rest altitude (the ladder, `[` / `]`, a recorded run's scale). */
   setBand(b: Band, jump = false): void {
     this.setTarget(BAND_REST[b]);
-    if (jump) { this.a = this.aTarget; this.hysteresis(); this.pending = null; }
+    if (jump) { this.a = this.aTarget; this.band = b; this.pending = null; this.snap = true; }
   }
 
   setTarget(a: number): void { this.aTarget = Math.min(5, Math.max(1, a)); }

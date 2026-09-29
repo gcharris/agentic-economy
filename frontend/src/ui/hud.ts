@@ -30,6 +30,8 @@ export class Hud {
   };
   private pending: Band | null = null;
   private tickerKey = '';
+  /** The Clearinghouse's last netting, written by the NETTED pulse (DESIGN §7 beat 2). */
+  private netted = '';
 
   constructor(private readonly deps: HudDeps) {
     this.buildLadder();
@@ -39,6 +41,8 @@ export class Hud {
   apply(frame: Frame, store: Store): void {
     const s = frame.state;
     this.ladder(s);
+    const net = frame.events.find((e) => e.type === 'NETTED');
+    if (net && net.type === 'NETTED') this.netted = `netted ${net.envelopes} envelopes · gross ${fmtCost(net.gross)} → net ${fmtCost(net.net)}`;
     this.block(s, store);
     const n = store.focus === null ? undefined : store.node(store.focus);
     if (n) this.focus(n);
@@ -83,12 +87,13 @@ export class Hud {
   private block(s: StateView, store: Store): void {
     const mode = this.deps.source.kind === 'trace' ? 'recorded run'
       : this.deps.source.kind === 'wasm' ? 'live · wasm in a worker' : `live · SSE ${store.hello?.version ?? ''}`.trim();
-    this.$('block').innerHTML = '<span class="b-tick"></span><span class="b-root mono"></span><span class="b-exec"></span><span class="b-mempool"></span><span class="b-mode"></span>';
+    this.$('block').innerHTML = '<span class="b-tick"></span><span class="b-root mono"></span><span class="b-exec"></span><span class="b-mempool"></span><span class="b-net"></span><span class="b-mode"></span>';
     const set = (c: string, t: string) => { this.$('block').querySelector(`.${c}`)!.textContent = t; };
     set('b-tick', `tick ${s.tick}`);
     set('b-root', `root ${hash8(s.root)}`);
     set('b-exec', s.executor);
     set('b-mempool', `mempool ${s.mempool}`);
+    set('b-net', this.netted);
     set('b-mode', mode);
   }
 

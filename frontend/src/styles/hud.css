@@ -10,6 +10,8 @@
 #block { top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; white-space: nowrap; color: var(--ink-2); }
 #block .b-tick { color: var(--ink); font-weight: 600; }
 #block .b-mode { color: var(--gold); }
+#block .b-net { color: var(--gold-2); font-family: var(--mono); font-size: 12px; }
+#block .b-net:empty { display: none; }
 #focus { top: 12px; right: 12px; width: 280px; }
 #focus h2 { font: 400 22px/1.2 var(--display); margin: 0 0 6px; }
 #focus .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line-2); margin-bottom: 8px; }

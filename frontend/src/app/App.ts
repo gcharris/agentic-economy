@@ -14,6 +14,8 @@ import type { LayoutHandle } from '../engine/layout/layoutCity.ts';
 import { AltitudeRig } from '../scene/camera/AltitudeRig.ts';
 import { Labels } from '../ui/labels.ts';
 import { presetForBand, WorldLights } from './lighting.ts';
+import { TruthBuffer } from '../engine/gpu/TruthBuffer.ts';
+import { createUniforms, uploadPulses, type SharedUniforms } from '../engine/gpu/uniforms.ts';
 import type { Renderer } from './Renderer.ts';
 
 export type { SceneEvent } from '../engine/store/bus.ts';
@@ -44,6 +46,8 @@ export interface SceneContext {
   quality: QualityPreset;
   lighting: LightingState;
   reducedMotion: boolean;
+  truth: TruthBuffer;
+  uniforms: SharedUniforms;
 }
 
 /** What the DOM asks of the engine. The answer returns only as a later Frame. */
@@ -77,6 +81,8 @@ export class App {
   ui: UiLayer = NOOP_UI;
   lights: WorldLights | null = null;
   labels: Labels | null = null;
+  readonly truth = new TruthBuffer();
+  readonly uniforms = createUniforms(this.truth);
   hello: SourceHello | null = null;
   ready = false;
   private ctx: SceneContext | null = null;
@@ -102,7 +108,11 @@ export class App {
       quality: opts.quality ?? 'balanced',
       lighting: opts.lighting ?? { preset: presetForBand(1, null), blend: 0, cycle: false },
       reducedMotion: opts.reducedMotion ?? false,
+      truth: app.truth, uniforms: app.uniforms,
     };
+    app.store.truthSink = app.truth;
+    app.uniforms.uReducedMotion.value = opts.reducedMotion ? 1 : 0;
+    app.uniforms.uHatchWeight.value = opts.reducedMotion ? 0.85 : 0.35;
     const ui = opts.ui ?? (async (a: App) => (await import('../ui/index.ts')).createUi(a, opts.root ?? document));
     app.ui = typeof ui === 'function' ? await ui(app) : ui;
     app.labels = new Labels((opts.root ?? (typeof document !== 'undefined' ? document : null))?.querySelector?.<HTMLElement>('#labels') ?? null, app.store.bus, app.now, (p) => app.project(p));
@@ -132,6 +142,7 @@ export class App {
   /** One frame from the source: the store, the reducer, the DOM, then the bands (§4 steps 2–4). */
   accept(frame: Frame): void {
     frame.arrivedAt = this.now(); // "app clock seconds when accepted": one clock for clips and the render loop
+    this.uniforms.uTickT.value = frame.arrivedAt;
     const events = acceptFrame(frame, this.store, this.ui);
     this.reduces++;
     this.rig.follow(this.store, frame, !this.source.live);
@@ -184,6 +195,18 @@ export class App {
       }
     }
     this.lights?.follow(this.rig.lookTarget, this.rig.viewH);
+    // The shared uniforms: numbers only, no Frame (ARCHITECTURE §4.5).
+    const u = this.uniforms;
+    u.uTime.value = t; u.uAltitude.value = this.rig.visualA; u.uTickSeconds.value = this.store.tickSeconds;
+    u.uPxPerUnit.value = this.renderer.rows / Math.max(1e-3, this.rig.viewH); u.uBurnRef.value = this.store.burnRef;
+    if (this.lights) {
+      const k = this.lights.key, h = this.lights.hemi;
+      u.uKeyDir.value.copy(k.position).sub(k.target.position).normalize();
+      u.uKeyColor.value.copy(k.color).multiplyScalar(k.intensity / Math.PI);
+      u.uHemiSky.value.copy(h.color).multiplyScalar(h.intensity / Math.PI);
+      u.uHemiGround.value.copy(h.groundColor).multiplyScalar(h.intensity / Math.PI);
+    }
+    if (this.store.pulses.dirty) { uploadPulses(u, this.store.pulses.uPulses, this.store.pulses.uPulseData); this.store.pulses.markClean(); }
     const a = this.rig.visualA;
     for (const b of this.bands) { b.setAltitude(a); b.animate?.(t); }
     this.labels?.frame(t);
@@ -218,6 +241,7 @@ export class App {
     this.ui.dispose?.();
     this.labels?.dispose();
     this.source.dispose();
+    this.truth.dispose();
     this.renderer.dispose();
   }
 }

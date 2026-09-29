@@ -57,9 +57,7 @@ export function meetingStone(a: Axial, b: Axial): THREE.Vector3 {
   return m.setY(KERB_HEIGHT);
 }
 
-/** DESIGN §2b.3: one rim dye per street, from a muted set, assigned by street id. It names a district; it orders nothing. */
-export const STREET_DYES = ['#8c3b2e', '#b0802c', '#3f4a63', '#5d6b3a'] as const; // madder, ochre, indigo-grey, moss
-export const dyeFor = (streetId: number): string => STREET_DYES[Number(BigInt(streetId) % BigInt(STREET_DYES.length))];
+export { dyeFor, STREET_DYES } from '../../engine/layout/dyes.ts';
 
 /** A soft contact shadow (DESIGN §2b.4): a radial falloff texture shared by every plinth and figure. */
 let softTex: THREE.DataTexture | null = null;

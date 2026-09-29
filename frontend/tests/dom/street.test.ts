@@ -27,3 +27,12 @@ test('tick 7: the hash-mismatch rejection is in the feed with 0.5 cr sunk; the f
   expect(document.querySelector('#focus-liquidity')!.textContent).toBe(`liquidity ${n.liquidity_truth.toFixed(2)}`);
   expect(document.querySelector('#ladder button.active')!.getAttribute('data-stage')).toBe('Street');
 });
+
+test('the block line writes the Clearinghouse netting on NETTED (scenario 3 in the wasm)', async () => {
+  const { engineSource } = await import('../helpers/engineSource.ts');
+  const source = engineSource('city');
+  app = await App.boot({ source, renderer: new NullRenderer(), root: document.body, clock: 'manual' });
+  await app.stepTo(1);
+  expect(document.querySelector('#block')!.textContent).toContain('netted 12 envelopes · gross 60.0 → net 20.0');
+  expect(document.querySelector('#ladder button.active')!.getAttribute('data-stage')).toBe('City');
+});

@@ -18,6 +18,7 @@ import type { LightingPreset, QualityPreset } from './engine/store/bus.ts';
 import { bindAltitudeInput } from './scene/camera/input.ts';
 import { RoomBand } from './scene/room/RoomBand.ts';
 import { StreetBand } from './scene/street/StreetBand.ts';
+import { CityBand } from './scene/city/CityBand.ts';
 
 const TAKES = {
   /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
@@ -51,7 +52,7 @@ async function main(): Promise<void> {
   const renderer = new ThreeRenderer(document.querySelector<HTMLCanvasElement>('#stage')!, quality, q.get('stats') === '1');
   const app = await App.boot({
     source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion,
-    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand()],
+    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand()],
   });
   if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
   const take = q.get('take');

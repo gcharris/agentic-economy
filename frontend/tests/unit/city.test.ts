@@ -1,0 +1,49 @@
+// The city against scenario 3 in the real wasm, headless: one tile mesh for every cell, the Clearinghouse, a tube
+// per street, and the NETTED pulse's beats (fill, flare, ring, sage ticks) from one event.
+
+import { expect, test } from 'vitest';
+import { App } from '../../src/app/App.ts';
+import { NullRenderer } from '../../src/app/Renderer.ts';
+import { NOOP_UI } from '../../src/engine/store/Store.ts';
+import { PULSE_KIND } from '../../src/engine/store/clips.ts';
+import { CityBand } from '../../src/scene/city/CityBand.ts';
+import { engineSource } from '../helpers/engineSource.ts';
+
+test('scenario 3: the city opens at band 3 without a zoom call, and NETTED plays its four beats', async () => {
+  const city = new CityBand();
+  let now = 10;
+  const source = engineSource('city');
+  const zooms: number[] = [];
+  source.zoom = async (s) => { zooms.push(s); return true; };
+  const app = await App.boot({ source, renderer: new NullRenderer(), ui: NOOP_UI, clock: 'manual', bands: [city], now: () => now });
+  const f = (await app.stepTo(1))!;
+  expect(f.state.active_scale).toBe('City');
+  app.renderFrame(now);
+  expect(app.rig.band).toBe(3);
+  expect(zooms).toEqual([]); // zoom/3 would pack the houses
+  expect(city.group.visible).toBe(true);
+
+  const layout = app.store.layout.current;
+  const tiles = city.tiles.tiles;
+  expect(tiles.filter((t) => t.kind === 3)).toHaveLength(1);           // the Clearinghouse at (0,0)
+  expect(tiles.filter((t) => t.kind === 1)).toHaveLength(6);           // two streets of three houses
+  expect(tiles.length).toBe(1 + 6 + layout.ground.length);
+  expect(city.tiles.mesh!.count).toBe(tiles.length);                   // one InstancedMesh, one draw
+  expect(city.tubes).toHaveLength(2);
+  expect(tiles.filter((t) => t.kind === 1).every((t) => t.slot >= 0)).toBe(true);
+
+  const net = f.events.find((e) => e.type === 'NETTED');
+  expect(net).toMatchObject({ gross: 60, net: 20, envelopes: 12 });
+  expect(app.store.pulses.entries.some((p) => p?.kind === PULSE_KIND.NETTED)).toBe(true);
+  expect(app.uniforms.uPulses.value.some((v) => v.x === PULSE_KIND.NETTED)).toBe(true);
+
+  const t0 = city.netted!.t0;
+  app.renderFrame(t0 + 0.2);                                            // beat 1: the tubes fill inward
+  expect(city.tubes.every((t) => t.fill.visible && t.fill.scale.z > 0)).toBe(true);
+  expect(city.tubes[0].fill.scale.x).toBeCloseTo(0.3, 6);               // clamp(60 / 200, 0.2, 1.0)
+  app.renderFrame(t0 + 0.4);                                            // beat 2: the dome flares
+  expect(city.hall!.dome.emissiveIntensity).toBeGreaterThan(0.8);
+  app.renderFrame(t0 + 2.0);
+  expect(city.hall!.dome.emissiveIntensity).toBe(0);
+  app.dispose();
+});
