@@ -10,7 +10,7 @@ import { normaliseBurn, type NodeId, type NodeStatus } from '../../engine/contra
 import type { Plate } from '../../engine/layout/layoutBulbs.ts';
 import { weight } from '../camera/Dissolve.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
-import { buildCottage, setChimney, setLantern, SLOT_LOCAL, type Cottage } from './cottage.ts';
+import { buildCottage, setChimney, setExteriorExposure, setLantern, SLOT_LOCAL, type Cottage } from './cottage.ts';
 import { BEAT_EDGES, beatsStart, Courier, courierAt, STATIC, staticAt, type Run } from './couriers.ts';
 import { buildCommons, CENTRE_STONE_R, lanternMesh, meetingStone } from './commons.ts';
 
@@ -38,6 +38,10 @@ export class StreetBand implements SceneBand {
   private a = 1;
   private readonly settledRuns = new Set<number>();
   private fade: THREE.Material[] = [];
+  private fadeSrc: [THREE.Material & { color?: THREE.Color }, THREE.Material & { color?: THREE.Color }][] = [];
+  private exposure = 0;
+  private readonly commons = new Map<NodeId, THREE.Group>();
+  private readonly sealed = new Set<NodeId>();
   private fadeFor: NodeId | null = null;
 
   mount(ctx: SceneContext): void {
@@ -51,7 +55,7 @@ export class StreetBand implements SceneBand {
     const { store } = this.ctx;
     const layout = store.layout.current;
     for (const c of this.cottages.values()) this.group.remove(c.group);
-    this.cottages.clear(); this.plates.clear(); this.posts = []; this.fadeFor = null;
+    this.cottages.clear(); this.plates.clear(); this.posts = []; this.fadeFor = null; this.commons.clear();
     for (const o of [...this.group.children]) if (o !== this.fx) this.group.remove(o);
     const housesOf = new Map<NodeId, Plate[]>();
     for (const p of layout.plates.values()) {
@@ -68,6 +72,7 @@ export class StreetBand implements SceneBand {
       next += c.posts.length;
       this.posts.push(...c.posts);
       this.group.add(c.group);
+      this.commons.set(sid, c.group);
     }
     this.lanterns.count = next;
     this.lanterns.instanceMatrix.needsUpdate = true;
@@ -94,6 +99,19 @@ export class StreetBand implements SceneBand {
       h.status = n.status;
       h.heat = n.status === 'waiting_at_door' ? 0 : normaliseBurn(n.burned_this_tick) / Math.max(1e-6, store.burnRef);
       this.houses.set(id, h);
+    }
+    // A packed street (DESIGN §10) is sealed: the resin plate (the shader), nothing moving inside (no commons, paths,
+    // stone or trees; its cottages have left with their packed houses), and a plate "N in stasis · M ticks".
+    for (const [sid, g] of this.commons) {
+      const packed = store.node(sid)?.packed ?? null;
+      g.visible = packed === null;
+      const street = store.layout.plateOf(sid);
+      if (packed && street) {
+        this.sealed.add(sid);
+        this.ctx.bus.emit('label', { id: `stasis-${sid}`, world: new THREE.Vector3(street.cx, street.top + 1.5, street.cz), text: `${packed.child_count} in stasis · ${packed.macro_ticks} ticks`, kind: 'plate', ttl: 1e6 });
+      } else if (this.sealed.delete(sid)) {
+        this.ctx.bus.emit('label', { id: `stasis-${sid}`, remove: true });
+      }
     }
     // Street lanterns: a state read each tick. Gold-2 at rest, ember while any house on the street is halted, off when packed.
     if (this.lanterns && this.posts.length) {
@@ -158,6 +176,12 @@ export class StreetBand implements SceneBand {
 
   setAltitude(a: number): void {
     this.a = a;
+    const k = this.ctx.lighting.preset === 'golden' ? 0.45 : 1;
+    if (k !== this.exposure) {
+      this.exposure = k;
+      setExteriorExposure(k);
+      for (const [clone, src] of this.fadeSrc) if ('color' in clone && 'color' in src) (clone.color as THREE.Color).copy(src.color as THREE.Color);
+    }
     this.group.visible = a <= STREET_VISIBLE_UP_TO;
     this.fx.visible = a < 2.5; // couriers belong to the street band; the city shows the netting instead
     const focus = this.ctx.store.focus;
@@ -177,12 +201,15 @@ export class StreetBand implements SceneBand {
   /** The focused cottage gets its own materials, so the lid can fade it without fading its neighbours. */
   private makeFadeable(c: Cottage): void {
     this.fade = [];
+    this.fadeSrc = [];
     this.fadeFor = c.id;
     c.house.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;
-      const m = (o.material as THREE.Material).clone();
+      const src = o.material as THREE.Material;
+      const m = src.clone();
       o.material = m;
       this.fade.push(m);
+      this.fadeSrc.push([m, src]);
     });
   }
 

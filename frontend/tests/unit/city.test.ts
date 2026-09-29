@@ -59,3 +59,25 @@ test('engine_new_city: 6 streets x 8 houses, laid out as bulbs with every house 
   expect(app.store.layout.current.satellites).toHaveLength(6);
   app.dispose();
 });
+
+test('pack_depth 3: the houses stay live at the City; at the Country a street seals (resin, no commons, a stasis plate)', async () => {
+  const { StreetBand } = await import('../../src/scene/street/StreetBand.ts');
+  const source = engineSource('city');
+  const street = new StreetBand();
+  const labels: string[] = [];
+  const app = await App.boot({ source, renderer: new NullRenderer(), ui: NOOP_UI, clock: 'manual', bands: [new CityBand(), street] });
+  app.store.bus.on('label', (l) => { if (!('remove' in l) && l.kind === 'plate') labels.push(l.text); });
+  let f = (await app.stepTo(1))!;
+  expect(f.state.nodes.filter((n) => n.status === 'packed')).toHaveLength(0);          // live at the City
+  await source.zoom(4);
+  f = (await app.step())!;
+  const streets = f.state.nodes.filter((n) => n.stage === 'Street');
+  expect(streets.every((n) => n.packed !== null)).toBe(true);
+  expect(f.state.nodes.filter((n) => n.stage === 'House').every((n) => n.status === 'packed')).toBe(true);
+  const iB = app.tiles.mesh!.geometry.getAttribute('iB').array as Float32Array;
+  app.tiles.tiles.forEach((t, i) => { if (t.kind === 2) expect(iB[i * 4 + 3]).toBeGreaterThanOrEqual(2); }); // sealed
+  expect(labels.some((l) => /^3 in stasis · \d+ ticks$/.test(l))).toBe(true);
+  street.setAltitude(2);
+  expect([...street.cottages.values()].every((c) => !c.group.visible)).toBe(true);
+  app.dispose();
+});

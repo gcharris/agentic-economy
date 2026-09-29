@@ -4,6 +4,7 @@
 //! cargo run --release --bin serve -- --scenario house --budget 800 --tasks 15 --seed 7 --interval-ms 700 --port 8787
 //! cargo run --release --bin serve -- --scenario street --port 0     # port 0: pick a free port, print it
 //! cargo run --release --bin serve -- --scenario city --streets 6 --houses 8   # Stage 3, sized (default 2 × 3)
+//! cargo run --release --bin serve -- --scenario city --pack-depth 2           # pack the houses at the City (default 3 for the city)
 //! cargo run --release --bin serve -- --scenario country|world   # Stages 4, 5 (fixed shapes; see wasm_abi.rs)
 //! PORT=8080 serve --bind 0.0.0.0                                       # a hosted run: the port from the environment, all interfaces (no TLS, no auth: put a front door in front)
 //! ```
@@ -52,6 +53,8 @@ struct Args {
     /// `--scenario city` only: streets × houses per street (default 2 × 3, as the wasm's scenario 3).
     streets: usize,
     houses: usize,
+    /// Levels below the camera at which children pack (EngineConfig::pack_depth); None: 3 for the city, else 2.
+    pack_depth: Option<u8>,
 }
 
 fn parse_args() -> Args {
@@ -69,6 +72,7 @@ fn parse_args() -> Args {
         bind: "127.0.0.1".into(),
         streets: 2,
         houses: 3,
+        pack_depth: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -91,6 +95,9 @@ fn parse_args() -> Args {
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(a.streets)
                     .max(1)
+            }
+            "--pack-depth" => {
+                a.pack_depth = it.next().and_then(|v| v.parse().ok()).or(a.pack_depth)
             }
             "--houses" => {
                 a.houses = it
@@ -345,6 +352,10 @@ async fn main() {
     let a = parse_args();
     let config = EngineConfig {
         seed: a.seed,
+        // As the wasm: the city keeps its houses live at the City unless told otherwise (AUDIT-LEDGER #30).
+        pack_depth: a
+            .pack_depth
+            .unwrap_or(if a.scenario == "city" { 3 } else { 2 }),
         ..Default::default()
     };
     let mut engine = match a.scenario.as_str() {

@@ -44,6 +44,8 @@ pub extern "C" fn engine_new(scenario: u32, seed: u64, budget: f64, tasks: u32, 
     let config = EngineConfig {
         seed,
         cost_visible: cost_visible != 0,
+        // The city (scenario 3) keeps its houses live at the City: they pack from the Country up (AUDIT-LEDGER #30).
+        pack_depth: if scenario == 3 { 3 } else { 2 },
         ..Default::default()
     };
     let engine = match scenario {
@@ -71,6 +73,7 @@ pub extern "C" fn engine_new_city(
     let config = EngineConfig {
         seed,
         cost_visible: cost_visible != 0,
+        pack_depth: 3, // houses stay live at the City (AUDIT-LEDGER #30)
         ..Default::default()
     };
     let engine = scenarios::city(

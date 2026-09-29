@@ -45,6 +45,16 @@ pub struct EngineConfig {
     /// Ticks between planetary heartbeats.
     pub stark_period: u64,
     pub max_events_retained: usize,
+    /// Level of detail: `set_active_scale` packs the children of any parent
+    /// whose children sit `pack_depth` or more levels below the camera. 2 (the
+    /// default) packs the houses once the camera is at the City; 3 keeps them
+    /// live at the City and packs them from the Country up (AUDIT-LEDGER #30).
+    #[serde(default = "default_pack_depth")]
+    pub pack_depth: u8,
+}
+
+fn default_pack_depth() -> u8 {
+    2
 }
 
 impl Default for EngineConfig {
@@ -56,6 +66,7 @@ impl Default for EngineConfig {
             snapshot_depth: 64,
             stark_period: 16,
             max_events_retained: 4096,
+            pack_depth: default_pack_depth(),
         }
     }
 }
@@ -309,7 +320,9 @@ impl Engine {
             .collect();
         for p in parents {
             let child_level = self.nodes[&p].scale_level.level().saturating_sub(1);
-            let should_pack = child_level + 1 < stage.level();
+            // Children `pack_depth` or more levels below the camera are packed
+            // (pack_depth 2: `child_level + 1 < stage`, the rule before the knob).
+            let should_pack = child_level + self.config.pack_depth.max(1) <= stage.level();
             let is_packed = self.nodes[&p].packed.is_some();
             if should_pack && !is_packed {
                 self.pack_children(p);

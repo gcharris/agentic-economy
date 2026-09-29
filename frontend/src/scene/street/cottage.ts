@@ -11,14 +11,27 @@ const flat = (color: string, extra: THREE.MeshLambertMaterialParameters = {}) =>
 const M = {
   edge: flat('#4c3f30'), plinth: flat('#2b2117'), bevel: flat('#4a3826'), wall: flat('#e3d6bb'), // limewash in daylight (DESIGN §2b)
   timber: flat('#5a422f'),
-  roof: flat('#7d4a34'), door: flat('#4a3525'), brass: flat('#a8842e'), pot: flat('#3e3a34'), step: flat('#3e2d1f'),
+  roof: flat('#7d4a34'), pane: new THREE.MeshLambertMaterial({ color: '#2a2118', emissive: '#f2cb7a', emissiveIntensity: 0.35 }), door: flat('#4a3525'), brass: flat('#a8842e'), pot: flat('#3e3a34'), step: flat('#3e2d1f'),
 };
 const EAVES = 3.2, RIDGE = 1.6;
+const BASE = { wall: new THREE.Color('#e3d6bb'), timber: new THREE.Color('#5a422f'), roof: new THREE.Color('#7d4a34') };
+/**
+ * Exterior exposure. Golden's light gains are measured for the dark oak room (room-light.spec); under them a limewash
+ * wall outdoors (albedo 0.68) blows out to a blank white slab next to the room at band 1. The street band scales the
+ * exterior set by the preset in force: 0.45 under Golden, 1 under Noon (DESIGN §2b's daylight materials as written).
+ */
+export function setExteriorExposure(k: number): void {
+  M.wall.color.copy(BASE.wall).multiplyScalar(k);
+  M.timber.color.copy(BASE.timber).multiplyScalar(Math.min(1, k * 1.3));
+}
 export const SLOT_LOCAL = new THREE.Vector3(4.13, 1.1, 0.0);
 
 /** Shared geometries: six cottages or sixty, one set of buffers. */
 const G = (() => {
   const body = new THREE.BoxGeometry(8.2, EAVES, 6.2).translate(0, EAVES / 2, 0);
+  const course = new THREE.BoxGeometry(8.26, 0.35, 6.26).translate(0, 0.175, 0);
+  const frame = new THREE.BoxGeometry(1.15, 1.25, 0.08);
+  const pane = new THREE.BoxGeometry(0.85, 0.95, 0.06);
   const post = new THREE.BoxGeometry(0.22, EAVES, 0.22).translate(0, EAVES / 2, 0);
   // The gable: a triangular prism along x (ridge east–west), eaves overhanging 0.3 m.
   const half = 3.1 + 0.3;
@@ -26,7 +39,7 @@ const G = (() => {
   const gable = new THREE.ExtrudeGeometry(shape, { depth: 8.2, bevelEnabled: false }).rotateY(Math.PI / 2).translate(-4.1, EAVES, 0);
   const slope = Math.hypot(half, RIDGE);
   const roofPlane = new THREE.BoxGeometry(8.8, 0.12, slope + 0.1);
-  return { body, post, gable, roofPlane, slope, half };
+  return { body, course, frame, pane, post, gable, roofPlane, slope, half };
 })();
 
 export interface Cottage {
@@ -71,6 +84,20 @@ export function buildCottage(id: number): Cottage {
     p.position.set(x, 0, z);
     p.scale.y = stretch;
     house.add(p);
+  }
+  // A house is a lit window (DESIGN §1.2): two windows on each long wall and one in the west gable end, timber-framed,
+  // their panes warm with lamplight; a dark plinth course along the foot of the walls. (A bare limewash wall filled the
+  // frame beside the room at band 1 as a blank slab.)
+  const course = new THREE.Mesh(G.course, M.timber);
+  house.add(course);
+  for (const [x, z, ry] of [[-2.2, 3.12, 0], [2.0, 3.12, 0], [-2.2, -3.12, 0], [2.0, -3.12, 0], [-4.12, 0, Math.PI / 2]] as const) {
+    const frame = new THREE.Mesh(G.frame, M.timber);
+    frame.position.set(x, 1.55 + v.lift * 0.5, z);
+    frame.rotation.y = ry;
+    const pane = new THREE.Mesh(G.pane, M.pane);
+    pane.position.set(x + (ry ? -0.02 : 0), frame.position.y, z + (ry ? 0 : Math.sign(z) * 0.02));
+    pane.rotation.y = ry;
+    house.add(frame, pane);
   }
   // Everything above the eaves rides one group, lifted for a taller house and lowered in by the lid gesture.
   const upper = new THREE.Group();

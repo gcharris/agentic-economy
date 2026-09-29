@@ -74,7 +74,7 @@ void main() {
   if (aSlot >= 0.0) {
     Truth t = fetchTruth(aSlot);
     fog = clamp(1.0 - visiblePhi(t, unit * 0.5), 0.0, 1.0);
-    packed = t.status == 3;
+    packed = t.status == 3 || iB.w >= 1.5; // a sealed street is one smooth plate too (DESIGN §2c.2)
     fold = packed ? clamp((uTime - t.packT) / 0.6, 0.0, 1.0) : 0.0; // PACKED folds a bulb into its parent over 600 ms
   }
 #ifdef SPECK
@@ -167,7 +167,8 @@ void main() {
   if (bevel) col = vKind < 2.5 ? lin(vDye) : vKind < 3.5 ? lin(vec3(0.353, 0.259, 0.184)) : col * 0.72;
   // A plate carries its own life (§2c.1.3): a street's commons is turf tinted with its dye; the city plate is paved in
   // rings round the dome.
-  if (!bevel && vKind > 1.5 && vKind < 2.5) {
+  bool sealed = vStreet >= 1.5;
+  if (!bevel && vKind > 1.5 && vKind < 2.5 && !sealed) {
     vec3 turf = mix(lin(vec3(0.42, 0.47, 0.27)), lin(vDye), 0.35);
     float mottle = hash12(floor(vWorld * 0.8)) * 0.08;
     col = turf * (0.92 + mottle);
@@ -192,12 +193,16 @@ void main() {
       float breathe = 0.7 + 0.3 * sin(uTime * 2.6) * (1.0 - uReducedMotion);
       if (t.status == 1) col = mix(col, lin(vec3(0.95, 0.80, 0.48)), 0.6 * breathe);    // waiting: gold-light, the hand
       if (t.status == 2) col = mix(col, lin(vec3(0.79, 0.32, 0.25)), 0.7);              // halted: ember rim
-      if (vStreet > 0.5) col = mix(col, lin(vec3(0.79, 0.32, 0.25)), 0.35);             // a halted house on this street
+      if (mod(vStreet, 2.0) > 0.5) col = mix(col, lin(vec3(0.79, 0.32, 0.25)), 0.35);             // a halted house on this street
       float sage = uTime - vSage;
       if (sage >= 0.0 && sage < 0.3) col = lin(vec3(0.416, 0.604, 0.431));              // a settle ticks the rim --sage
     }
     col = applyFog(col, phi, vUvC, vSeed);
     if (t.status == 3) col = mix(col, lin(vec3(0.243, 0.227, 0.204)), 0.6);             // packed: --resin
+    if (sealed) {                                  // a sealed street (DESIGN §10): cast resin, nothing moving inside,
+      float flick = (hash12(floor(vWorld * 0.35) + floor(uTime * (0.5 + 4.0 * t.variance))) - 0.5) * t.variance * (1.0 - uReducedMotion);
+      col = lin(vec3(0.243, 0.227, 0.204)) * (bevel ? 0.8 : 1.0 + flick * 1.5);          // shimmering at 0.5 + 4·variance
+    }
     if (t.status == 4) col *= 0.25;                                                     // partitioned
     col = sweepLight(col, t, vUvC);
   }

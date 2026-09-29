@@ -84,6 +84,8 @@ cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown
 6. **Idle decay while waiting is doc 02's rule, not a measurement.** Benchmark 3 held Φ constant while the door was closed. Keep the rule; attribute it honestly.
 7. **Seats are trusted host code.** The type now prevents identity forgery, free calibration and receipt-less burns; it cannot prevent a seat from sharing an `Arc<Mutex>` with another seat. Documented in `node.rs`.
 
+8. **Level of detail is a knob (AUDIT-LEDGER #30).** `EngineConfig::pack_depth: u8` (default 2, the behaviour before) makes `set_active_scale` pack the children of any parent whose children sit `pack_depth` or more levels below the camera. The city scenarios (`engine_new(3)`, `engine_new_city`, `serve --scenario city`) use 3: the houses the Clearinghouse nets stay live at the City and pack from the Country up; `serve --pack-depth N` overrides.
+
 ## 5. The six lane tests, adapted (done; kept for the record)
 
 Line numbers are current (after `cargo fmt`).

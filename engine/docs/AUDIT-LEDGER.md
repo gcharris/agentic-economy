@@ -33,7 +33,7 @@ Source: the adversarial audit of 2026-09-28 (5 lenses, 33 findings, 81 refutatio
 | 27 | Shared LLM backend sees every house's prompt | low | **documented** in `agents/llm.rs` |
 | 28 | Court rollback depth is effectively 1; no coherence marker; `snapshot_depth` unused in anger | policy | **open**: decide veto-vs-rollback semantics (lane 4 report, `docs/workflow/lane-stage4-court.md`) |
 | 29 | Court double-counts seizures undone by rollback in `total_slashed` | low | **partly**: snapshots now carry and restore `total_settled`/`total_slashed`; event stream still shows both |
-| 30 | Stage 3 LOD tension: camera at City packs the houses the clearinghouse needs | policy | **open** (lane 3 report) |
+| 30 | Stage 3 LOD tension: camera at City packs the houses the clearinghouse needs | policy | **decided 2026-09-29**: `EngineConfig::pack_depth` (default 2, the old rule) packs children `pack_depth` or more levels below the camera; the city (`engine_new(3)`, `engine_new_city`, `serve --scenario city`) uses 3, so the houses stay live while the Clearinghouse nets and pack from the Country up; `serve --pack-depth` overrides. Test: `tests/pack_depth.rs` |
 | 31 | Receiver never verifies in DvP; `AwaitingCounterparty` never produced | policy | **open** (lane 2 report) |
 | 32 | Stage 5: settlement writes no ledger line to Oak Tables, so country roots are static | policy | **open** (lane 5 report; the Chancellor seat compensates) |
 | 33 | `serve`: `POST /authorize/<unheld>` answers ok | low | **fixed**: `Engine::authorize`/`reject` return bool; `src/bin/serve.rs` answers `404 {"ok":false,"error":"no envelope held with that id"}`; `tests/serve_smoke.rs` |

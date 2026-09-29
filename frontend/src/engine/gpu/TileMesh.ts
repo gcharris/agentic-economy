@@ -121,7 +121,12 @@ export class TileMesh {
     for (const t of this.tiles) if (t.id !== null && t.street !== null && t.kind === 1 && store.node(t.id)?.status === 'halted') halted.add(t.street);
     const arr = this.street.array as Float32Array;
     let dirty = false;
-    this.tiles.forEach((t, i) => { const v = t.street !== null && halted.has(t.street) ? 1 : 0; if (arr[i * 4 + 3] !== v) { arr[i * 4 + 3] = v; dirty = true; } });
+    // iB.w: +1 a halted house on the plate's street; +2 a sealed street (its children packed: node.packed on the street).
+    this.tiles.forEach((t, i) => {
+      const sealed = t.kind === 2 && t.id !== null && store.node(t.id)?.packed != null;
+      const v = (t.street !== null && halted.has(t.street) ? 1 : 0) + (sealed ? 2 : 0);
+      if (arr[i * 4 + 3] !== v) { arr[i * 4 + 3] = v; dirty = true; }
+    });
     if (dirty) this.street.needsUpdate = true;
   }
 

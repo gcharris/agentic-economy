@@ -44,3 +44,4 @@ body[data-quality="balanced"]::after, body[data-quality="high"]::after { content
   background: radial-gradient(ellipse at 50% 48%, transparent 55%, rgba(14, 10, 6, 0.55) 100%); }
 #hud, #labels, #ticker, #banner { z-index: 2; }
 body[data-take="zoom"] dialog#door { display: none; }
+#labels .label.plate { background: color-mix(in srgb, var(--resin) 88%, black); color: var(--paper-2); border-color: var(--line-2); font-size: 11px; }
