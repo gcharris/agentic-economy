@@ -25,7 +25,7 @@ export interface Plate {
   top: number;
 }
 /** Foundries and data yards (DESIGN §2c.1.3): they stand on the city plate between the streets' attachments. */
-export interface Satellite { kind: 'foundry' | 'yard'; cx: number; cz: number; r: number; theta: number; seed: number }
+export interface Satellite { kind: 'foundry' | 'yard'; city: NodeId; cx: number; cz: number; r: number; theta: number; seed: number }
 export interface BulbLayout {
   plates: Map<NodeId, Plate>;
   root: NodeId | null;
@@ -106,17 +106,26 @@ export function layoutBulbs(nodes: readonly Shape[]): BulbLayout {
     });
   }
 
-  // Foundries and data yards on the city plate, one between each pair of neighbouring streets, alternating.
+  // Foundries and data yards on every city plate, one between each pair of neighbouring streets, alternating. A city
+  // that buds from a country leaves the arc facing its parent empty (its streets never bud there either).
   const satellites: Satellite[] = [];
-  const rp = plates.get(root.id)!;
-  if (root.stage === 'City') {
-    const angles = kids(root.id).map((c) => plates.get(c.id)!.theta).sort((a, b) => a - b);
+  for (const cp of plates.values()) {
+    if (cp.stage !== 'City') continue;
+    const angles = kids(cp.id).map((c) => { const k = plates.get(c.id)!; return Math.atan2(k.cz - cp.cz, k.cx - cp.cx); }).sort((a, b) => a - b);
+    const r = Math.min(0.16 * cp.r, 1.4 * HOUSE_R);
+    const d = cp.r - r - 1.5;
+    const parent = cp.parent === null ? undefined : plates.get(cp.parent);
+    const toParent = parent ? Math.atan2(parent.cz - cp.cz, parent.cx - cp.cx) : null;
+    let n = 0;
     angles.forEach((a, i) => {
       const next = i + 1 < angles.length ? angles[i + 1] : angles[0] + 2 * Math.PI;
+      if (toParent !== null) { // skip the gap that holds the direction to the parent: the attachment arc
+        const k = a + ((((toParent - a) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
+        if (k < next) return;
+      }
       const theta = (a + next) / 2;
-      const r = Math.min(0.16 * rp.r, 1.4 * HOUSE_R);
-      const d = rp.r - r - 1.5;
-      satellites.push({ kind: i % 2 === 0 ? 'foundry' : 'yard', cx: d * Math.cos(theta), cz: d * Math.sin(theta), r, theta, seed: seedOf(root.id + i + 1) });
+      satellites.push({ kind: n % 2 === 0 ? 'foundry' : 'yard', city: cp.id, cx: cp.cx + d * Math.cos(theta), cz: cp.cz + d * Math.sin(theta), r, theta, seed: seedOf(cp.id + i + 1) });
+      n++;
     });
   }
   return { plates, root: root.id, radius: extent, satellites };

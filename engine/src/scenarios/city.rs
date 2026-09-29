@@ -38,20 +38,52 @@ pub fn city(
 ) -> Engine {
     config.active_scale = Stage::City;
     let mut e = Engine::new(config);
-    let city = e.add_node("The City", Stage::City, None, Purse::new(0.0, 0.0));
+    populate_city(
+        &mut e,
+        None,
+        "The City",
+        "",
+        streets,
+        houses_per_street,
+        budget_each,
+        tasks_each,
+    );
+    e.graph
+        .service_prices
+        .insert("courier".into(), CITY_COURIER_PRICE);
+    e
+}
 
+/// One city's subtree: `streets` × `houses` houses with the statistical staff,
+/// `tasks` synthesis tasks and `budget` credits each, the courier price on
+/// every Oak Table, and peers on the city's other streets only. `prefix`
+/// names the nodes (`""` for the stand-alone city, `"C1.2 "` in a world).
+/// Returns the city's id. The caller sets the courier price on the graph.
+#[allow(clippy::too_many_arguments)]
+pub fn populate_city(
+    e: &mut Engine,
+    parent: Option<NodeId>,
+    name: &str,
+    prefix: &str,
+    streets: usize,
+    houses_per_street: usize,
+    budget_each: f64,
+    tasks_each: usize,
+) -> NodeId {
+    let city = e.add_node(name, Stage::City, parent, Purse::new(0.0, 0.0));
+    let tag = prefix.to_lowercase().replace([' ', '.'], "");
     // (street, house) pairs, in build order, so peer lists are deterministic.
     let mut houses: Vec<(NodeId, NodeId)> = Vec::with_capacity(streets * houses_per_street);
     for s in 1..=streets {
         let street = e.add_node(
-            format!("Street {s}"),
+            format!("{prefix}Street {s}"),
             Stage::Street,
             Some(city),
             Purse::new(0.0, 0.0),
         );
         for h in 1..=houses_per_street {
             let house = e.add_node(
-                format!("S{s} House {h}"),
+                format!("{prefix}S{s} House {h}"),
                 Stage::House,
                 Some(street),
                 Purse::new(budget_each, CITY_HOUSE_LIQUIDITY),
@@ -60,7 +92,7 @@ pub fn city(
                 e.node_mut(house)
                     .unwrap()
                     .tasks
-                    .push(Task::synthesis(format!("s{s}h{h}_task_{t:02}")));
+                    .push(Task::synthesis(format!("{tag}s{s}h{h}_task_{t:02}")));
             }
             e.node_mut(house)
                 .unwrap()
@@ -72,8 +104,7 @@ pub fn city(
             houses.push((street, house));
         }
     }
-
-    // Local knowledge, not a directory: addresses on other streets only.
+    // Local knowledge, not a directory: addresses on the city's other streets only.
     for (street, house) in &houses {
         let peers: Vec<NodeId> = houses
             .iter()
@@ -82,9 +113,49 @@ pub fn city(
             .collect();
         e.node_mut(*house).unwrap().known_peers = peers;
     }
+    city
+}
 
+/// The whole tree (Stage 4 and up): `countries` roots, each with `cities`
+/// cities of `streets` × `houses`, statistical staff at every house. The level
+/// of detail keeps houses live at the City and packs them from the Country up
+/// (`pack_depth` 3, AUDIT-LEDGER #30); the camera starts at the Country, so the
+/// houses are packed and every street is sealed until someone zooms in.
+pub fn world_full(
+    mut config: EngineConfig,
+    countries: usize,
+    cities: usize,
+    streets: usize,
+    houses: usize,
+    budget_each: f64,
+    tasks_each: usize,
+) -> Engine {
+    config.active_scale = Stage::House;
+    config.pack_depth = 3;
+    let mut e = Engine::new(config);
+    for i in 1..=countries {
+        let country = e.add_node(
+            format!("Country {i}"),
+            Stage::Country,
+            None,
+            Purse::new(0.0, 0.0),
+        );
+        for j in 1..=cities {
+            populate_city(
+                &mut e,
+                Some(country),
+                &format!("City {i}.{j}"),
+                &format!("C{i}.{j} "),
+                streets,
+                houses,
+                budget_each,
+                tasks_each,
+            );
+        }
+    }
     e.graph
         .service_prices
         .insert("courier".into(), CITY_COURIER_PRICE);
+    e.set_active_scale(Stage::Country);
     e
 }

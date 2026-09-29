@@ -80,7 +80,8 @@ export function reduce(frame: Frame, store: Store, ui: UiLayer = NOOP_UI): Scene
         if (pulse) store.pulses.push(pulse);
       }
     }
-    store.pushFeed({ tick: ev.tick, type: ev.type, text: feedLine(ev, store.nameOf) });
+    const envelope = 'envelope' in ev ? ev.envelope : undefined;
+    store.pushFeed({ tick: ev.tick, type: ev.type, text: feedLine(ev, store.nameOf), envelope });
     out.push({ ev, tick: frame.tick, arrivedAt, clip: clip && clip.kind !== 'none' ? clip : null, seeked });
   }
 

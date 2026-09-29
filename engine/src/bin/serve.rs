@@ -5,6 +5,7 @@
 //! cargo run --release --bin serve -- --scenario street --port 0     # port 0: pick a free port, print it
 //! cargo run --release --bin serve -- --scenario city --streets 6 --houses 8   # Stage 3, sized (default 2 × 3)
 //! cargo run --release --bin serve -- --scenario city --pack-depth 2           # pack the houses at the City (default 3 for the city)
+//! cargo run --release --bin serve -- --scenario world-full --countries 1 --cities 3 --streets 6 --houses 8   # Stage 4, the whole tree
 //! cargo run --release --bin serve -- --scenario country|world   # Stages 4, 5 (fixed shapes; see wasm_abi.rs)
 //! PORT=8080 serve --bind 0.0.0.0                                       # a hosted run: the port from the environment, all interfaces (no TLS, no auth: put a front door in front)
 //! ```
@@ -55,6 +56,9 @@ struct Args {
     houses: usize,
     /// Levels below the camera at which children pack (EngineConfig::pack_depth); None: 3 for the city, else 2.
     pack_depth: Option<u8>,
+    /// `--scenario world-full` only: countries and cities per country (default 1 × 3).
+    countries: usize,
+    cities: usize,
 }
 
 fn parse_args() -> Args {
@@ -73,6 +77,8 @@ fn parse_args() -> Args {
         streets: 2,
         houses: 3,
         pack_depth: None,
+        countries: 1,
+        cities: 3,
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -98,6 +104,20 @@ fn parse_args() -> Args {
             }
             "--pack-depth" => {
                 a.pack_depth = it.next().and_then(|v| v.parse().ok()).or(a.pack_depth)
+            }
+            "--countries" => {
+                a.countries = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(a.countries)
+                    .max(1)
+            }
+            "--cities" => {
+                a.cities = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(a.cities)
+                    .max(1)
             }
             "--houses" => {
                 a.houses = it
@@ -361,6 +381,15 @@ async fn main() {
     let mut engine = match a.scenario.as_str() {
         "street" => street(config, 6, a.budget, a.tasks),
         "city" => city(config, a.streets, a.houses, a.budget, a.tasks),
+        "world-full" => world_full(
+            config,
+            a.countries,
+            a.cities,
+            a.streets,
+            a.houses,
+            a.budget,
+            a.tasks,
+        ),
         "country" => forged_country(config, 5, 2, 2, 200.0, 10_000.0).0,
         "world" => world(config, 3, 2),
         _ => house(config, a.budget, a.tasks),

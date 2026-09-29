@@ -45,3 +45,10 @@ body[data-quality="balanced"]::after, body[data-quality="high"]::after { content
 #hud, #labels, #ticker, #banner { z-index: 2; }
 body[data-take="zoom"] dialog#door { display: none; }
 #labels .label.plate { background: color-mix(in srgb, var(--resin) 88%, black); color: var(--paper-2); border-color: var(--line-2); font-size: 11px; }
+/* The court (DESIGN §8): VOIDED strikes through in --sage; ROLLED_BACK rewinds the ticker. */
+#feed li.struck { text-decoration: line-through; text-decoration-color: var(--sage); color: var(--sage-2); }
+#block .b-court { color: var(--ember-2); font-family: var(--mono); font-size: 12px; }
+#block .b-court:empty { display: none; }
+#ticker.rewind .tab { animation: rewind 900ms ease-in-out; }
+@keyframes rewind { 0% { transform: none; opacity: 1; } 45% { transform: translateX(-24px); opacity: 0.35; } 100% { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #ticker.rewind .tab { animation: none; } }

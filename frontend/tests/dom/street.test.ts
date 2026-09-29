@@ -36,3 +36,14 @@ test('the block line writes the Clearinghouse netting on NETTED (scenario 3 in t
   expect(document.querySelector('#block')!.textContent).toContain('netted 12 envelopes · gross 60.0 → net 20.0');
   expect(document.querySelector('#ladder button.active')!.getAttribute('data-stage')).toBe('City');
 });
+
+test('the court in the HUD (scenario 4): VOIDED lines struck in sage, the unwind in the block line, the ticker rewinding', async () => {
+  const { engineSource } = await import('../helpers/engineSource.ts');
+  app = await App.boot({ source: engineSource('country'), renderer: new NullRenderer(), root: document.body, clock: 'manual' });
+  await app.stepTo(2);
+  expect(document.querySelector('#block')!.textContent).toMatch(/rolled back to t\d+ · \d+ slashed/);
+  expect(document.querySelector('#ticker')!.classList.contains('rewind')).toBe(true);
+  const struck = [...document.querySelectorAll('#feed li.struck')];
+  expect(struck.length).toBeGreaterThan(0);
+  expect(struck.some((l) => /voided by the court/.test(l.textContent!))).toBe(true);
+});

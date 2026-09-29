@@ -21,6 +21,7 @@ export class CityBand implements SceneBand {
   readonly stage = 3 as const;
   readonly group = new THREE.Group();
   hall: Clearinghouse | null = null;
+  readonly halls: Clearinghouse[] = [];
   readonly tubes: Tube[] = [];
   /** The last NETTED: its start and gross (the tubes' width). */
   netted: { t0: number; tick: number; gross: number } | null = null;
@@ -39,22 +40,34 @@ export class CityBand implements SceneBand {
     const layout = store.layout.current;
     for (const o of [...this.group.children]) this.group.remove(o);
     this.tubes.length = 0;
-    this.hall = null;
-    const root = layout.root === null ? undefined : layout.plates.get(layout.root);
-    if (!root || root.stage !== 'City') return; // the city band draws a city; a house or street run has none
-    this.hall = buildClearinghouse(root.top);
-    this.hall.group.position.set(root.cx, 0, root.cz);
-    this.group.add(this.hall.group);
-    for (const p of layout.plates.values()) {
-      if (p.stage !== 'Street' || p.parent !== root.id) continue;
-      // A tube from the street's attach point on the rim to the dome, with trees along it.
-      const at = attachPoint(p, root);
-      const t = buildTube(at, { x: root.cx, z: root.cz });
-      t.group.position.y += root.top;
-      this.tubes.push(t);
-      this.group.add(t.group, buildTubeTrees(at, { x: root.cx, z: root.cz }, root.top, 18));
+    this.halls.length = 0;
+    // Every city plate (a country holds several): its Clearinghouse, a tube from each street's attach point with trees
+    // along it, and its foundries and yards between the streets.
+    for (const city of layout.plates.values()) {
+      if (city.stage !== 'City') continue;
+      const hall = buildClearinghouse(city.top);
+      hall.group.position.set(city.cx, 0, city.cz);
+      // A city with no streets (scenario 4's are leaves) is a 6.5 m plate: the hall scales with its plate so the plate,
+      // and the court's scorch on it, stay visible.
+      const k = Math.min(1, Math.max(0.3, city.r / 18));
+      hall.group.scale.setScalar(k);
+      hall.group.position.y = city.top * (1 - k); // the base stays on the plate: y' = top·(1 − k) + k·top
+      this.halls.push(hall);
+      this.group.add(hall.group);
+      for (const p of layout.plates.values()) {
+        if (p.stage !== 'Street' || p.parent !== city.id) continue;
+        const at = attachPoint(p, city);
+        const t = buildTube(at, { x: city.cx, z: city.cz });
+        t.group.position.y += city.top;
+        this.tubes.push(t);
+        this.group.add(t.group, buildTubeTrees(at, { x: city.cx, z: city.cz }, city.top, 18));
+      }
     }
-    for (const s of layout.satellites) this.group.add(s.kind === 'foundry' ? buildFoundry(s, root.top) : buildYard(s, root.top));
+    for (const s of layout.satellites) {
+      const top = layout.plates.get(s.city)?.top ?? 0;
+      this.group.add(s.kind === 'foundry' ? buildFoundry(s, top) : buildYard(s, top));
+    }
+    this.hall = this.halls[0] ?? null;
   }
 
   onFrame(frame: Frame): void {
@@ -95,10 +108,10 @@ export class CityBand implements SceneBand {
   }
 
   animate(t: number): void {
-    if (!this.group.visible || !this.netted) { if (this.hall) setFlare(this.hall, 0); return; }
+    if (!this.group.visible || !this.netted) { for (const h of this.halls) setFlare(h, 0); return; }
     const age = t - this.netted.t0;
     for (const tube of this.tubes) setFill(tube, age, this.netted.gross);
-    if (this.hall) setFlare(this.hall, flareAt(age));
+    for (const h of this.halls) setFlare(h, flareAt(age));
   }
 
   dispose(): void { this.ctx?.scene.remove(this.group); }

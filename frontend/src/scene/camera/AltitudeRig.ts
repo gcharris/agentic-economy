@@ -43,6 +43,9 @@ export class AltitudeRig {
   readonly streetCentre = new THREE.Vector3();
   /** The root plate's centre: the Clearinghouse. */
   readonly cityCentre = new THREE.Vector3();
+  /** The root when it is a country (Stage 4): the plateau the city plates bud from. */
+  readonly countryCentre = new THREE.Vector3();
+  countryH = 400;
   streetH = 70;
   cityH = 140;
   /** Target in house-local metres (between the Oak Table and the Desk by default). */
@@ -93,7 +96,25 @@ export class AltitudeRig {
       this.streetCentre.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
       this.streetH = Math.max(70 * k, 1.3 * 0.5 * Math.hypot(x1 - x0, z1 - z0));
     }
-    this.cityH = Math.min(1600, Math.max(140 * k, 1.3 * layout.radius));
+    // Band 3 frames the focused house's own city (its bounding box: a country holds several); band 4 the whole tree.
+    let city = plate;
+    while (city && city.stage !== 'City' && city.parent !== null) city = layout.plates.get(city.parent);
+    if (city && city.stage === 'City') {
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const q of layout.plates.values()) {
+        let up: typeof q | undefined = q;
+        while (up && up.id !== city.id) up = up.parent === null ? undefined : layout.plates.get(up.parent);
+        if (!up) continue;
+        x0 = Math.min(x0, q.cx - q.r); x1 = Math.max(x1, q.cx + q.r); z0 = Math.min(z0, q.cz - q.r); z1 = Math.max(z1, q.cz + q.r);
+      }
+      this.cityCentre.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
+      this.cityH = Math.min(1600, Math.max(140 * k, 1.3 * 0.5 * Math.hypot(x1 - x0, z1 - z0)));
+    } else {
+      this.cityCentre.set(0, 0, 0);
+      this.cityH = Math.min(1600, Math.max(140 * k, 1.3 * layout.radius));
+    }
+    this.countryCentre.set(0, 0, 0);
+    this.countryH = Math.max(40 * k, 2.0 * layout.radius); // the whole tree; at 55° pitch a disc stands taller in frame
     if (!frame) return;
     this.tick = frame.tick;
     const scale = STAGE_LEVEL[frame.state.active_scale];
@@ -152,18 +173,19 @@ export class AltitudeRig {
     // Band 1: the house's frame and local target; from A 1.5 to 2.0 blend to the street centre at world yaw.
     const s = smooth(1.5, 2.0, a);
     const houseTarget = this.local.clone().applyAxisAngle(UP, this.frameYaw).add(this.origin);
-    this.target.copy(houseTarget).lerp(this.streetCentre, s).lerp(this.cityCentre, smooth(2.5, 3.0, a));
+    this.target.copy(houseTarget).lerp(this.streetCentre, s).lerp(this.cityCentre, smooth(2.5, 3.0, a)).lerp(this.countryCentre, smooth(3.5, 4.0, a));
     const yawTarget = this.frameYaw * (1 - s);
     this.yaw = dt >= 1 ? yawTarget : this.yaw + (yawTarget - this.yaw) * k;
     if (dt >= 1) this.smoothTarget.copy(this.target); else this.smoothTarget.lerp(this.target, k);
 
     const row = BANDS[Math.min(4, Math.max(0, Math.round(a) - 1))];
     const H = this.take ? this.rows / this.take.ppm
-      : heightAt(a, BANDS.map((b, i) => (i === 0 ? this.rows / ROOM_PPM : i === 1 ? this.streetH : i === 2 ? this.cityH : b.H)));
+      : heightAt(a, BANDS.map((b, i) => (i === 0 ? this.rows / ROOM_PPM : i === 1 ? this.streetH : i === 2 ? this.cityH : i === 3 ? this.countryH : b.H)));
     this.viewH = H;
     const fov = row.fovDeg;
     const d = dolly(H, fov);
-    const p = row.pitchDeg * DEG;
+    // Band 4 tips the camera up from 30° to 55° over [3.5, 4.0] (ARCHITECTURE §8): the country read as relief.
+    const p = (a < 3.5 ? row.pitchDeg : 30 + 25 * smooth(3.5, 4.0, a)) * DEG;
     const y = YAW_DEG * DEG;
     const off = new THREE.Vector3(-Math.cos(p) * Math.sin(y), Math.sin(p), Math.cos(p) * Math.cos(y)).multiplyScalar(d);
     off.applyAxisAngle(UP, this.yaw);

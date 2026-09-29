@@ -119,7 +119,7 @@ vec3 kindColour(float kind) {
   return kind < 1.5 ? vec3(0.169, 0.129, 0.090)        // 1 house plate: --plinth
        : kind < 2.5 ? vec3(0.612, 0.541, 0.427)        // 2 street plate: its commons are tinted in main()
        : kind < 3.5 ? vec3(0.659, 0.592, 0.478)        // 3 city plate: warm limestone #a8977a (DESIGN §2b)
-       : kind < 4.5 ? vec3(0.071, 0.055, 0.039)        // 4 country / world: --baize
+       : kind < 4.5 ? vec3(0.165, 0.129, 0.094)        // 4 country: a plateau of cut card #2a2118 (DESIGN §8)
        : kind < 5.5 ? vec3(0.290, 0.310, 0.341)        // 5 data yard: slate #4a4f57
        : vec3(0.490, 0.290, 0.204);                    // 6 foundry: fired clay --roof
 }
@@ -172,6 +172,14 @@ void main() {
     vec3 turf = mix(lin(vec3(0.42, 0.47, 0.27)), lin(vDye), 0.35);
     float mottle = hash12(floor(vWorld * 0.8)) * 0.08;
     col = turf * (0.92 + mottle);
+  }
+  if (vKind > 3.5 && vKind < 4.5) {             // the country: risers #1e1710, contour lines #3a2f24 round its centre
+    if (bevel) col = lin(vec3(0.118, 0.090, 0.063));
+    else {
+      float c = length(vWorld - vCenter) / 14.0;
+      float w = fwidth(c);
+      col = mix(col, lin(vec3(0.227, 0.184, 0.141)), 1.0 - smoothstep(0.0, 1.5 * w + 0.02, abs(fract(c) - 0.5) - 0.45));
+    }
   }
   if (!bevel && vKind > 2.5 && vKind < 3.5) {
     float d = length(vWorld - vCenter);

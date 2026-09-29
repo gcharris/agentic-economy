@@ -106,7 +106,7 @@ export class StreetBand implements SceneBand {
       const packed = store.node(sid)?.packed ?? null;
       g.visible = packed === null;
       const street = store.layout.plateOf(sid);
-      if (packed && street) {
+      if (packed && street && this.a <= STREET_VISIBLE_UP_TO) {
         this.sealed.add(sid);
         this.ctx.bus.emit('label', { id: `stasis-${sid}`, world: new THREE.Vector3(street.cx, street.top + 1.5, street.cz), text: `${packed.child_count} in stasis · ${packed.macro_ticks} ticks`, kind: 'plate', ttl: 1e6 });
       } else if (this.sealed.delete(sid)) {

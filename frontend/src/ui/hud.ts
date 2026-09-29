@@ -32,6 +32,8 @@ export class Hud {
   private tickerKey = '';
   /** The Clearinghouse's last netting, written by the NETTED pulse (DESIGN §7 beat 2). */
   private netted = '';
+  /** The High Court's last unwind, written by ROLLED_BACK (DESIGN §8). */
+  private rolled = '';
 
   constructor(private readonly deps: HudDeps) {
     this.buildLadder();
@@ -41,6 +43,12 @@ export class Hud {
   apply(frame: Frame, store: Store): void {
     const s = frame.state;
     this.ladder(s);
+    const rb = frame.events.find((e) => e.type === 'ROLLED_BACK');
+    if (rb && rb.type === 'ROLLED_BACK') {
+      this.rolled = `rolled back to t${rb.to_tick} · ${rb.slashed} slashed`;
+      const tk = this.$('ticker'); // the ticker rewinds: its tabs slide back (CSS), replayed on every rollback
+      tk.classList.remove('rewind'); void tk.offsetWidth; tk.classList.add('rewind');
+    }
     const net = frame.events.find((e) => e.type === 'NETTED');
     if (net && net.type === 'NETTED') this.netted = `netted ${net.envelopes} envelopes · gross ${fmtCost(net.gross)} → net ${fmtCost(net.net)}`;
     this.block(s, store);
@@ -87,13 +95,14 @@ export class Hud {
   private block(s: StateView, store: Store): void {
     const mode = this.deps.source.kind === 'trace' ? 'recorded run'
       : this.deps.source.kind === 'wasm' ? 'live · wasm in a worker' : `live · SSE ${store.hello?.version ?? ''}`.trim();
-    this.$('block').innerHTML = '<span class="b-tick"></span><span class="b-root mono"></span><span class="b-exec"></span><span class="b-mempool"></span><span class="b-net"></span><span class="b-mode"></span>';
+    this.$('block').innerHTML = '<span class="b-tick"></span><span class="b-root mono"></span><span class="b-exec"></span><span class="b-mempool"></span><span class="b-net"></span><span class="b-court"></span><span class="b-mode"></span>';
     const set = (c: string, t: string) => { this.$('block').querySelector(`.${c}`)!.textContent = t; };
     set('b-tick', `tick ${s.tick}`);
     set('b-root', `root ${hash8(s.root)}`);
     set('b-exec', s.executor);
     set('b-mempool', `mempool ${s.mempool}`);
     set('b-net', this.netted);
+    set('b-court', this.rolled);
     set('b-mode', mode);
   }
 
@@ -145,10 +154,13 @@ export class Hud {
 
   private feed(store: Store): void {
     const lines = store.feed.slice(-FEED_LINES).reverse();
+    // VOIDED strikes the envelope's feed lines through in --sage (DESIGN §8).
+    const voided = new Set(store.feed.filter((l) => l.type === 'VOIDED' && l.envelope !== undefined).map((l) => l.envelope));
     this.$('feed').replaceChildren(...lines.map((l) => {
       const li = document.createElement('li');
       li.textContent = l.text;
       li.dataset.type = l.type;
+      if (l.envelope !== undefined && voided.has(l.envelope)) li.classList.add('struck');
       return li;
     }));
   }

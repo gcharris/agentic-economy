@@ -11,7 +11,7 @@ pub mod city;
 pub mod drift;
 pub mod high_court;
 pub mod world;
-pub use city::{city, CITY_COURIER_PRICE, CITY_HOUSE_LIQUIDITY};
+pub use city::{city, populate_city, world_full, CITY_COURIER_PRICE, CITY_HOUSE_LIQUIDITY};
 pub use drift::{move_truth, street_under_drift, MOVED_PRICE, STALE_PRICE};
 pub use high_court::{forged_country, forged_street, CourtWorld, Transferor};
 pub use world::{world, Chancellor};

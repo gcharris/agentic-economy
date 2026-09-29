@@ -19,6 +19,7 @@ import { bindAltitudeInput } from './scene/camera/input.ts';
 import { RoomBand } from './scene/room/RoomBand.ts';
 import { StreetBand } from './scene/street/StreetBand.ts';
 import { CityBand } from './scene/city/CityBand.ts';
+import { CountryBand } from './scene/atlas/CountryBand.ts';
 
 const TAKES = {
   /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
@@ -32,12 +33,14 @@ async function makeSource(q: URLSearchParams): Promise<EngineSource> {
   const kind = q.get('source') ?? 'trace';
   if (kind === 'sse') return new SseSource();
   if (kind === 'wasm') {
-    const scenario = run.startsWith('house') ? 'house' : run === 'street_doors' ? 'street' : (run as 'street' | 'city' | 'world');
+    const scenario = run.startsWith('house') ? 'house' : run === 'street_doors' ? 'street' : run === ('world_full' as RunName) || run === ('country' as RunName) ? 'country' : (run as 'street' | 'city' | 'world');
     return new WasmSource({
       scenario, seed: q.get('seed') ?? 7, budget: Number(q.get('budget') ?? 800), tasks: Number(q.get('tasks') ?? 15),
       costVisible: q.get('cost') !== '0' && run !== 'house_hidden_cost',
       // &streets=6&houses=8: a sized city through engine_new_city (DESIGN §2c.5).
-      ...(q.get('streets') || q.get('houses') ? { city: { streets: Number(q.get('streets') ?? 2), houses: Number(q.get('houses') ?? 3) } } : {}),
+      // &run=world_full&countries=1&cities=3&streets=6&houses=8: the whole tree through engine_new_world (Stage 4).
+      ...(run === ('world_full' as RunName) ? { world: { countries: Number(q.get('countries') ?? 1), cities: Number(q.get('cities') ?? 3), streets: Number(q.get('streets') ?? 6), houses: Number(q.get('houses') ?? 8) } } : {}),
+      ...(run !== ('world_full' as RunName) && (q.get('streets') || q.get('houses')) ? { city: { streets: Number(q.get('streets') ?? 2), houses: Number(q.get('houses') ?? 3) } } : {}),
     });
   }
   const trace = (await (await fetch(`${import.meta.env.BASE_URL}traces/trace.json`)).json()) as Trace;
@@ -59,7 +62,7 @@ async function main(): Promise<void> {
   let clockT = performance.now() / 1000;
   const app = await App.boot({
     source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion, now: manual ? () => clockT : undefined,
-    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand()],
+    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand(), new CountryBand()],
   });
   if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
   const take = q.get('take');
@@ -82,6 +85,8 @@ async function main(): Promise<void> {
       /** Director: put the camera at altitude A (no spring); returns the zoom still waiting for the engine, if any. */
       altitude: (a: number) => { app.rig.jumpTo(a); return app.rig.pending?.band ?? null; },
       pending: () => app.rig.pending?.band ?? null,
+      /** Look at a band without asking the engine to zoom (a scenario whose engine stays at its own scale). */
+      look: (band: 1 | 2 | 3 | 4 | 5) => { app.rig.setBand(band, true); return band; },
       /** DOM-free commands for scripted takes (a live source only): approve, reject, top up, zoom. */
       command: (c: Parameters<typeof app.command>[0]) => app.command(c),
       render: (at?: number) => { if (at !== undefined) clockT = at; app.renderFrame(clockT); return true; },

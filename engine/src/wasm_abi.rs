@@ -86,6 +86,38 @@ pub extern "C" fn engine_new_city(
     ENGINE.with(|e| *e.borrow_mut() = Some(engine));
 }
 
+/// The whole tree (Stage 4): `countries` × `cities` × `streets` × `houses`
+/// with statistical staff at the houses (`scenarios::world_full`). The camera
+/// starts at the Country, where the houses are packed and the streets sealed.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn engine_new_world(
+    countries: u32,
+    cities: u32,
+    streets: u32,
+    houses: u32,
+    budget: f64,
+    tasks: u32,
+    seed: u64,
+    cost_visible: u32,
+) {
+    let config = EngineConfig {
+        seed,
+        cost_visible: cost_visible != 0,
+        ..Default::default()
+    };
+    let engine = scenarios::world_full(
+        config,
+        countries.max(1) as usize,
+        cities.max(1) as usize,
+        streets.max(1) as usize,
+        houses.max(1) as usize,
+        budget,
+        tasks as usize,
+    );
+    ENGINE.with(|e| *e.borrow_mut() = Some(engine));
+}
+
 /// Run one block. Returns the tick number, or 0 if a seat's future could
 /// not complete on this single-threaded host (a seat that waits on a
 /// network wake has no reactor here; the tab is not frozen, the tick is

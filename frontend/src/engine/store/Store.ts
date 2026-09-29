@@ -26,7 +26,8 @@ export interface DoorEntry {
   sent: 'approve' | 'reject' | null; // a click, until the engine answers ("sent to the Door…")
 }
 
-export interface FeedLine { tick: number; type: EventType; text: string }
+/** A feed line; `envelope` lets the HUD strike every line of an envelope the court VOIDED (DESIGN §8). */
+export interface FeedLine { tick: number; type: EventType; text: string; envelope?: number }
 
 /** The DOM layer (ui lane). `apply` runs once per frame at the end of reduce(); never from the render loop. */
 export interface UiLayer {
