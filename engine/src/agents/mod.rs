@@ -4,3 +4,7 @@
 
 pub mod llm;
 pub mod statistical;
+// The estate Vault route as an `InferenceBackend`. Native only, behind the
+// `vault` cargo feature; the module documents itself.
+#[cfg(feature = "vault")]
+pub mod vault;
