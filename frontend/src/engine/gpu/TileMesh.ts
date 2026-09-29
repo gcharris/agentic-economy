@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { NodeId, Stage } from '../contract/state.ts';
 import { dyeFor } from '../layout/dyes.ts';
-import { PLATE_TOP, type BulbLayout } from '../layout/layoutBulbs.ts';
+import type { BulbLayout } from '../layout/layoutBulbs.ts';
 import type { Store } from '../store/Store.ts';
 import { plateGeometry } from './plateGeometry.ts';
 import { TILE_FRAG, TILE_VERT } from './shaders/tile.glsl.ts';
@@ -23,19 +23,36 @@ export const KIND_YARD = 5, KIND_FOUNDRY = 6;
 export const EDGE_GAIN = 4;
 export const SPECKS_PER_PLATE = 6;
 
-export interface Tile { cx: number; cz: number; r: number; kind: number; slot: number; id: NodeId | null; street: NodeId | null; height: number; seed: number }
+export interface Tile { cx: number; cz: number; r: number; kind: number; slot: number; id: NodeId | null; street: NodeId | null; base: number; top: number; seed: number }
 
 /** The tile list for a layout: pure, so tests can count and order it. */
 export function tilesFor(layout: BulbLayout, store: Pick<Store, 'slots'>): Tile[] {
   const tiles: Tile[] = [];
   for (const p of layout.plates.values()) {
     const street = p.stage === 'Street' ? p.id : p.stage === 'House' ? p.parent : null;
-    tiles.push({ cx: p.cx, cz: p.cz, r: p.r, kind: KIND[p.stage], slot: store.slots.peek(p.id), id: p.id, street, height: PLATE_TOP[p.stage], seed: p.seed });
+    tiles.push({ cx: p.cx, cz: p.cz, r: p.r, kind: KIND[p.stage], slot: store.slots.peek(p.id), id: p.id, street, base: p.base, top: p.top, seed: p.seed });
   }
-  for (const s of layout.satellites) {
-    tiles.push({ cx: s.cx, cz: s.cz, r: s.r, kind: s.kind === 'yard' ? KIND_YARD : KIND_FOUNDRY, slot: -1, id: null, street: null, height: 0.25, seed: s.seed });
-  }
-  return tiles;
+  return tiles; // foundries and data yards stand on the city plate (DESIGN §2c.1.3): they are buildings, not plates
+}
+
+/** The ground beyond every plate: dark earth #1c1610 with faint contour rings every 8 m, never black (§2c.1.3). */
+export function buildGround(extent: number): THREE.Mesh {
+  const mat = new THREE.MeshLambertMaterial({ color: '#1c1610' });
+  mat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vGround;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvGround = (modelMatrix * vec4(transformed, 1.0)).xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vGround;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+  float d = length(vGround) / 8.0 + 0.35 * sin(atan(vGround.y, vGround.x) * 3.0 + length(vGround) * 0.02);
+  float w = fwidth(d);
+  float ring = 1.0 - smoothstep(0.0, 1.5 * w + 0.02, abs(fract(d) - 0.5) - 0.46);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.145, 0.114, 0.082), ring * 0.4); // faint: a contour, not a road`);
+  };
+  const m = new THREE.Mesh(new THREE.CircleGeometry(Math.max(90, extent * 2.4), 96).rotateX(-Math.PI / 2), mat);
+  m.position.y = -0.02;
+  m.receiveShadow = true;
+  m.name = 'ground';
+  return m;
 }
 
 export class TileMesh {
@@ -68,29 +85,29 @@ export class TileMesh {
     this.specks = this.instance(this.speckGeometry.clone(), this.speckMaterial, speckable, SPECKS_PER_PLATE);
     this.street = this.mesh.geometry.getAttribute('iB') as THREE.InstancedBufferAttribute;
     this.sage = this.mesh.geometry.getAttribute('iC') as THREE.InstancedBufferAttribute;
-    this.group.add(this.mesh, this.specks);
+    this.group.add(buildGround(layout.radius), this.mesh, this.specks);
     return this.group;
   }
 
   private instance(g: THREE.BufferGeometry, mat: THREE.ShaderMaterial, tiles: Tile[], per: number): THREE.InstancedMesh {
     const n = Math.max(1, tiles.length * per);
-    const iA = new Float32Array(n * 4), iB = new Float32Array(n * 4), iC = new Float32Array(n * 4), idx = new Float32Array(n);
+    const iA = new Float32Array(n * 4), iB = new Float32Array(n * 4), iC = new Float32Array(n * 4), iD = new Float32Array(n * 4);
     const c = new THREE.Color();
     let i = 0;
     for (const t of tiles) {
       c.set(t.street === null ? '#4a3826' : dyeFor(t.street)); // sRGB; the shader linearises
       for (let k = 0; k < per; k++, i++) {
-        iA.set([t.cx, t.cz, t.r, t.height], i * 4);
+        iA.set([t.cx, t.cz, t.r, t.top], i * 4);
         iB.set([t.slot, t.kind, t.seed, 0], i * 4);
         iC.set([c.r, c.g, c.b, -1e9], i * 4);
-        idx[i] = k;
+        iD.set([t.base, k, 0, 0], i * 4);
       }
     }
     for (const name of ['normal', 'ang', 'rho', 'side']) g.deleteAttribute(name); // packed into vtx (16 attribute slots)
     g.setAttribute('iA', new THREE.InstancedBufferAttribute(iA, 4));
     const b = new THREE.InstancedBufferAttribute(iB, 4); b.setUsage(THREE.DynamicDrawUsage); g.setAttribute('iB', b);
     const cc = new THREE.InstancedBufferAttribute(iC, 4); cc.setUsage(THREE.DynamicDrawUsage); g.setAttribute('iC', cc);
-    g.setAttribute('aIndex', new THREE.InstancedBufferAttribute(idx, 1));
+    g.setAttribute('iD', new THREE.InstancedBufferAttribute(iD, 4));
     const mesh = new THREE.InstancedMesh(g, mat, n);
     mesh.count = tiles.length * per;
     mesh.frustumCulled = false; // placement is in the shader; the identity instance matrices say nothing about bounds

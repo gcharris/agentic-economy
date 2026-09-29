@@ -2,12 +2,13 @@
 // the way bulbs bud from the Mandelbrot cardioid, by the same rule at every scale. Pure and keyed by NodeId: the
 // same (id, parent, stage) triples give the same layout in any array order, so a take can be re-shot frame for frame.
 //
-// Radii leaf-up: a house keeps HOUSE_R at every zoom; a parent's radius follows from its children,
-// R = max(r_child) / f(n_eff). Placement top-down: child i (ascending id) at angle θᵢ on the parent's rim, centre at
-// R + 0.6·r from the parent's centre (a 0.4·r overlap, so each bulb visibly grows out of the rim). The root spreads its
-// children round the whole circle; any other plate buds only within θ₀ ± 100° of its own outward direction.
-// One deviation from §7.3, written down: children confined to a 200° arc would overlap at f(n), so a non-root parent
-// sizes for n_eff = n · 360 / 200 (the bulbs then just touch, as in the reference set, instead of piling up).
+// DESIGN §2c.1 (the composition fix): children bud all the way round the rim except the attachment arc (±35° about
+// the direction of the parent); the root uses the whole circle. A parent's radius is the smallest that seats them,
+// R = max(2.2·r, n·reach·1.15/π), and child i (ascending id) sits at R + 0.6·r from the parent's centre (a 0.4·r
+// overlap, so each bulb visibly grows out of the rim). One deviation, written down: §2c.1 seats by the child's radius
+// r; seated that way, neighbouring streets' houses collide (six streets of eight: 29 m reach each, 53 m apart), so the
+// seating term uses each child's reach, r + 1.6·(its own largest child), which equals r for a leaf.
+// Terraces: each generation stands 0.35 m above its parent (a 0.25 m wall and a bevel), city lowest.
 
 import type { NodeId, NodeView, Stage } from '../contract/state.ts';
 
@@ -19,8 +20,11 @@ export interface Plate {
   /** hash(id) in 0–1. */
   seed: number;
   depth: number;
+  /** Terrace: the plate stands from `base` to `top` (metres); each generation 0.35 m above its parent. */
+  base: number;
+  top: number;
 }
-/** Foundries and data yards: small satellite plates in the unused arc gaps of a city's rim (DESIGN §2c.4). */
+/** Foundries and data yards (DESIGN §2c.1.3): they stand on the city plate between the streets' attachments. */
 export interface Satellite { kind: 'foundry' | 'yard'; cx: number; cz: number; r: number; theta: number; seed: number }
 export interface BulbLayout {
   plates: Map<NodeId, Plate>;
@@ -31,10 +35,12 @@ export interface BulbLayout {
 }
 
 export const HOUSE_R = 6.5;
-export const ARC = (100 * Math.PI) / 180;
-export const f = (n: number): number => Math.min(0.42, 0.85 / Math.sqrt(Math.max(n, 1)));
-/** Plate tops by stage: each generation stands a little proud of its parent, so the overlap reads as budding. */
-export const PLATE_TOP: Record<Stage, number> = { World: 0.05, Country: 0.1, City: 0.15, Street: 0.3, House: 0.45 };
+/** Half-width of the attachment arc no child may use (DESIGN §2c.1). */
+export const ATTACH = (35 * Math.PI) / 180;
+export const TERRACE = 0.35;
+/** The smallest parent radius that seats n children of radius r and reach `reach` round its rim (DESIGN §2c.1). */
+export const seatRadius = (n: number, r: number, reach = r): number => Math.max(2.2 * r, (n * reach * 1.15) / Math.PI);
+export const topAt = (depth: number): number => TERRACE * (depth + 1);
 
 type Shape = Pick<NodeView, 'id' | 'parent' | 'stage'>;
 
@@ -59,22 +65,24 @@ export function layoutBulbs(nodes: readonly Shape[]): BulbLayout {
   if (!roots?.length) return { ...EMPTY, plates: new Map(), satellites: [] };
   const root = roots[0];
 
-  // Leaf-up radii (iterative post-order, so a deep graph cannot overflow the stack).
-  const radius = new Map<NodeId, number>();
+  // Leaf-up radii and reaches (iterative post-order, so a deep graph cannot overflow the stack).
+  const radius = new Map<NodeId, number>(), reach = new Map<NodeId, number>();
   const order: Shape[] = [];
   const stack: Shape[] = [root];
   while (stack.length) { const n = stack.pop()!; order.push(n); for (const c of kids(n.id)) stack.push(c); }
   for (let i = order.length - 1; i >= 0; i--) {
     const n = order[i];
     const cs = kids(n.id);
-    if (cs.length === 0) { radius.set(n.id, HOUSE_R); continue; }
-    const nEff = n === root ? cs.length : (cs.length * 360) / 200;
-    radius.set(n.id, Math.max(...cs.map((c) => radius.get(c.id)!)) / f(nEff));
+    if (cs.length === 0) { radius.set(n.id, HOUSE_R); reach.set(n.id, HOUSE_R); continue; }
+    const r = Math.max(...cs.map((c) => radius.get(c.id)!)), rc = Math.max(...cs.map((c) => reach.get(c.id)!));
+    const R = seatRadius(cs.length, r, rc);
+    radius.set(n.id, R);
+    reach.set(n.id, R + 1.6 * r);
   }
 
-  // Top-down placement.
+  // Top-down placement: the root round its whole rim, every other plate round its rim minus the attachment arc.
   const plates = new Map<NodeId, Plate>();
-  plates.set(root.id, { id: root.id, parent: null, stage: root.stage, cx: 0, cz: 0, r: radius.get(root.id)!, theta: 0, seed: seedOf(root.id), depth: 0 });
+  plates.set(root.id, { id: root.id, parent: null, stage: root.stage, cx: 0, cz: 0, r: radius.get(root.id)!, theta: 0, seed: seedOf(root.id), depth: 0, base: 0, top: topAt(0) });
   let extent = radius.get(root.id)!;
   const queue: NodeId[] = [root.id];
   while (queue.length) {
@@ -82,34 +90,33 @@ export function layoutBulbs(nodes: readonly Shape[]): BulbLayout {
     const p = plates.get(pid)!;
     const cs = kids(pid);
     const n = cs.length;
+    const span = p.parent === null ? 2 * Math.PI : 2 * Math.PI - 2 * ATTACH;
+    const start = p.parent === null ? p.theta : p.theta + Math.PI + ATTACH; // just past the arc that faces the parent
     cs.forEach((c, i) => {
       const s = seedOf(c.id);
-      const jitter = (s * 2 - 1);
-      const theta = p.parent === null
-        ? p.theta + (2 * Math.PI * i) / n + (jitter * Math.PI) / (4 * n)
-        : p.theta - ARC + (2 * ARC * (i + 0.5)) / n + (jitter * ARC) / (4 * n);
+      // A small seeded jitter (±1/24 of the spacing): larger, and neighbours seated at the minimum radius touch.
+      const theta = start + (span * (i + (p.parent === null ? 0 : 0.5))) / n + ((s * 2 - 1) * span) / (24 * n);
       const r = radius.get(c.id)!;
       const d = p.r + 0.6 * r;
-      const plate: Plate = { id: c.id, parent: pid, stage: c.stage, cx: p.cx + d * Math.cos(theta), cz: p.cz + d * Math.sin(theta), r, theta, seed: s, depth: p.depth + 1 };
+      const depth = p.depth + 1;
+      const plate: Plate = { id: c.id, parent: pid, stage: c.stage, cx: p.cx + d * Math.cos(theta), cz: p.cz + d * Math.sin(theta), r, theta, seed: s, depth, base: p.top, top: topAt(depth) };
       plates.set(c.id, plate);
       extent = Math.max(extent, Math.hypot(plate.cx, plate.cz) + r);
       queue.push(c.id);
     });
   }
 
-  // Satellites in the arc gaps of a city's rim: one per gap, foundry and data yard alternating.
+  // Foundries and data yards on the city plate, one between each pair of neighbouring streets, alternating.
   const satellites: Satellite[] = [];
   const rp = plates.get(root.id)!;
   if (root.stage === 'City') {
     const angles = kids(root.id).map((c) => plates.get(c.id)!.theta).sort((a, b) => a - b);
-    const childR = Math.max(HOUSE_R, ...kids(root.id).map((c) => radius.get(c.id)!));
     angles.forEach((a, i) => {
       const next = i + 1 < angles.length ? angles[i + 1] : angles[0] + 2 * Math.PI;
       const theta = (a + next) / 2;
-      const r = Math.min(0.3 * childR, 0.35 * rp.r, 2.2 * HOUSE_R);
-      const d = rp.r + 0.6 * r;
+      const r = Math.min(0.16 * rp.r, 1.4 * HOUSE_R);
+      const d = rp.r - r - 1.5;
       satellites.push({ kind: i % 2 === 0 ? 'foundry' : 'yard', cx: d * Math.cos(theta), cz: d * Math.sin(theta), r, theta, seed: seedOf(root.id + i + 1) });
-      extent = Math.max(extent, d + r);
     });
   }
   return { plates, root: root.id, radius: extent, satellites };

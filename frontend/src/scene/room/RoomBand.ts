@@ -10,7 +10,6 @@ import { buildFixtures, PAPER_CAP, setPurse, type Fixtures } from './fixtures.ts
 import { RoomLights } from './lights.ts';
 import { makeSeat, SEATS, type SeatActor, type SeatName } from './actors/seats.ts';
 import { place, type PorterClip } from './stations.ts';
-import { PLINTH_TOP } from '../street/cottage.ts';
 
 const TIER_GLOW = { fast_quantized: 0.2, balanced_staff: 0.5, frontier_deep: 1.0 } as const;
 const DOOR_SWING = (70 * Math.PI) / 180;
@@ -50,7 +49,7 @@ export class RoomBand implements SceneBand {
   onFrame(frame: Frame): void {
     const { store, rig } = this.ctx;
     const n = store.focus === null ? undefined : store.node(store.focus);
-    this.group.position.copy(rig.origin).setY(PLINTH_TOP); // the tile's plinth carries the house (DESIGN §6)
+    this.group.position.copy(rig.origin); // the rig's origin is the house plate's top: the terrace carries the room
     this.group.rotation.y = rig.frameYaw;
     if (!n) return;
     this.status = n.status;

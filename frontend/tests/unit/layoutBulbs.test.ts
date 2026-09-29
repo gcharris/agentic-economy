@@ -1,10 +1,11 @@
-// The bulb layout (DESIGN §2c, ARCHITECTURE §7.3): pure, leaf-up radii with HOUSE_R held, children on the parent's
-// rim at R + 0.6·r, grandchildren within ±100° of outward, siblings never overlapping, satellites in the gaps, and
+// The bulb layout (DESIGN §2c and §2c.1): pure, leaf-up radii with HOUSE_R held, R = max(2.2r, n·reach·1.15/π),
+// children on the parent's rim at R + 0.6·r all round it except the ±35° attachment arc, terraces of 0.35 m, no two
+// plates of the city overlapping, foundries and yards on the city plate, and
 // the 5,000-node city under 50 ms. layoutWorld (unchanged) keeps its beacon test.
 
 import { describe, expect, test } from 'vitest';
 import type { NodeView } from '../../src/engine/contract/state.ts';
-import { ARC, attachPoint, f, HOUSE_R, layoutBulbs, rimPoint, yawToward, type Plate } from '../../src/engine/layout/layoutBulbs.ts';
+import { ATTACH, attachPoint, HOUSE_R, layoutBulbs, rimPoint, seatRadius, TERRACE, yawToward, type Plate } from '../../src/engine/layout/layoutBulbs.ts';
 import { layoutWorld, WORLD_RADIUS } from '../../src/engine/layout/layoutWorld.ts';
 import { loadTrace } from '../helpers/assets.ts';
 
@@ -36,9 +37,12 @@ describe('layoutBulbs', () => {
     const plates = [...l.plates.values()];
     for (const p of plates.filter((x) => x.stage === 'House')) expect(p.r).toBe(HOUSE_R);
     const street = plates.find((p) => p.stage === 'Street')!;
-    expect(street.r).toBeCloseTo(HOUSE_R / f((8 * 360) / 200), 9); // arc-confined: n_eff = n · 360 / 200
+    expect(street.r).toBeCloseTo((8 * HOUSE_R * 1.15) / Math.PI, 9);   // 19.0 m for eight houses (§2c.1)
+    expect(layoutBulbs(city(1, 6)).plates.get(1001)!.r).toBeCloseTo(2.2 * HOUSE_R, 9); // 14.3 m for six: 2.2·r governs
     const root = l.plates.get(l.root!)!;
-    expect(root.r).toBeCloseTo(street.r / f(6), 9);
+    expect(root.r).toBeCloseTo(seatRadius(6, street.r, street.r + 1.6 * HOUSE_R), 9);
+    for (const p of plates) expect(p.top - p.base).toBeCloseTo(p.parent === null ? TERRACE : TERRACE, 9);
+    expect(l.plates.get(1001)!.base).toBeCloseTo(root.top, 9);
     for (const p of plates) {
       if (p.parent === null) continue;
       const parent = l.plates.get(p.parent)!;
@@ -48,27 +52,28 @@ describe('layoutBulbs', () => {
     }
   });
 
-  test("grandchildren bud within ±100° of their parent's outward direction; siblings never overlap", () => {
+  test('grandchildren bud all round their rim but the ±35° facing their parent; no two plates of the city overlap', () => {
     const l = layoutBulbs(city(6, 8));
     const plates = [...l.plates.values()];
     for (const h of plates.filter((p) => p.stage === 'House')) {
       const s = l.plates.get(h.parent!)!;
-      expect(Math.abs(wrap(angleFrom(h, s) - s.theta))).toBeLessThanOrEqual(ARC + 1e-9);
+      const toParent = s.theta + Math.PI; // the street's parent lies back along its own outward direction
+      expect(Math.abs(wrap(angleFrom(h, s) - toParent))).toBeGreaterThanOrEqual(ATTACH - 1e-9);
     }
-    const byParent = new Map<number, Plate[]>();
-    for (const p of plates) if (p.parent !== null) byParent.set(p.parent, [...(byParent.get(p.parent) ?? []), p]);
-    for (const kids of byParent.values()) {
-      for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
-        const [a, b] = [kids[i], kids[j]];
-        expect(Math.hypot(a.cx - b.cx, a.cz - b.cz), `${a.id}/${b.id}`).toBeGreaterThanOrEqual(0.9 * (a.r + b.r));
-      }
+    const nonRoot = plates.filter((p) => p.parent !== null);
+    for (let i = 0; i < nonRoot.length; i++) for (let j = i + 1; j < nonRoot.length; j++) {
+      const [a, b] = [nonRoot[i], nonRoot[j]];
+      if (a.parent === b.id || b.parent === a.id) continue; // a bulb overlaps its own parent by design
+      expect(Math.hypot(a.cx - b.cx, a.cz - b.cz), `${a.id}/${b.id}`).toBeGreaterThanOrEqual(0.98 * (a.r + b.r));
     }
   });
 
-  test('satellites sit in the arc gaps of a city rim, foundry and yard alternating; a house run has none', () => {
+  test('foundries and yards stand on the city plate between the streets, alternating; a house run has none', () => {
     const l = layoutBulbs(city(6, 8));
     expect(l.satellites).toHaveLength(6);
     expect(l.satellites.map((s) => s.kind)).toEqual(['foundry', 'yard', 'foundry', 'yard', 'foundry', 'yard']);
+    const root = l.plates.get(l.root!)!;
+    for (const s of l.satellites) expect(Math.hypot(s.cx, s.cz) + s.r).toBeLessThanOrEqual(root.r);
     expect(layoutBulbs(trace.house[0].state.nodes).satellites).toHaveLength(0);
   });
 

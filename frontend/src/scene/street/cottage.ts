@@ -4,7 +4,6 @@
 // and a brass-capped chimney pot on the ridge at x = −1.0 that glows with heat. House-local metres, as the room.
 
 import * as THREE from 'three';
-import { PLATE_TOP } from '../../engine/layout/layoutBulbs.ts';
 import type { NodeStatus } from '../../engine/contract/state.ts';
 
 const flat = (color: string, extra: THREE.MeshLambertMaterialParameters = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra });
@@ -14,8 +13,6 @@ const M = {
   roof: flat('#7d4a34'), door: flat('#4a3525'), brass: flat('#a8842e'), pot: flat('#3e3a34'), step: flat('#3e2d1f'),
 };
 const EAVES = 3.2, RIDGE = 1.6;
-/** The house plate's top: the plate is the plinth (DESIGN §2c); the room and the cottage both stand on it. */
-export const PLINTH_TOP = PLATE_TOP.House;
 export const SLOT_LOCAL = new THREE.Vector3(4.13, 1.1, 0.0);
 
 /** Shared geometries: six cottages or sixty, one set of buffers. */
@@ -46,7 +43,7 @@ export function buildCottage(id: number): Cottage {
   const group = new THREE.Group();
   group.name = `cottage-${id}`;
   const house = new THREE.Group();
-  house.position.y = PLINTH_TOP;
+  house.position.y = 0; // the group stands at the house plate's top (a terrace, DESIGN §2c.1)
   group.add(house);
   const body = new THREE.Mesh(G.body, M.wall);
   body.castShadow = body.receiveShadow = true;

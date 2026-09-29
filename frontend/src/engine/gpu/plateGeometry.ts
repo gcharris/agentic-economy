@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 
 export const PLATE_SEGMENTS = 96; // §7.3 says 48; 96 keeps the 27-cycle octave of the coastline from aliasing
-const BEVEL_IN = 0.9, BEVEL_Y = 0.8;
+const BEVEL_IN = 0.9, BEVEL_Y = 0.72; // a 0.25 m wall and a bevel on a 0.35 m terrace (DESIGN §2c.1)
 
 export function plateGeometry(n = PLATE_SEGMENTS): THREE.BufferGeometry {
   const pos: number[] = [], nrm: number[] = [], ang: number[] = [], rho: number[] = [], side: number[] = [], idx: number[] = [];

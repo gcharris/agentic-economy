@@ -7,25 +7,22 @@
 
 import * as THREE from 'three';
 import type { SceneBand, SceneContext, SceneEvent } from '../../app/App.ts';
-import { attachPoint, type Plate } from '../../engine/layout/layoutBulbs.ts';
+import { attachPoint } from '../../engine/layout/layoutBulbs.ts';
 import { PULSE_KIND } from '../../engine/store/clips.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import { buildClearinghouse, flareAt, setFlare, type Clearinghouse } from './clearinghouse.ts';
-import { buildFoundry, buildLanterns, buildYard } from './dressing.ts';
+import { buildFoundry, buildTubeTrees, buildYard } from './dressing.ts';
 import { buildTube, setFill, type Tube } from './tubes.ts';
 
 export const CITY_VISIBLE_ABOVE = 2.5;
-const GOLD2 = new THREE.Color('#b98626'), EMBER = new THREE.Color('#c95140'), OFF = new THREE.Color('#000000');
 
 export class CityBand implements SceneBand {
   readonly stage = 3 as const;
   readonly group = new THREE.Group();
   hall: Clearinghouse | null = null;
   readonly tubes: Tube[] = [];
-  lanterns: THREE.InstancedMesh | null = null;
   /** The last NETTED: its start and gross (the tubes' width). */
   netted: { t0: number; tick: number; gross: number } | null = null;
-  private lanternCells: { id: number; street: number | null }[] = [];
   private ctx!: SceneContext;
   private layoutKey = '';
 
@@ -44,38 +41,24 @@ export class CityBand implements SceneBand {
     this.hall = null;
     const root = layout.root === null ? undefined : layout.plates.get(layout.root);
     if (!root || root.stage !== 'City') return; // the city band draws a city; a house or street run has none
-    this.hall = buildClearinghouse();
+    this.hall = buildClearinghouse(root.top);
     this.hall.group.position.set(root.cx, 0, root.cz);
     this.group.add(this.hall.group);
-    const houses: Plate[] = [];
     for (const p of layout.plates.values()) {
-      if (p.stage === 'Street' && p.parent === root.id) { // a tube from the street's attach point on the rim to the dome
-        const t = buildTube(attachPoint(p, root), { x: root.cx, z: root.cz });
-        this.tubes.push(t);
-        this.group.add(t.group);
-      }
-      if (p.stage === 'House') houses.push(p);
+      if (p.stage !== 'Street' || p.parent !== root.id) continue;
+      // A tube from the street's attach point on the rim to the dome, with trees along it.
+      const at = attachPoint(p, root);
+      const t = buildTube(at, { x: root.cx, z: root.cz });
+      t.group.position.y += root.top;
+      this.tubes.push(t);
+      this.group.add(t.group, buildTubeTrees(at, { x: root.cx, z: root.cz }, root.top, 18));
     }
-    this.lanternCells = houses.map((h) => ({ id: h.id, street: h.parent }));
-    this.lanterns = buildLanterns(houses);
-    this.group.add(this.lanterns);
-    for (const s of layout.satellites) this.group.add(s.kind === 'foundry' ? buildFoundry(s) : buildYard(s));
+    for (const s of layout.satellites) this.group.add(s.kind === 'foundry' ? buildFoundry(s, root.top) : buildYard(s, root.top));
   }
 
   onFrame(frame: Frame): void {
     const { store } = this.ctx;
     if (store.layout.key !== this.layoutKey) { this.layoutKey = store.layout.key; this.rebuild(); }
-    // Street lanterns: a state read each tick. Gold-2 at rest, ember while any house on the street is halted, off when packed.
-    if (this.lanterns) {
-      const halted = new Set<number>();
-      for (const l of this.lanternCells) if (l.street !== null && store.node(l.id)?.status === 'halted') halted.add(l.street);
-      this.lanternCells.forEach((l, i) => {
-        const n = store.node(l.id);
-        const c = n?.status === 'packed' || n?.status === 'partitioned' ? OFF : l.street !== null && halted.has(l.street) ? EMBER : GOLD2;
-        this.lanterns!.setColorAt(i, c);
-      });
-      if (this.lanterns.instanceColor) this.lanterns.instanceColor.needsUpdate = true;
-    }
     void frame;
   }
 

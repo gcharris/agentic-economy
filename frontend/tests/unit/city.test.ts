@@ -28,7 +28,7 @@ test('scenario 3: the city opens at band 3 without a zoom call, and NETTED plays
   expect(tiles.filter((t) => t.kind === 3)).toHaveLength(1);           // the city plate: the Clearinghouse at its centre
   expect(tiles.filter((t) => t.kind === 2)).toHaveLength(2);           // two street plates
   expect(tiles.filter((t) => t.kind === 1)).toHaveLength(6);           // six house plates
-  expect(tiles.length).toBe(1 + 2 + 6 + layout.satellites.length);
+  expect(tiles.length).toBe(1 + 2 + 6);                                 // foundries and yards are buildings on the plate
   expect(app.tiles.mesh!.count).toBe(tiles.length);                    // one InstancedMesh, one draw (plus the specks)
   expect(city.tubes).toHaveLength(2);
   expect(tiles.filter((t) => t.kind <= 3).every((t) => t.slot >= 0)).toBe(true);

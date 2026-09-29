@@ -13,7 +13,6 @@ import type { Frame } from '../../engine/source/EngineSource.ts';
 import type { Band } from '../../engine/store/bus.ts';
 import type { Store } from '../../engine/store/Store.ts';
 import { BANDS, dolly, heightAt, YAW_DEG } from './bands.ts';
-import { PLINTH_TOP } from '../street/cottage.ts';
 
 const HALF_LIFE = 0.12;
 const DEG = Math.PI / 180;
@@ -76,7 +75,7 @@ export class AltitudeRig {
     const plate = id === null ? undefined : store.layout.plateOf(id);
     if (plate) {
       if (id !== this.focusId) { this.focusId = id; this.snap = true; }
-      this.origin.set(plate.cx, PLINTH_TOP, plate.cz);
+      this.origin.set(plate.cx, plate.top, plate.cz);
       this.frameYaw = store.layout.yawOf(plate.id);
     }
     const layout = store.layout.current;

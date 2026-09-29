@@ -2,14 +2,13 @@
 // its lantern --paper toward --gold. The dome flares --gold in the NETTED pulse's second beat (240–400 ms).
 
 import * as THREE from 'three';
-import { PLATE_TOP } from '../../engine/layout/layoutBulbs.ts';
 
 export interface Clearinghouse { group: THREE.Group; dome: THREE.MeshLambertMaterial; lantern: THREE.MeshLambertMaterial; top: number }
 
-export function buildClearinghouse(): Clearinghouse {
+/** `base`: the city plate's top (a terrace). */
+export function buildClearinghouse(base: number): Clearinghouse {
   const g = new THREE.Group();
   g.name = 'clearinghouse';
-  const base = PLATE_TOP.City;
   const plinth = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.6, 2.0, 32), new THREE.MeshLambertMaterial({ color: '#4a3826' }));
   plinth.position.y = base + 1.0;
   plinth.castShadow = plinth.receiveShadow = true;

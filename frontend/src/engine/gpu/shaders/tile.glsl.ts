@@ -45,8 +45,7 @@ ${TRUTH_CHUNK}
 // Packed (WebGL allows 16 attribute slots): vtx = (angle, rho, y, part: 0 cap, 1 bevel, 2 wall);
 // iA = (centre x, centre z, radius, height); iB = (slot, kind, seed, street halted); iC = (dye rgb, sage time).
 in vec4 vtx;
-in vec4 iA, iB, iC;
-in float aIndex;
+in vec4 iA, iB, iC, iD; // iD = (base: the parent's top, speck index, –, –): terraces, DESIGN §2c.1
 // Per-instance values are flat: interpolating a constant across a long fan triangle is not exact on every GPU, and a
 // slot that arrives as 12.99999 reads the wrong node's texel (it drew wedges across the city plate).
 out vec2 vUvC, vWorld;
@@ -65,7 +64,7 @@ float rimNoise(float a, float cycles, float seed) { return vnoise(vec2(cos(a), s
 
 void main() {
   float ang = vtx.x, rho = vtx.y, side = vtx.w > 0.5 ? 1.0 : 0.0;
-  vec2 aCenter = iA.xy; float aRadius = iA.z, aHeight = iA.w;
+  vec2 aCenter = iA.xy; float aRadius = iA.z, aTop = iA.w, aBase = iD.x, aIndex = iD.y;
   float aSlot = iB.x, aKind = iB.y, aSeed = iB.z;
   vec3 position = vec3(0.0, vtx.z, 0.0);
   vec3 normal = vtx.w < 0.5 ? vec3(0.0, 1.0, 0.0) : vtx.w < 1.5 ? normalize(vec3(cos(ang) * 0.2, 0.1, sin(ang) * 0.2)) : vec3(cos(ang), 0.0, sin(ang));
@@ -85,14 +84,14 @@ void main() {
   float dist = aRadius * (1.1 + 0.18 * h);
   float size = aRadius * (0.03 + 0.04 * h) * k;
   vec2 u = vec2(cos(ang), sin(ang)) * rho;
-  vec3 p = vec3(u.x * size + cos(a0) * dist, position.y * aHeight * 0.6, u.y * size + sin(a0) * dist);
+  vec3 p = vec3(u.x * size + cos(a0) * dist, aBase + position.y * (aTop - aBase) * 0.6, u.y * size + sin(a0) * dist);
   vUvC = u * 0.5;
 #else
   float disp = 0.05 * rimNoise(ang, 3.0, aSeed) * smoothstep(0.02, 0.12, fog)
              + 0.03 * rimNoise(ang, 9.0, aSeed + 0.37) * smoothstep(0.30, 0.40, fog)
              + 0.015 * rimNoise(ang, 27.0, aSeed + 0.71) * smoothstep(0.60, 0.70, fog);
   float rr = rho >= 0.9 && !packed ? rho * (1.0 + fog * uEdgeGain * disp) : rho;       // a packed plate is one smooth circle
-  vec3 p = vec3(cos(ang) * rr * aRadius, position.y * aHeight, sin(ang) * rr * aRadius);
+  vec3 p = vec3(cos(ang) * rr * aRadius, aBase + position.y * (aTop - aBase), sin(ang) * rr * aRadius);
   vUvC = unit * 0.5;
 #endif
   vec3 w = vec3(aCenter.x + p.x, p.y, aCenter.y + p.z);
@@ -116,7 +115,7 @@ in vec3 vNormalW;
 
 vec3 kindColour(float kind) {
   return kind < 1.5 ? vec3(0.169, 0.129, 0.090)        // 1 house plate: --plinth
-       : kind < 2.5 ? vec3(0.612, 0.541, 0.427)        // 2 street plate: limestone, a shade under the city's
+       : kind < 2.5 ? vec3(0.612, 0.541, 0.427)        // 2 street plate: its commons are tinted in main()
        : kind < 3.5 ? vec3(0.659, 0.592, 0.478)        // 3 city plate: warm limestone #a8977a (DESIGN §2b)
        : kind < 4.5 ? vec3(0.071, 0.055, 0.039)        // 4 country / world: --baize
        : kind < 5.5 ? vec3(0.290, 0.310, 0.341)        // 5 data yard: slate #4a4f57
@@ -164,6 +163,19 @@ void main() {
   bool bevel = vSide > 0.5;
   // The rim: a house or street plate wears its street's dye (§2b.3); the city plate an oak edge; dressing its own.
   if (bevel) col = vKind < 2.5 ? lin(vDye) : vKind < 3.5 ? lin(vec3(0.353, 0.259, 0.184)) : col * 0.72;
+  // A plate carries its own life (§2c.1.3): a street's commons is turf tinted with its dye; the city plate is paved in
+  // rings round the dome.
+  if (!bevel && vKind > 1.5 && vKind < 2.5) {
+    vec3 turf = mix(lin(vec3(0.42, 0.47, 0.27)), lin(vDye), 0.35);
+    float mottle = hash12(floor(vWorld * 0.8)) * 0.08;
+    col = turf * (0.92 + mottle);
+  }
+  if (!bevel && vKind > 2.5 && vKind < 3.5) {
+    float d = length(vWorld - vCenter);
+    float band = step(0.5, fract(d / 1.6)) * (1.0 - smoothstep(10.0, 16.0, d));
+    col = mix(col, col * 0.86, band);
+    col = mix(col, lin(vec3(0.353, 0.259, 0.184)), (1.0 - smoothstep(0.05, 0.25, abs(d - 16.5))) * 0.6); // a brass-oak edge to the paving
+  }
   if (vSlot >= 0.0) {
     Truth t = fetchTruth(vSlot);
     float phi = visiblePhi(t, vUvC);

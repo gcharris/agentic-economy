@@ -7,17 +7,18 @@ import * as THREE from 'three';
 import type { SceneBand, SceneContext, SceneEvent } from '../../app/App.ts';
 import { isHashMismatch } from '../../engine/contract/events.ts';
 import { normaliseBurn, type NodeId, type NodeStatus } from '../../engine/contract/state.ts';
-import { PLATE_TOP, type Plate } from '../../engine/layout/layoutBulbs.ts';
+import type { Plate } from '../../engine/layout/layoutBulbs.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
-import { buildCottage, setChimney, setLantern, SLOT_LOCAL, PLINTH_TOP, type Cottage } from './cottage.ts';
+import { buildCottage, setChimney, setLantern, SLOT_LOCAL, type Cottage } from './cottage.ts';
 import { BEAT_EDGES, beatsStart, Courier, courierAt, STATIC, staticAt, type Run } from './couriers.ts';
-import { buildKerb, contactShadow, meetingStone } from './kerb.ts';
+import { buildCommons, lanternMesh, meetingStone } from './commons.ts';
 
 /** The street band draws up to the city's dissolve edge; the city takes over above it. */
-export const STREET_VISIBLE_UP_TO = 2.5;
+export const STREET_VISIBLE_UP_TO = 3.5; // the street's life stays in the city view (§2c.1: roof and lantern)
 /** The focused house's body appears as the lid goes on (DESIGN §10: [1.35, 1.65]). */
 export const LID_ON_AT = 1.5;
 const COURIER_CAP = 64;
+const GOLD2 = new THREE.Color('#d4a755'), EMBER = new THREE.Color('#c95140'), OFF = new THREE.Color('#1c1610');
 const SLOT_REST = new THREE.Color('#b98626'), CYAN = new THREE.Color('#2aa5b8'), GOLD_LIGHT = new THREE.Color('#f2cb7a'), INK3 = new THREE.Color('#8a7a64');
 
 interface HouseState { status: NodeStatus; heat: number; delivered: number; staticAt: number; settledAt: number }
@@ -30,6 +31,8 @@ export class StreetBand implements SceneBand {
   readonly couriers: Courier[] = [];
   private readonly houses = new Map<NodeId, HouseState>();
   private readonly plates = new Map<NodeId, Plate>();
+  private lanterns: THREE.InstancedMesh | null = null;
+  private posts: { street: number; index: number }[] = [];
   private readonly fx = new THREE.Group();
   private ctx!: SceneContext;
   private layoutKey = '';
@@ -47,34 +50,36 @@ export class StreetBand implements SceneBand {
     const { store } = this.ctx;
     const layout = store.layout.current;
     for (const c of this.cottages.values()) this.group.remove(c.group);
-    this.cottages.clear(); this.plates.clear();
+    this.cottages.clear(); this.plates.clear(); this.posts = [];
     for (const o of [...this.group.children]) if (o !== this.fx) this.group.remove(o);
-    // Each street plate: its kerb along the rim between its houses, and a soft contact shadow under it.
     const housesOf = new Map<NodeId, Plate[]>();
     for (const p of layout.plates.values()) {
       if (p.stage !== 'House' || p.parent === null) continue;
       const l = housesOf.get(p.parent); if (l) l.push(p); else housesOf.set(p.parent, [p]);
     }
+    // Each street plate's life: kerb ring, lantern posts, paths to the centre stone, trees (commons.ts).
+    this.lanterns = lanternMesh([...housesOf.values()].reduce((n, h) => n + h.length, 0));
+    let next = 0;
     for (const [sid, houses] of housesOf) {
       const street = layout.plates.get(sid);
       if (!street) continue;
-      this.group.add(buildKerb(street, houses));
-      const sh = contactShadow(street.r * 1.12, 0.35);
-      sh.position.set(street.cx, 0.004, street.cz);
-      this.group.add(sh);
+      const c = buildCommons(street, houses, this.lanterns, next);
+      next += c.posts.length;
+      this.posts.push(...c.posts);
+      this.group.add(c.group);
     }
-    // A cottage on every house plate, its Door (and Letter Slot) facing the street's centre.
+    this.lanterns.count = next;
+    this.lanterns.instanceMatrix.needsUpdate = true;
+    this.group.add(this.lanterns);
+    // A cottage on every house plate, its Door (and Letter Slot) facing the street's centre stone.
     for (const [id, p] of layout.plates) {
       if (p.stage !== 'House') continue;
       const c = buildCottage(id);
-      c.group.position.set(p.cx, 0, p.cz);
+      c.group.position.set(p.cx, p.top, p.cz);
       c.group.rotation.y = store.layout.yawOf(id);
       this.cottages.set(id, c);
       this.plates.set(id, p);
       this.group.add(c.group);
-      const sh = contactShadow(p.r * 1.15, 0.45);
-      sh.position.set(p.cx, PLATE_TOP.Street + 0.006, p.cz);
-      this.group.add(sh);
     }
   }
 
@@ -89,6 +94,18 @@ export class StreetBand implements SceneBand {
       h.heat = n.status === 'waiting_at_door' ? 0 : normaliseBurn(n.burned_this_tick) / Math.max(1e-6, store.burnRef);
       this.houses.set(id, h);
     }
+    // Street lanterns: a state read each tick. Gold-2 at rest, ember while any house on the street is halted, off when packed.
+    if (this.lanterns && this.posts.length) {
+      const halted = new Set<NodeId>(), packed = new Set<NodeId>();
+      for (const p of this.plates.values()) {
+        const st = store.node(p.id)?.status;
+        if (p.parent === null) continue;
+        if (st === 'halted') halted.add(p.parent);
+        if (st === 'packed' || st === 'partitioned') packed.add(p.parent);
+      }
+      for (const post of this.posts) this.lanterns.setColorAt(post.index, packed.has(post.street) ? OFF : halted.has(post.street) ? EMBER : GOLD2);
+      if (this.lanterns.instanceColor) this.lanterns.instanceColor.needsUpdate = true;
+    }
     void frame;
   }
 
@@ -96,7 +113,7 @@ export class StreetBand implements SceneBand {
   private slotWorld(id: NodeId): THREE.Vector3 | null {
     const c = this.cottages.get(id);
     if (!c) return null;
-    return SLOT_LOCAL.clone().setY(PLINTH_TOP).add(new THREE.Vector3(0.5, 0, 0)).applyAxisAngle(new THREE.Vector3(0, 1, 0), c.group.rotation.y).add(c.group.position);
+    return SLOT_LOCAL.clone().setY(0).add(new THREE.Vector3(0.5, 0, 0)).applyAxisAngle(new THREE.Vector3(0, 1, 0), c.group.rotation.y).add(c.group.position);
   }
 
   onEvent(se: SceneEvent): void {
@@ -107,7 +124,7 @@ export class StreetBand implements SceneBand {
       case 'PROPOSED': {
         if (ev.kind !== 'hire_service') break;
         const a = this.plates.get(ev.from), b = this.plates.get(ev.to);
-        const street = a?.parent == null ? undefined : this.ctx.store.layout.plateOf(a.parent);
+        const street = a?.parent == null ? undefined : this.ctx.store.layout.plateOf(a.parent); // the centre stone
         const start = this.slotWorld(ev.from);
         if (!a || !b || !start || !street) break;
         this.runs.set(ev.envelope, { envelope: ev.envelope, from: ev.from, to: ev.to, start, meet: meetingStone(street, a, b), t0, outcome: null });
