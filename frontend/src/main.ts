@@ -54,8 +54,11 @@ async function main(): Promise<void> {
   document.body.dataset.quality = quality;
   const source = await makeSource(q);
   const renderer = new ThreeRenderer(document.querySelector<HTMLCanvasElement>('#stage')!, quality, q.get('stats') === '1');
+  // Manual clock: a virtual app clock that render(at) advances, so a take drawn at 1/24 s per frame (however long each
+  // frame takes to draw) keeps frames, clips and folds on one timeline.
+  let clockT = performance.now() / 1000;
   const app = await App.boot({
-    source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion,
+    source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion, now: manual ? () => clockT : undefined,
     lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand()],
   });
   if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
@@ -81,7 +84,7 @@ async function main(): Promise<void> {
       pending: () => app.rig.pending?.band ?? null,
       /** DOM-free commands for scripted takes (a live source only): approve, reject, top up, zoom. */
       command: (c: Parameters<typeof app.command>[0]) => app.command(c),
-      render: (at?: number) => { app.renderFrame(at); return true; },
+      render: (at?: number) => { if (at !== undefined) clockT = at; app.renderFrame(clockT); return true; },
       /** Where a point in the focused house's local metres projects on screen. */
       locatePoint: (x: number, y: number, z: number) => {
         const w = new Vector3(x, y, z).applyAxisAngle(new Vector3(0, 1, 0), app.rig.frameYaw).add(app.rig.origin);
