@@ -137,3 +137,15 @@ Cloud session `session_017K6GES9PnR23AwS2vThJFM` (2026-09-28 21:02 to 2026-09-29
 ## 8. Provenance you will be asked about
 
 `docs/workflow/facts.md` lists 62 facts with file and quote, and 17 discrepancies between the source documents, including: the foundations report's benchmark-3 table (33.0/467.0) vs the JSON (60.0/430.0); benchmark-2 intermediate values in the report vs the JSON; the guild's "1,593.8 credits reclaimed" being phantom (added to the runway, never removed); the kernel's door benchmark asserting 0.0 idle burn rather than measuring it (the engine's `law_4` test actually measures it); arithmetic slips in `ENERGETIC_RUNWAY_EXPERIMENTS.md`. Cite the JSON, not the report tables.
+
+## 11. Operating rules for the build (the Director, 2026-09-29)
+
+Budget: this is a side project; keep it inside 10–20 % of the weekly subscription. The USD 252.78 cloud grant is spent.
+
+1. **Model and effort:** Claude Opus 5.5 at effort `high`. Not Fable (2.5× the price per token for implementation the specs already decide), not `xhigh`.
+2. **No multi-agent workflows, ultracode off.** Build in the main session; at most one review pass at the end. The workflows of 2026-09-28 cost most of the grant (the raw record is in `docs/workflow/cloud-session-2026-09-29/`).
+3. **Spend checkpoints:** the session's own record (`get_session` → `external_metadata.usage.cost_usd`, `rate_limit_info`) is the meter. The Director sets a ceiling per session; stop at 80 % of it, commit, push, report.
+4. **Keep the context small:** small tool outputs, never re-read a file already read, no full-file dumps of trace.json or the specs.
+5. **Order of work:** (a) the figure check in code (jev's finding): a script run by `presentation/build.py` that fails when a template figure disagrees with the JSON record, seeded with the discrepancies in `docs/workflow/facts.md` (D1: foundations 33.0/467.0 vs JSON 60.0/430.0; D2: gen 5/10/15 87.2/76.0/65.5 vs 88.7/74.4/63.6; D6: 340 vs 150 is 190 not 210, 10 vs 3 is 3.33× not 2.3×, 1.17/0.56 is 2.09 not 1.9); copy agents stay for prose only. (b) The room (Stage 1) with the Door flow and the HUD: the thumbnail and the moral centre. (c) The street. (d) The city with the `NETTED` pulse. (e) Atlas, design page, recording plan last; deferrable.
+6. **Stay in the cloud environment:** it has the Rust toolchain with the wasm target, Node 22, headless Chromium with software WebGL for screenshots, and both repositories. The Vault route is unreachable here without the Director key in the environment settings; the frontend does not need it.
+7. **Sharing:** a public demo (`serve` on Cloud Run plus the built frontend as a static site) is Controlled work with a docket; the shape is in `../frontend/ARCHITECTURE.md` §12 and `serve` already honours `PORT` and `--bind`.
