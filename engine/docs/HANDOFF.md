@@ -145,7 +145,7 @@ Live cost: the demo and every take run the deterministic engine locally (the was
 
 Cloud session `session_017K6GES9PnR23AwS2vThJFM` (2026-09-28 21:02 to 2026-09-29): five subagent workflows, 50 agent runs, about 7.3M subagent tokens; the session's own record reports USD 252.78 of usage on the overage pool, with the seven-day limit in `rejected` state from about 23:41 UTC on 28 September until 11:00 UTC on 29 September. Two workflows (the Vault repair round and the frontend scaffold) died on that limit; their partial work is the two WIP checkpoint commits. `TECH-STACK-DECISION.md` records the previous local session's judges stopping on the same limit the day before.
 
-Session `session_01XfouYeTaaQi2P4RF3mnWhV` (2026-09-29, Opus 5.5 at high, no workflows, no subagents): §11.5 (a) and (b). The session record exposes no `cost_usd`, only `rate_limit_info` (five-hour window, `allowed`), so spend was not measurable from inside the session.
+Session `session_01XfouYeTaaQi2P4RF3mnWhV` ("Game build #2", 2026-09-29 11:50 to 18:34 UTC, Opus 5.5 at high, no workflows, no subagents): §11.5 (a) to (e) through the demo's completion (b2536b6). Read from the lab session, its record's `cost_usd` is USD 55.52 (cache reads 169.5M tokens, cache writes 1.2M, output 591k; five-hour window, never in overage). The lab session (`session_017K6GES9PnR23AwS2vThJFM`, Fable 5.1: design judgement, review of every milestone's stills, the pastes) closes at USD 303.35 on its own record, the USD 252.78 above included. The Director's rule for anything further: at most 10–20 % of the weekly 20x Max allowance, Opus 5.5 at high, no workflows.
 
 ## 8. Provenance you will be asked about
 
