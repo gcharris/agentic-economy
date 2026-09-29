@@ -11,10 +11,9 @@
 //!    courier drops it.
 //! 5. The Letter Slot keeps the record: `Settled` and `Reverted`, envelope
 //!    by envelope.
-//!
-//! Two tests at the end are `#[ignore]`d on purpose. They assert what doc 04
-//! §3 asks of the Lock phase and the engine does not yet do; they are the
-//! regression tests for that fix, ready to un-ignore.
+//! 6. The Lock phase binds and reserves (doc 04 §3): a lock that is not the
+//!    verified price reverts (ledger #4), and two swaps one purse cannot
+//!    both cover do not both pass the gate (ledger #11).
 
 use context_engine::prelude::*;
 use std::collections::BTreeMap;
@@ -67,6 +66,8 @@ fn done(ctx: DraftContext) -> DraftFuture {
 /// The engine's own `Stage2LetterSlot`, behind a shared handle so a test can
 /// read its `history` after the engine has boxed it as a trait object. The
 /// engine sees only the trait; the verdicts are the real slot's verdicts.
+/// Both hooks are forwarded: the engine calls `verify_batch`, and the
+/// slot's per-batch lock map (ledger #11) lives there, not in `verify`.
 struct SharedSlot(Arc<Mutex<Stage2LetterSlot>>);
 
 impl VerificationStrategy for SharedSlot {
@@ -75,6 +76,9 @@ impl VerificationStrategy for SharedSlot {
     }
     fn verify(&mut self, env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Verdict {
         self.0.lock().unwrap().verify(env, view)
+    }
+    fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {
+        self.0.lock().unwrap().verify_batch(envs, view)
     }
     fn describe(&self) -> String {
         self.0.lock().unwrap().describe()
@@ -570,12 +574,10 @@ impl Agent for Cheat {
 }
 
 /// Doc 05 Stage 2: "Both verify the exact payload size and signature." The
-/// lock amount must be the amount the verified hash commits to. Today the
-/// gate compares only `believed_price_hash` to the truth and never checks
-/// that `believed_price` and `requested_liquidity` are the price that hash
-/// names, so a 1.0 lock with a 10.0 hash settles for 1.0.
+/// lock amount must be the amount the verified hash commits to: a 1.0 lock
+/// under a 10.0 hash is a revert, not a settle for 1.0. Regression test for
+/// ledger #4 (`dvp_binding()`).
 #[test]
-#[ignore = "documents a DvP gap: the verified hash is not bound to the locked amount; un-ignore with the fix in Stage2LetterSlot::verify"]
 fn dvp_binds_the_lock_amount_to_the_verified_price() {
     let mut e = street_of(40, 2, || Cheat);
     let slot = install_slot(&mut e);
@@ -613,11 +615,10 @@ impl Agent for DoubleHirer {
 
 /// Doc 04 §3 step 1: "Sender locks Liquidity." A lock reserves. Two swaps
 /// of 10 from a purse of 15 must produce one settle and one revert *at the
-/// gate*. Today the Lock phase only reads the balance, so both pass the
-/// slot (its ledger says two `Settled`) and the second fails later in
-/// Commit as "stale belief at commit": the gate's verdict was not final.
+/// gate*, not a second `Settled` that later fails in Commit as "stale
+/// belief at commit". Regression test for ledger #11 (the per-batch lock
+/// map in `Stage2LetterSlot::verify_batch`).
 #[test]
-#[ignore = "documents a DvP gap: the Lock phase reads the balance but reserves nothing; un-ignore when the slot tracks per-initiator locks within a tick"]
 fn dvp_lock_reserves_liquidity_so_a_second_swap_cannot_pass_the_gate() {
     let mut e = street(cfg(41), 2, 500.0, 1);
     let slot = install_slot(&mut e);

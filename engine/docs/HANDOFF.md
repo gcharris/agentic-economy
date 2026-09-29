@@ -18,7 +18,7 @@ cargo test --no-fail-fast
   tests/golden_invariant.rs  14 passed
   tests/law_1_forgery.rs      5 passed
   tests/serve_smoke.rs        1 passed
-  tests/stage2_letter_slot.rs 7 passed, 3 FAILED, 2 ignored (by design)
+  tests/stage2_letter_slot.rs 9 passed, 3 FAILED
   tests/stage3_clearinghouse  6 passed, 2 FAILED
   tests/stage4_high_court.rs  7 passed, 1 FAILED
   tests/stage5_recursive_stark 8 passed
@@ -80,9 +80,9 @@ cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown
 
 | test | why it fails now | change |
 |---|---|---|
-| stage2 `the_letter_slot_history_records_settled_and_reverted_phases` (line ~448) | `AtomicDvP.locked_compute` now records `tax_paid` (the lane itself flagged the 4× overstatement) | assert `(d.locked_compute - HIRE_WEIGHT * 0.25).abs() < 1e-9` |
-| stage2 `an_overdue_house_asks_the_oracle_itself_and_settles_next_tick` (~386) | oracle trigger is now `generation + 2 >= MAX_UNCALIBRATED_HANDOVERS`, so neighbours at generation ≥ 3 also sync | set the neighbours' `epistemics.generation = 0` before the step, or assert only on house A |
-| stage2 `a_street_wide_stale_price_trips_the_high_court` (~499) | the court no longer counts hash-mismatch reverts (the lane's flagged flaw, fixed) | invert: `assert!(!r.rolled_back)`, no injunctions, truth unchanged |
+| stage2 `the_letter_slot_history_records_settled_and_reverted_phases` (line ~452) | `AtomicDvP.locked_compute` now records `tax_paid` (the lane itself flagged the 4× overstatement) | assert `(d.locked_compute - HIRE_WEIGHT * 0.25).abs() < 1e-9` |
+| stage2 `an_overdue_house_asks_the_oracle_itself_and_settles_next_tick` (~390) | oracle trigger is now `generation + 2 >= MAX_UNCALIBRATED_HANDOVERS`, so neighbours at generation ≥ 3 also sync | set the neighbours' `epistemics.generation = 0` before the step, or assert only on house A |
+| stage2 `a_street_wide_stale_price_trips_the_high_court` (~503) | the court no longer counts hash-mismatch reverts (the lane's flagged flaw, fixed) | invert: `assert!(!r.rolled_back)`, no injunctions, truth unchanged |
 | stage3 `unbacked_net_position_is_slashed_at_ten_percent` (~234) | the Clearinghouse now price-checks (lane recommendation), so a hallucinated 500 is rejected as hash mismatch, not slashed | make A unbacked at the TRUE price: `graph.set_liquidity(a, 3.0)`, remove the 500 belief; expect one `Slashed` of `10 × 0.10 = 1.0` |
 | stage3 `cross_street_pays_1_40_and_same_street_pays_1_25` (~292) | send fee is 10 cr | `assert_eq!(x.tax_paid, 2.5)` |
 | stage4 `a_systemic_failure_trips_the_circuit_breaker` (~103) | court reason text changed | check `reason.contains("71%") && reason.contains("7 liquidity verdicts")` |
