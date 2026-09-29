@@ -2,6 +2,9 @@
 """Assemble presentation/index.html from the template, the wasm engine and the recorded trace."""
 import base64, json, pathlib, sys
 here = pathlib.Path(__file__).parent
+import subprocess
+if subprocess.run([sys.executable, str(here / "figure_check.py")]).returncode:  # every printed figure against the JSON record
+    sys.exit("build.py: the figure check failed; fix the template copy, not the check")
 dist = here.parent / "engine/dist/context_engine.wasm"
 target = here.parent / "engine/target/wasm32-unknown-unknown/wasm/context_engine.wasm"
 wasm = dist if dist.exists() else target
