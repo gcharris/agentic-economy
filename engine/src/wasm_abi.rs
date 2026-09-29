@@ -56,6 +56,33 @@ pub extern "C" fn engine_new(scenario: u32, seed: u64, budget: f64, tasks: u32, 
     ENGINE.with(|e| *e.borrow_mut() = Some(engine));
 }
 
+/// A sized city (Stage 3): `streets` × `houses` per street, `budget` and
+/// `tasks` per house, the camera at the city. Scenario 3 of `engine_new` keeps
+/// its 2 × 3 default; this is the video's city (DESIGN §2c.5: about 6 × 8).
+#[no_mangle]
+pub extern "C" fn engine_new_city(
+    streets: u32,
+    houses: u32,
+    budget: f64,
+    tasks: u32,
+    seed: u64,
+    cost_visible: u32,
+) {
+    let config = EngineConfig {
+        seed,
+        cost_visible: cost_visible != 0,
+        ..Default::default()
+    };
+    let engine = scenarios::city(
+        config,
+        streets.max(1) as usize,
+        houses.max(1) as usize,
+        budget,
+        tasks as usize,
+    );
+    ENGINE.with(|e| *e.borrow_mut() = Some(engine));
+}
+
 /// Run one block. Returns the tick number, or 0 if a seat's future could
 /// not complete on this single-threaded host (a seat that waits on a
 /// network wake has no reactor here; the tab is not frozen, the tick is

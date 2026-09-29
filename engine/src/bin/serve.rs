@@ -3,7 +3,8 @@
 //! ```text
 //! cargo run --release --bin serve -- --scenario house --budget 800 --tasks 15 --seed 7 --interval-ms 700 --port 8787
 //! cargo run --release --bin serve -- --scenario street --port 0     # port 0: pick a free port, print it
-//! cargo run --release --bin serve -- --scenario city|country|world   # Stages 3, 4, 5 (fixed shapes; see wasm_abi.rs)
+//! cargo run --release --bin serve -- --scenario city --streets 6 --houses 8   # Stage 3, sized (default 2 × 3)
+//! cargo run --release --bin serve -- --scenario country|world   # Stages 4, 5 (fixed shapes; see wasm_abi.rs)
 //! PORT=8080 serve --bind 0.0.0.0                                       # a hosted run: the port from the environment, all interfaces (no TLS, no auth: put a front door in front)
 //! ```
 //!
@@ -48,6 +49,9 @@ struct Args {
     interval_ms: u64,
     port: u16,
     bind: String,
+    /// `--scenario city` only: streets × houses per street (default 2 × 3, as the wasm's scenario 3).
+    streets: usize,
+    houses: usize,
 }
 
 fn parse_args() -> Args {
@@ -63,6 +67,8 @@ fn parse_args() -> Args {
             .and_then(|v| v.parse().ok())
             .unwrap_or(8787),
         bind: "127.0.0.1".into(),
+        streets: 2,
+        houses: 3,
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -79,6 +85,20 @@ fn parse_args() -> Args {
             }
             "--port" => a.port = it.next().and_then(|v| v.parse().ok()).unwrap_or(a.port),
             "--bind" => a.bind = it.next().unwrap_or(a.bind),
+            "--streets" => {
+                a.streets = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(a.streets)
+                    .max(1)
+            }
+            "--houses" => {
+                a.houses = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(a.houses)
+                    .max(1)
+            }
             _ => {}
         }
     }
@@ -329,7 +349,7 @@ async fn main() {
     };
     let mut engine = match a.scenario.as_str() {
         "street" => street(config, 6, a.budget, a.tasks),
-        "city" => city(config, 2, 3, a.budget, a.tasks),
+        "city" => city(config, a.streets, a.houses, a.budget, a.tasks),
         "country" => forged_country(config, 5, 2, 2, 200.0, 10_000.0).0,
         "world" => world(config, 3, 2),
         _ => house(config, a.budget, a.tasks),

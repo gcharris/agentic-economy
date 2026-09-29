@@ -8,9 +8,11 @@ import { freshEngine } from './assets.ts';
 
 const CODE: Record<ScenarioName, number> = { house: 1, street: 2, city: 3, country: 4, world: 5 };
 
-export function engineSource(scenario: ScenarioName, opts: { seed?: bigint; budget?: number; tasks?: number } = {}): EngineSource {
+export function engineSource(scenario: ScenarioName, opts: { seed?: bigint; budget?: number; tasks?: number; city?: { streets: number; houses: number } } = {}): EngineSource {
   const e = freshEngine();
-  e.x.engine_new(CODE[scenario], opts.seed ?? 7n, opts.budget ?? 800, opts.tasks ?? 15, 1);
+  const x = e.x as typeof e.x & { engine_new_city(s: number, h: number, b: number, t: number, seed: bigint, c: number): void };
+  if (opts.city) x.engine_new_city(opts.city.streets, opts.city.houses, opts.budget ?? 800, opts.tasks ?? 15, opts.seed ?? 7n, 1);
+  else e.x.engine_new(CODE[scenario], opts.seed ?? 7n, opts.budget ?? 800, opts.tasks ?? 15, 1);
   const frames = new Listeners<Frame>(), status = new Listeners<SourceStatus>();
   return {
     kind: 'wasm', drive: 'pull', live: true,

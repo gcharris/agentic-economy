@@ -7,12 +7,11 @@ import * as THREE from 'three';
 import type { SceneBand, SceneContext, SceneEvent } from '../../app/App.ts';
 import { isHashMismatch } from '../../engine/contract/events.ts';
 import { normaliseBurn, type NodeId, type NodeStatus } from '../../engine/contract/state.ts';
-import { toWorld, type Axial } from '../../engine/layout/hex.ts';
-import { houseYaw } from '../../engine/layout/layoutCity.ts';
+import { PLATE_TOP, type Plate } from '../../engine/layout/layoutBulbs.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import { buildCottage, setChimney, setLantern, SLOT_LOCAL, PLINTH_TOP, type Cottage } from './cottage.ts';
 import { BEAT_EDGES, beatsStart, Courier, courierAt, STATIC, staticAt, type Run } from './couriers.ts';
-import { buildKerb, buildRoad, contactShadow, dyeFor, meetingStone } from './kerb.ts';
+import { buildKerb, contactShadow, meetingStone } from './kerb.ts';
 
 /** The street band draws up to the city's dissolve edge; the city takes over above it. */
 export const STREET_VISIBLE_UP_TO = 2.5;
@@ -20,7 +19,6 @@ export const STREET_VISIBLE_UP_TO = 2.5;
 export const LID_ON_AT = 1.5;
 const COURIER_CAP = 64;
 const SLOT_REST = new THREE.Color('#b98626'), CYAN = new THREE.Color('#2aa5b8'), GOLD_LIGHT = new THREE.Color('#f2cb7a'), INK3 = new THREE.Color('#8a7a64');
-const SAGE = new THREE.Color('#6a9a6e');
 
 interface HouseState { status: NodeStatus; heat: number; delivered: number; staticAt: number; settledAt: number }
 
@@ -31,9 +29,7 @@ export class StreetBand implements SceneBand {
   readonly runs = new Map<number, Run>();
   readonly couriers: Courier[] = [];
   private readonly houses = new Map<NodeId, HouseState>();
-  private readonly rims = new Map<NodeId, THREE.MeshLambertMaterial>();
-  private readonly cells = new Map<NodeId, Axial>();
-  private readonly dyes = new Map<NodeId, THREE.Color>();
+  private readonly plates = new Map<NodeId, Plate>();
   private readonly fx = new THREE.Group();
   private ctx!: SceneContext;
   private layoutKey = '';
@@ -51,34 +47,34 @@ export class StreetBand implements SceneBand {
     const { store } = this.ctx;
     const layout = store.layout.current;
     for (const c of this.cottages.values()) this.group.remove(c.group);
-    this.cottages.clear(); this.cells.clear(); this.rims.clear(); this.dyes.clear();
+    this.cottages.clear(); this.plates.clear();
     for (const o of [...this.group.children]) if (o !== this.fx) this.group.remove(o);
-    this.group.add(buildRoad({ q: 0, r: 0 }, Math.max(1, layout.radius)));
-    for (const [sid, st] of layout.streets) {
-      const full = st.cells.length >= 6 * st.ringFrom && st.ringFrom === st.ringTo;
-      this.group.add(buildKerb(st.cells, full));
-      void sid;
+    // Each street plate: its kerb along the rim between its houses, and a soft contact shadow under it.
+    const housesOf = new Map<NodeId, Plate[]>();
+    for (const p of layout.plates.values()) {
+      if (p.stage !== 'House' || p.parent === null) continue;
+      const l = housesOf.get(p.parent); if (l) l.push(p); else housesOf.set(p.parent, [p]);
     }
-    for (const [id, cell] of layout.cell) {
-      const n = store.node(id);
-      if (!n || n.stage !== 'House') continue;
+    for (const [sid, houses] of housesOf) {
+      const street = layout.plates.get(sid);
+      if (!street) continue;
+      this.group.add(buildKerb(street, houses));
+      const sh = contactShadow(street.r * 1.12, 0.35);
+      sh.position.set(street.cx, 0.004, street.cz);
+      this.group.add(sh);
+    }
+    // A cottage on every house plate, its Door (and Letter Slot) facing the street's centre.
+    for (const [id, p] of layout.plates) {
+      if (p.stage !== 'House') continue;
       const c = buildCottage(id);
-      const w = toWorld(cell);
-      c.group.position.set(w.x, 0, w.z);
-      c.group.rotation.y = houseYaw(cell);
-      // Each rim gets its own material: dyed by its street (DESIGN §2b.3), ticked --sage by a settle.
-      const street = [...layout.streets].find(([, st]) => st.cells.some((x) => x.q === cell.q && x.r === cell.r))?.[0];
-      const dye = new THREE.Color(street === undefined ? '#4c3f30' : dyeFor(street));
-      this.dyes.set(id, dye);
-      const rim = new THREE.MeshLambertMaterial({ color: dye.clone(), flatShading: true });
-      (c.group.children[0] as THREE.Mesh).material = rim;
-      this.rims.set(id, rim);
+      c.group.position.set(p.cx, 0, p.cz);
+      c.group.rotation.y = store.layout.yawOf(id);
       this.cottages.set(id, c);
-      this.cells.set(id, cell);
+      this.plates.set(id, p);
       this.group.add(c.group);
-      const shadow = contactShadow(7.2);
-      shadow.position.x = w.x; shadow.position.z = w.z;
-      this.group.add(shadow);
+      const sh = contactShadow(p.r * 1.15, 0.45);
+      sh.position.set(p.cx, PLATE_TOP.Street + 0.006, p.cz);
+      this.group.add(sh);
     }
   }
 
@@ -110,10 +106,11 @@ export class StreetBand implements SceneBand {
     switch (ev.type) {
       case 'PROPOSED': {
         if (ev.kind !== 'hire_service') break;
-        const a = this.cells.get(ev.from), b = this.cells.get(ev.to);
+        const a = this.plates.get(ev.from), b = this.plates.get(ev.to);
+        const street = a?.parent == null ? undefined : this.ctx.store.layout.plateOf(a.parent);
         const start = this.slotWorld(ev.from);
-        if (!a || !b || !start) break;
-        this.runs.set(ev.envelope, { envelope: ev.envelope, from: ev.from, to: ev.to, start, meet: meetingStone(a, b), t0, outcome: null });
+        if (!a || !b || !start || !street) break;
+        this.runs.set(ev.envelope, { envelope: ev.envelope, from: ev.from, to: ev.to, start, meet: meetingStone(street, a, b), t0, outcome: null });
         break;
       }
       case 'SETTLED': {
@@ -196,14 +193,12 @@ export class StreetBand implements SceneBand {
       else if (cyanSlots.has(id)) { slot.emissive.copy(CYAN); slot.color.copy(CYAN); slot.emissiveIntensity = 0.8; }
       else if (t - h.delivered < 0.3) { slot.emissive.copy(GOLD_LIGHT); slot.color.copy(GOLD_LIGHT); slot.emissiveIntensity = 1.0; }
       else { slot.emissive.copy(SLOT_REST); slot.color.copy(SLOT_REST); slot.emissiveIntensity = 0.25; }
-      const rim = this.rims.get(id)!;
-      rim.color.copy(t - h.settledAt < 0.3 ? SAGE : this.dyes.get(id)!);
     }
   }
 
   /** The settle beat: both rims tick --sage, and the amount rides a label over the seal. */
   private settle(r: Run, t: number): void {
-    for (const id of [r.from, r.to]) { const h = id === null ? undefined : this.houses.get(id); if (h) h.settledAt = t; }
+    for (const id of [r.from, r.to]) if (id !== null) this.ctx.tiles.tickSage(id, t); // both rims tick --sage on the plates
     if (r.outcome?.kind === 'settled' && this.a >= 1.5) {
       this.ctx.bus.emit('label', { id: `settle-${r.envelope}`, world: r.meet.clone().setY(r.meet.y + 0.6), text: `${r.outcome.amount.toFixed(2)}`, kind: 'caption', ttl: 1.2 });
     }

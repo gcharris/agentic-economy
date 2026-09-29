@@ -1,10 +1,10 @@
-// A cottage on its tile (DESIGN §6): the §4 house with its roof on, on a hex plinth. Walls #2c2219, timber
+// A cottage on its house plate (DESIGN §6, §2c): the §4 house with its roof on; the plate is the plinth. Walls #2c2219, timber
 // corners #5a422f, a --roof gable whose ridge runs east–west 1.6 m above the eaves, the Door under the east gable
 // with the Letter Slot in its leaf, a lantern 0.4 m right of the leaf at 2.0 m (the status pill made physical),
 // and a brass-capped chimney pot on the ridge at x = −1.0 that glows with heat. House-local metres, as the room.
 
 import * as THREE from 'three';
-import { HEX_SIZE } from '../../engine/layout/hex.ts';
+import { PLATE_TOP } from '../../engine/layout/layoutBulbs.ts';
 import type { NodeStatus } from '../../engine/contract/state.ts';
 
 const flat = (color: string, extra: THREE.MeshLambertMaterialParameters = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra });
@@ -14,13 +14,12 @@ const M = {
   roof: flat('#7d4a34'), door: flat('#4a3525'), brass: flat('#a8842e'), pot: flat('#3e3a34'), step: flat('#3e2d1f'),
 };
 const EAVES = 3.2, RIDGE = 1.6;
-export const PLINTH_TOP = 0.3;
+/** The house plate's top: the plate is the plinth (DESIGN §2c); the room and the cottage both stand on it. */
+export const PLINTH_TOP = PLATE_TOP.House;
 export const SLOT_LOCAL = new THREE.Vector3(4.13, 1.1, 0.0);
 
 /** Shared geometries: six cottages or sixty, one set of buffers. */
 const G = (() => {
-  const plinthBase = new THREE.CylinderGeometry(HEX_SIZE, HEX_SIZE, 0.15, 6).translate(0, 0.075, 0);
-  const plinthTop = new THREE.CylinderGeometry(HEX_SIZE - 0.15, HEX_SIZE, 0.15, 6).translate(0, 0.225, 0);
   const body = new THREE.BoxGeometry(8.2, EAVES, 6.2).translate(0, EAVES / 2, 0);
   const post = new THREE.BoxGeometry(0.22, EAVES, 0.22).translate(0, EAVES / 2, 0);
   // The gable: a triangular prism along x (ridge east–west), eaves overhanging 0.3 m.
@@ -29,7 +28,7 @@ const G = (() => {
   const gable = new THREE.ExtrudeGeometry(shape, { depth: 8.2, bevelEnabled: false }).rotateY(Math.PI / 2).translate(-4.1, EAVES, 0);
   const slope = Math.hypot(half, RIDGE);
   const roofPlane = new THREE.BoxGeometry(8.8, 0.12, slope + 0.1);
-  return { plinthBase, plinthTop, body, post, gable, roofPlane, slope, half };
+  return { body, post, gable, roofPlane, slope, half };
 })();
 
 export interface Cottage {
@@ -46,12 +45,6 @@ export interface Cottage {
 export function buildCottage(id: number): Cottage {
   const group = new THREE.Group();
   group.name = `cottage-${id}`;
-  const plinth = new THREE.Mesh(G.plinthBase, M.edge);
-  const top = new THREE.Mesh(G.plinthTop, [M.bevel, M.plinth, M.edge]);
-  plinth.receiveShadow = top.receiveShadow = true;
-  plinth.castShadow = top.castShadow = true;
-  group.add(plinth, top);
-
   const house = new THREE.Group();
   house.position.y = PLINTH_TOP;
   group.add(house);

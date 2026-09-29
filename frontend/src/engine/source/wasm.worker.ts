@@ -17,6 +17,7 @@ import type { FromWorker, ToWorker } from './WasmSource.ts';
 interface EngineExports {
   memory: WebAssembly.Memory;
   engine_new(scenario: number, seed: bigint, budget: number, tasks: number, costVisible: number): void;
+  engine_new_city?(streets: number, houses: number, budget: number, tasks: number, seed: bigint, costVisible: number): void;
   engine_tick(): bigint;
   engine_authorize(envelope: bigint): number;
   engine_reject(envelope: bigint): number;
@@ -81,7 +82,8 @@ scope.onmessage = async (ev: MessageEvent<ToWorker>) => {
     switch (m.t) {
       case 'new': {
         x = await instantiate(m.wasmUrl);
-        x.engine_new(m.scenario, BigInt(m.seed), m.budget, m.tasks, m.costVisible ? 1 : 0);
+        if (m.city && x.engine_new_city) x.engine_new_city(m.city.streets, m.city.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
+        else x.engine_new(m.scenario, BigInt(m.seed), m.budget, m.tasks, m.costVisible ? 1 : 0);
         post({ t: 'hello', version: read(x, x.engine_version()) });
         break;
       }

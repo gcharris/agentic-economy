@@ -1,20 +1,19 @@
-// Tubes (DESIGN §7): a brass-ringed glass ribbon from each street's marker cell to the dome, a 10 % gold pilot glow
+// Tubes (DESIGN §7, §2c.4): a brass-ringed glass ribbon from each street's attach point on the city plate to the dome, a 10 % gold pilot glow
 // at rest. NETTED beat 1 (0–240 ms): every tube fills inward, width clamp(gross / 200, 0.2, 1.0) m, --gold-2, quad-in.
 
 import * as THREE from 'three';
-import { toWorld, type Axial } from '../../engine/layout/hex.ts';
 
 export interface Tube { group: THREE.Group; fill: THREE.Mesh; length: number }
 
 const GLASS = new THREE.MeshLambertMaterial({ color: '#e9dfc6', emissive: '#d4a755', emissiveIntensity: 0.1, transparent: true, opacity: 0.45, depthWrite: false });
 const RING = new THREE.MeshLambertMaterial({ color: '#a8842e', flatShading: true });
 const FILL = new THREE.MeshBasicMaterial({ color: '#b98626' });
-export const TUBE_Y = 3.0;
+export const TUBE_Y = 2.4;
 
-export function buildTube(from: Axial, domeRadius = 4): Tube {
-  const w = toWorld(from);
-  const start = new THREE.Vector3(w.x, TUBE_Y, w.z);
-  const dir = new THREE.Vector3(-w.x, 0, -w.z);
+/** A tube from a street's attach point on the city plate's rim, along the plate, to the dome at `centre`. */
+export function buildTube(from: { x: number; z: number }, centre: { x: number; z: number } = { x: 0, z: 0 }, domeRadius = 4): Tube {
+  const start = new THREE.Vector3(from.x, TUBE_Y, from.z);
+  const dir = new THREE.Vector3(centre.x - from.x, 0, centre.z - from.z);
   const full = dir.length();
   const length = Math.max(0.5, full - domeRadius - 1.5);
   const g = new THREE.Group();
@@ -28,8 +27,8 @@ export function buildTube(from: Axial, domeRadius = 4): Tube {
     g.add(ring);
   }
   // Legs down to the house tile, so the tube reads as carried, not floating.
-  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, TUBE_Y - 1.2, 0.12), RING);
-  leg.position.set(0, -(TUBE_Y - 1.2) / 2, 0.3);
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, TUBE_Y - 0.15, 0.12), RING);
+  leg.position.set(0, -(TUBE_Y - 0.15) / 2, 0.3);
   g.add(leg);
   const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 8).rotateX(Math.PI / 2).translate(0, 0, 0.5), FILL);
   fill.visible = false;

@@ -1,18 +1,26 @@
-// Set dressing (DESIGN §7, §2b): foundries on the corner cells of ring radius + 1 (three --roof stacks, --ember rims at
-// 60 %, a slow plume), data yards on the corners of ring radius + 2 (slate longhouses, lantern rows at 30 %); they carry
-// no number and read no texel. The street lanterns (one per house tile, on its outer edge): --gold-2 at rest, --ember
-// while any house on the street is halted, off when packed. The bevelled --oak baseboard round the spiral's edge.
+// Set dressing (DESIGN §7, §2b): foundries on satellite plates in the arc gaps of the city's rim (three --roof stacks, --ember
+// rims at 60 %), data yards likewise (slate longhouses, lantern rows at 30 %); they carry no number and read no texel.
+// The street lanterns (one per house plate, on its outward rim): --gold-2 at rest, --ember while any house on the
+// street is halted, off when packed.
 
 import * as THREE from 'three';
-import { HEX_FLAT, HEX_SIZE, toWorld, type Axial } from '../../engine/layout/hex.ts';
-import { HEIGHT } from '../../engine/gpu/TileMesh.ts';
+import { PLATE_TOP, rimPoint, type Plate, type Satellite } from '../../engine/layout/layoutBulbs.ts';
+
+const SAT_TOP = 0.25; // the satellite plates' top (TileMesh)
 
 const flat = (color: string, extra: THREE.MeshLambertMaterialParameters = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra });
 
-export function buildFoundry(c: Axial): THREE.Group {
+/** Scaled to its satellite plate (the kit is drawn for a 6 m plate). */
+function onSatellite(s: Satellite): THREE.Group {
   const g = new THREE.Group();
-  const w = toWorld(c);
-  g.position.set(w.x, HEIGHT.ground, w.z);
+  g.position.set(s.cx, SAT_TOP, s.cz);
+  g.scale.setScalar(s.r / 6);
+  g.rotation.y = -s.theta;
+  return g;
+}
+
+export function buildFoundry(s: Satellite): THREE.Group {
+  const g = onSatellite(s);
   const shed = new THREE.Mesh(new THREE.BoxGeometry(6, 1.6, 4), flat('#7d4a34'));
   shed.position.y = 0.8;
   g.add(shed);
@@ -28,10 +36,8 @@ export function buildFoundry(c: Axial): THREE.Group {
   return g;
 }
 
-export function buildYard(c: Axial): THREE.Group {
-  const g = new THREE.Group();
-  const w = toWorld(c);
-  g.position.set(w.x, HEIGHT.ground, w.z);
+export function buildYard(s: Satellite): THREE.Group {
+  const g = onSatellite(s);
   for (const z of [-1.6, 1.6]) {
     const house = new THREE.Mesh(new THREE.BoxGeometry(7, 1.4, 2.2), flat('#4a4f57')); // slate
     house.position.set(0, 0.7, z);
@@ -48,28 +54,18 @@ export function buildYard(c: Axial): THREE.Group {
   return g;
 }
 
-/** One lantern post per house tile on its outer edge (away from the Clearinghouse). */
-export function buildLanterns(cells: readonly Axial[]): THREE.InstancedMesh {
+/** One lantern post per house plate, on its rim at the outward side (away from its street). */
+export function buildLanterns(houses: readonly Plate[]): THREE.InstancedMesh {
   const post = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 1.6, 0.3).translate(0, 0.8, 0),
-    new THREE.MeshLambertMaterial({ color: '#3e3a34', emissive: '#ffffff', emissiveIntensity: 0.9 }), Math.max(1, cells.length));
+    new THREE.MeshLambertMaterial({ color: '#3e3a34', emissive: '#ffffff', emissiveIntensity: 0.9 }), Math.max(1, houses.length));
   const m = new THREE.Matrix4();
-  cells.forEach((c, i) => {
-    const w = toWorld(c);
-    const l = Math.hypot(w.x, w.z) || 1;
-    m.makeTranslation(w.x + (w.x / l) * 4.2, HEIGHT.house, w.z + (w.z / l) * 4.2);
+  houses.forEach((h, i) => {
+    const p = rimPoint(h, h.theta, 0.82);
+    m.makeTranslation(p.x, PLATE_TOP.House, p.z);
     post.setMatrixAt(i, m);
     post.setColorAt(i, new THREE.Color('#b98626'));
   });
-  post.count = cells.length;
+  post.count = houses.length;
   post.name = 'street-lanterns';
   return post;
-}
-
-/** The bevelled --oak baseboard round the spiral's edge (ring `rings` of the ground). */
-export function buildBaseboard(rings: number): THREE.Mesh {
-  const r = rings * HEX_FLAT + HEX_SIZE + 1.2;
-  const frame = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.8, 1.0, 6, 1, true).rotateY(Math.PI / 6), flat('#5a422f', { side: THREE.DoubleSide }));
-  frame.position.y = 0.3;
-  frame.receiveShadow = true;
-  return frame;
 }

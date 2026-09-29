@@ -8,7 +8,7 @@
 
 import type { EventType } from '../contract/events.ts';
 import type { EnvelopeId, HeldView, NodeId, NodeView, Note } from '../contract/state.ts';
-import { LayoutHandle } from '../layout/layoutCity.ts';
+import { LayoutHandle } from '../layout/layoutBulbs.ts';
 import type { Decision, Frame, SourceHello, SourceStatus } from '../source/EngineSource.ts';
 import { TICK_SECONDS_BY_BAND } from '../source/TickClock.ts';
 import { Bus } from './bus.ts';

@@ -8,7 +8,8 @@
 import { fmtCost, fmtCr, fmtJ, fmtPhi, gateWord, haltReasonLine, hash8 } from '../contract/copy.ts';
 import { isHashMismatch, type EngineEvent, type EventType } from '../contract/events.ts';
 import type { EnvelopeId, NodeId } from '../contract/state.ts';
-import type { Axial } from '../layout/hex.ts';
+/** A world point on the ground plane (metres): a pulse's origin, the plate centre it starts from. */
+export interface Point2 { x: number; z: number }
 
 export type ClipKind =
   | 'bubble' | 'flare' | 'carry' | 'drop' | 'hold' | 'orbit' | 'seal' | 'burn' | 'snapback' | 'flash'
@@ -34,7 +35,7 @@ export interface Clip {
   envelope: EnvelopeId | null;
   /** SLASHED: the scorch that outlives the flash, in seconds (8 ticks). */
   tail?: number;
-  /** STATE_SYNC: seconds per hex ring of cascade (0.04); the reducer writes the texels. */
+  /** STATE_SYNC: seconds per generation of cascade (0.04); the reducer writes the texels. */
   cascade?: number;
 }
 
@@ -211,10 +212,10 @@ export type PulseKind = (typeof PULSE_KIND)[keyof typeof PULSE_KIND];
 export type PulseEventType = 'NETTED' | 'ROLLED_BACK' | 'GLOBAL_STATE_CONFIRMED' | 'SLASHED';
 export const PULSE_EVENTS: ReadonlySet<EventType> = new Set<EventType>(['NETTED', 'ROLLED_BACK', 'GLOBAL_STATE_CONFIRMED', 'SLASHED']);
 
-export interface Pulse { kind: PulseKind; t0: number; origin: Axial; data: [number, number, number, number] }
+export interface Pulse { kind: PulseKind; t0: number; origin: Point2; data: [number, number, number, number] }
 
 export class PulseRing {
-  /** vec4 per entry: kind, t0, originQ, originR. */
+  /** vec4 per entry: kind, t0, originX, originZ (metres). */
   readonly uPulses = new Float32Array(PULSE_RING * 4);
   /** vec4 per entry: per-kind payload. */
   readonly uPulseData = new Float32Array(PULSE_RING * 4);
@@ -227,14 +228,14 @@ export class PulseRing {
     const i = this.head;
     this.head = (this.head + 1) % PULSE_RING;
     this.entries[i] = p;
-    this.uPulses.set([p.kind, p.t0, p.origin.q, p.origin.r], i * 4);
+    this.uPulses.set([p.kind, p.t0, p.origin.x, p.origin.z], i * 4);
     this.uPulseData.set(p.data, i * 4);
     this.dirty = true;
     return i;
   }
 
   /** Build the pulse for a pulse event at `arrivedAt` from `origin` (the node's cell, or 0,0). */
-  static fromEvent(ev: EngineEvent, arrivedAt: number, origin: Axial, extra: { radius?: number; tickCount?: number } = {}): Pulse | null {
+  static fromEvent(ev: EngineEvent, arrivedAt: number, origin: Point2, extra: { radius?: number; tickCount?: number } = {}): Pulse | null {
     switch (ev.type) {
       case 'NETTED': return { kind: PULSE_KIND.NETTED, t0: arrivedAt, origin, data: [ev.gross, ev.net, ev.envelopes, extra.radius ?? 0] };
       case 'ROLLED_BACK': return { kind: PULSE_KIND.ROLLED_BACK, t0: arrivedAt, origin, data: [ev.to_tick, ev.slashed, 0, 0] };

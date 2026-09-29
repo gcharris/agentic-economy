@@ -24,13 +24,14 @@ test('scenario 3: the city opens at band 3 without a zoom call, and NETTED plays
   expect(city.group.visible).toBe(true);
 
   const layout = app.store.layout.current;
-  const tiles = city.tiles.tiles;
-  expect(tiles.filter((t) => t.kind === 3)).toHaveLength(1);           // the Clearinghouse at (0,0)
-  expect(tiles.filter((t) => t.kind === 1)).toHaveLength(6);           // two streets of three houses
-  expect(tiles.length).toBe(1 + 6 + layout.ground.length);
-  expect(city.tiles.mesh!.count).toBe(tiles.length);                   // one InstancedMesh, one draw
+  const tiles = app.tiles.tiles;
+  expect(tiles.filter((t) => t.kind === 3)).toHaveLength(1);           // the city plate: the Clearinghouse at its centre
+  expect(tiles.filter((t) => t.kind === 2)).toHaveLength(2);           // two street plates
+  expect(tiles.filter((t) => t.kind === 1)).toHaveLength(6);           // six house plates
+  expect(tiles.length).toBe(1 + 2 + 6 + layout.satellites.length);
+  expect(app.tiles.mesh!.count).toBe(tiles.length);                    // one InstancedMesh, one draw (plus the specks)
   expect(city.tubes).toHaveLength(2);
-  expect(tiles.filter((t) => t.kind === 1).every((t) => t.slot >= 0)).toBe(true);
+  expect(tiles.filter((t) => t.kind <= 3).every((t) => t.slot >= 0)).toBe(true);
 
   const net = f.events.find((e) => e.type === 'NETTED');
   expect(net).toMatchObject({ gross: 60, net: 20, envelopes: 12 });
@@ -45,5 +46,16 @@ test('scenario 3: the city opens at band 3 without a zoom call, and NETTED plays
   expect(city.hall!.dome.emissiveIntensity).toBeGreaterThan(0.8);
   app.renderFrame(t0 + 2.0);
   expect(city.hall!.dome.emissiveIntensity).toBe(0);
+  app.dispose();
+});
+
+test('engine_new_city: 6 streets x 8 houses, laid out as bulbs with every house on its street\'s rim', async () => {
+  const source = engineSource('city', { city: { streets: 6, houses: 8 } });
+  const app = await App.boot({ source, renderer: new NullRenderer(), ui: NOOP_UI, clock: 'manual', bands: [new CityBand()] });
+  const f = (await app.stepTo(1))!;
+  const count = (st: string) => f.state.nodes.filter((n) => n.stage === st).length;
+  expect([count('City'), count('Street'), count('House')]).toEqual([1, 6, 48]);
+  expect(app.tiles.tiles.filter((t) => t.kind === 1)).toHaveLength(48);
+  expect(app.store.layout.current.satellites).toHaveLength(6);
   app.dispose();
 });

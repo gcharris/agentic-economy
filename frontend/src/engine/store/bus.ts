@@ -7,8 +7,7 @@
 import type { Vector3 } from 'three';
 import type { EngineEvent } from '../contract/events.ts';
 import type { NodeId } from '../contract/state.ts';
-import type { Axial } from '../layout/hex.ts';
-import type { Layout } from '../layout/layoutCity.ts';
+import type { BulbLayout, Plate } from '../layout/layoutBulbs.ts';
 import type { Frame, SourceStatus } from '../source/EngineSource.ts';
 import type { Clip } from './clips.ts';
 
@@ -34,8 +33,8 @@ export interface BusEvents {
   frame: Frame; // after reduce()
   event: SceneEvent; // one per EngineEvent, after 'frame'
   altitude: { a: number; band: Band; pending: Band | null; w: number }; // per render frame, from the rig
-  focus: { node: NodeId | null; cell: Axial | null };
-  layout: Layout; // only when the (id, parent) set changed
+  focus: { node: NodeId | null; plate: Plate | null };
+  layout: BulbLayout; // only when the (id, parent) set changed
   zoomPending: { band: Band; sentTick: number };
   zoomConfirmed: { band: Band; by: 'PACKED' | 'UNPACKED' | 'TICK_COMMITTED' };
   quality: QualityPreset;

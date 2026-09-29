@@ -152,7 +152,7 @@ describe('the pulse ring', () => {
   test('16 entries, wraps around, and packs the uniform vec4s', () => {
     const ring = new PulseRing();
     expect(PULSE_RING).toBe(16);
-    for (let i = 0; i < 18; i++) ring.push({ kind: PULSE_KIND.NETTED, t0: i, origin: { q: i, r: -i }, data: [60, 20, 12, 2] });
+    for (let i = 0; i < 18; i++) ring.push({ kind: PULSE_KIND.NETTED, t0: i, origin: { x: i, z: -i }, data: [60, 20, 12, 2] });
     expect(ring.entries.filter(Boolean)).toHaveLength(16);
     expect(ring.uPulses[0 * 4 + 1]).toBe(16); // slot 0 was overwritten by the 17th push
     expect(ring.uPulses[1 * 4 + 1]).toBe(17);
@@ -164,7 +164,7 @@ describe('the pulse ring', () => {
   });
 
   test('fromEvent builds the four pulse kinds and nothing for the rest', () => {
-    const o = { q: 0, r: 0 };
+    const o = { x: 0, z: 0 };
     expect(PulseRing.fromEvent(SAMPLE.NETTED, 1, o, { radius: 3 })).toEqual({ kind: 1, t0: 1, origin: o, data: [60, 20, 12, 3] });
     expect(PulseRing.fromEvent(SAMPLE.ROLLED_BACK, 1, o)?.kind).toBe(PULSE_KIND.ROLLED_BACK);
     expect(PulseRing.fromEvent(SAMPLE.GLOBAL_STATE_CONFIRMED, 1, o)?.data[0]).toBe(32);

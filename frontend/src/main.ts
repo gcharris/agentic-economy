@@ -34,6 +34,8 @@ async function makeSource(q: URLSearchParams): Promise<EngineSource> {
     return new WasmSource({
       scenario, seed: q.get('seed') ?? 7, budget: Number(q.get('budget') ?? 800), tasks: Number(q.get('tasks') ?? 15),
       costVisible: q.get('cost') !== '0' && run !== 'house_hidden_cost',
+      // &streets=6&houses=8: a sized city through engine_new_city (DESIGN §2c.5).
+      ...(q.get('streets') || q.get('houses') ? { city: { streets: Number(q.get('streets') ?? 2), houses: Number(q.get('houses') ?? 3) } } : {}),
     });
   }
   const trace = (await (await fetch(`${import.meta.env.BASE_URL}traces/trace.json`)).json()) as Trace;
@@ -70,6 +72,10 @@ async function main(): Promise<void> {
       stepTo: async (t: number) => { await app.stepTo(t); return render(); },
       step: async () => { await app.step(); return render(); },
       frame: () => app.frame(),
+      /** Set a shared shader uniform (a take or a diagnosis: uHatchWeight, uEdgeGain, …). */
+      uniform: (name: string, value: number) => { const u = (app.uniforms as unknown as Record<string, { value: unknown }>)[name]; if (u && typeof u.value === 'number') u.value = value; return !!u; },
+      /** DOM-free commands for scripted takes (a live source only): approve, reject, top up, zoom. */
+      command: (c: Parameters<typeof app.command>[0]) => app.command(c),
       render: (at?: number) => { app.renderFrame(at); return true; },
       /** Where a point in the focused house's local metres projects on screen. */
       locatePoint: (x: number, y: number, z: number) => {

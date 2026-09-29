@@ -6,8 +6,7 @@
 // Door queue from state.held; the Notes; (g) ui.apply(frame). Nothing here
 // runs from the render loop (reducer.test.ts).
 
-import { distance, type Axial } from '../layout/hex.ts';
-import { ORIGIN } from '../layout/layoutCity.ts';
+import { HOUSE_R } from '../layout/layoutBulbs.ts';
 import type { Frame } from '../source/EngineSource.ts';
 import type { SceneEvent } from './bus.ts';
 import { feedLine, PULSE_EVENTS, PulseRing, type ClipContext } from './clips.ts';
@@ -48,7 +47,9 @@ export function reduce(frame: Frame, store: Store, ui: UiLayer = NOOP_UI): Scene
   }
 
   // (e) events, in engine order
-  const ctx: ClipContext = { tickSeconds: store.tickSeconds, radius: layout.radius };
+  // Pulses travel 40 ms per house diameter (the §7 'per hex' now reads 'per bulb').
+  const rings = layout.radius / (2 * HOUSE_R);
+  const ctx: ClipContext = { tickSeconds: store.tickSeconds, radius: rings };
   const out: SceneEvent[] = [];
   for (const ev of frame.events) {
     const clip = seeked ? null : store.clips.schedule(ev, arrivedAt, ctx);
@@ -59,12 +60,8 @@ export function reduce(frame: Frame, store: Store, ui: UiLayer = NOOP_UI): Scene
           // the prev texel keeps the pre-sync Φ until the sweep is over
           const s = store.slots.peek(ev.node);
           if (s >= 0) store.truthPrev[s * TRUTH_CHANNELS] = toHalfFloat(ev.confidence_before);
-          const from = layout.cell.get(ev.node);
-          for (const d of store.descendantsOf(ev.node)) {
-            const to = layout.cell.get(d.id);
-            const rings = from && to ? distance(from, to) : d.depth;
-            store.writeTime(d.id, TIMES_SYNC, arrivedAt + CASCADE_PER_RING * rings);
-          }
+          // The cascade is written, not computed (§6.5): 40 ms per generation down the bulbs.
+          for (const d of store.descendantsOf(ev.node)) store.writeTime(d.id, TIMES_SYNC, arrivedAt + CASCADE_PER_RING * d.depth);
           break;
         }
         case 'PACKED': case 'UNPACKED': {
@@ -77,8 +74,9 @@ export function reduce(frame: Frame, store: Store, ui: UiLayer = NOOP_UI): Scene
         default: break;
       }
       if (PULSE_EVENTS.has(ev.type)) {
-        const origin: Axial = ev.type === 'SLASHED' ? layout.cell.get(ev.node) ?? ORIGIN : ORIGIN;
-        const pulse = PulseRing.fromEvent(ev, arrivedAt, origin, { radius: layout.radius, tickCount: 8 });
+        const at = ev.type === 'SLASHED' ? layout.plates.get(ev.node) : undefined;
+        const origin = at ? { x: at.cx, z: at.cz } : { x: 0, z: 0 };
+        const pulse = PulseRing.fromEvent(ev, arrivedAt, origin, { radius: rings, tickCount: 8 });
         if (pulse) store.pulses.push(pulse);
       }
     }

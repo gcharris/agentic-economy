@@ -9,8 +9,6 @@
 
 import * as THREE from 'three';
 import { STAGE_LEVEL } from '../../engine/contract/copy.ts';
-import { toWorld } from '../../engine/layout/hex.ts';
-import { houseYaw } from '../../engine/layout/layoutCity.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import type { Band } from '../../engine/store/bus.ts';
 import type { Store } from '../../engine/store/Store.ts';
@@ -44,6 +42,8 @@ export class AltitudeRig {
   frameYaw = 0;
   /** The street band's centre (the ring's centre) and its view height, from the layout. */
   readonly streetCentre = new THREE.Vector3();
+  /** The root plate's centre: the Clearinghouse. */
+  readonly cityCentre = new THREE.Vector3();
   streetH = 70;
   cityH = 140;
   /** Target in house-local metres (between the Oak Table and the Desk by default). */
@@ -70,25 +70,31 @@ export class AltitudeRig {
     return p.band > p.from ? Math.min(this.a, p.from + 0.5) : Math.max(this.a, p.from - 0.5);
   }
 
-  /** After each frame: the focused node's cell and yaw, the street's extent, and zoom confirmation. */
+  /** After each frame: the focused house's plate and yaw, its street's plate, the city's extent, zoom confirmation. */
   follow(store: Store, frame?: Frame, recorded = false): void {
     const id = store.focus;
-    const cell = id === null ? null : store.layout.cellOf(id);
-    if (cell) {
+    const plate = id === null ? undefined : store.layout.plateOf(id);
+    if (plate) {
       if (id !== this.focusId) { this.focusId = id; this.snap = true; }
-      const w = toWorld(cell);
-      this.origin.set(w.x, PLINTH_TOP, w.z);
-      this.frameYaw = houseYaw(cell);
+      this.origin.set(plate.cx, PLINTH_TOP, plate.cz);
+      this.frameYaw = store.layout.yawOf(plate.id);
     }
     const layout = store.layout.current;
-    // The street's centre is the ring's centre (the layout origin); H covers the ring's extent.
-    let extent = 0;
-    for (const c of layout.cell.values()) { const w = toWorld(c); extent = Math.max(extent, Math.hypot(w.x, w.z)); }
-    this.streetCentre.set(0, 0, 0);
-    // DESIGN §10's heights are for 1080 rows; hold their pixels per metre at any viewport, as band 1 does.
-    const k = this.rows / 1080;
-    this.streetH = Math.max(70 * k, 2.4 * extent);
-    this.cityH = Math.min(1200, Math.max(140 * k, 2.2 * layout.radius * Math.sqrt(3) * 6));
+    // Band 2 looks at the focused house's street plate; band 3 at the root (the Clearinghouse). A disc of extent E
+    // fills a 16:9 frame at pitch 30° when H ≈ 1.3·E.
+    const street = plate?.stage === 'House' ? store.layout.parentOf(plate.id) : plate;
+    const k = this.rows / 1080; // DESIGN §10's heights are for 1080 rows; hold their pixels per metre at any viewport
+    if (street) {
+      // Frame the street plate and its houses together: their bounding box, since the houses bud on one side.
+      let x0 = street.cx - street.r, x1 = street.cx + street.r, z0 = street.cz - street.r, z1 = street.cz + street.r;
+      for (const p of layout.plates.values()) {
+        if (p.parent !== street.id) continue;
+        x0 = Math.min(x0, p.cx - p.r); x1 = Math.max(x1, p.cx + p.r); z0 = Math.min(z0, p.cz - p.r); z1 = Math.max(z1, p.cz + p.r);
+      }
+      this.streetCentre.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
+      this.streetH = Math.max(70 * k, 1.3 * 0.5 * Math.hypot(x1 - x0, z1 - z0));
+    }
+    this.cityH = Math.min(1600, Math.max(140 * k, 1.3 * layout.radius));
     if (!frame) return;
     this.tick = frame.tick;
     const scale = STAGE_LEVEL[frame.state.active_scale];
@@ -147,7 +153,7 @@ export class AltitudeRig {
     // Band 1: the house's frame and local target; from A 1.5 to 2.0 blend to the street centre at world yaw.
     const s = smooth(1.5, 2.0, a);
     const houseTarget = this.local.clone().applyAxisAngle(UP, this.frameYaw).add(this.origin);
-    this.target.copy(houseTarget).lerp(this.streetCentre, s);
+    this.target.copy(houseTarget).lerp(this.streetCentre, s).lerp(this.cityCentre, smooth(2.5, 3.0, a));
     const yawTarget = this.frameYaw * (1 - s);
     this.yaw = dt >= 1 ? yawTarget : this.yaw + (yawTarget - this.yaw) * k;
     if (dt >= 1) this.smoothTarget.copy(this.target); else this.smoothTarget.lerp(this.target, k);

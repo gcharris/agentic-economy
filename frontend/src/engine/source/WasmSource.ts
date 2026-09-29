@@ -15,7 +15,7 @@ import {
 export type ScenarioCode = 1 | 2 | 3 | 4 | 5;
 
 export type ToWorker =
-  | { t: 'new'; scenario: ScenarioCode; seed: string /* decimal u64 */; budget: number; tasks: number; costVisible: boolean; wasmUrl: string }
+  | { t: 'new'; scenario: ScenarioCode; seed: string /* decimal u64 */; budget: number; tasks: number; costVisible: boolean; wasmUrl: string; city?: { streets: number; houses: number } }
   | { t: 'tick' }
   | { t: 'authorize'; id: number; envelope: string /* decimal */ }
   | { t: 'reject'; id: number; envelope: string }
@@ -36,6 +36,8 @@ export interface WasmSourceOptions {
   budget?: number;
   tasks?: number;
   costVisible?: boolean;
+  /** Scenario 3 only: a sized city through engine_new_city (DESIGN §2c.5); omitted, scenario 3 is 2 × 3. */
+  city?: { streets: number; houses: number };
   /** Defaults to `${BASE_URL}engine/context_engine.wasm` (public/engine, copied by scripts/copy-assets.ts). */
   wasmUrl?: string;
   /** Injectable for tests; defaults to a module Worker over ./wasm.worker.ts. */
@@ -88,6 +90,7 @@ export class WasmSource implements EngineSource {
       t: 'new', scenario: this.scenario, seed: this.seed,
       budget: this.opts.budget ?? WASM_DEFAULTS.budget, tasks: this.opts.tasks ?? WASM_DEFAULTS.tasks,
       costVisible: this.opts.costVisible ?? WASM_DEFAULTS.costVisible, wasmUrl: this.opts.wasmUrl ?? defaultWasmUrl(),
+      ...(this.opts.city && this.scenario === 3 ? { city: this.opts.city } : {}),
     };
     worker.postMessage(msg);
     return promise;

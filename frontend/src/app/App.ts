@@ -10,11 +10,12 @@ import type { Band, LightingState, QualityPreset, SceneBus, SceneEvent } from '.
 import type { ClipScheduler } from '../engine/store/clips.ts';
 import { acceptFrame } from '../engine/store/reducer.ts';
 import { NOOP_UI, Store, type UiLayer } from '../engine/store/Store.ts';
-import type { LayoutHandle } from '../engine/layout/layoutCity.ts';
+import type { LayoutHandle } from '../engine/layout/layoutBulbs.ts';
 import { AltitudeRig } from '../scene/camera/AltitudeRig.ts';
 import { Labels } from '../ui/labels.ts';
 import { presetForBand, WorldLights } from './lighting.ts';
 import { TruthBuffer } from '../engine/gpu/TruthBuffer.ts';
+import { TileMesh } from '../engine/gpu/TileMesh.ts';
 import { createUniforms, uploadPulses, type SharedUniforms } from '../engine/gpu/uniforms.ts';
 import type { Renderer } from './Renderer.ts';
 
@@ -48,6 +49,8 @@ export interface SceneContext {
   reducedMotion: boolean;
   truth: TruthBuffer;
   uniforms: SharedUniforms;
+  /** The plates every band stands on (DESIGN §2c), owned by App. */
+  tiles: TileMesh;
 }
 
 /** What the DOM asks of the engine. The answer returns only as a later Frame. */
@@ -83,6 +86,8 @@ export class App {
   labels: Labels | null = null;
   readonly truth = new TruthBuffer();
   readonly uniforms = createUniforms(this.truth);
+  readonly tiles = new TileMesh(this.uniforms);
+  private platesKey = '';
   hello: SourceHello | null = null;
   ready = false;
   private ctx: SceneContext | null = null;
@@ -108,7 +113,7 @@ export class App {
       quality: opts.quality ?? 'balanced',
       lighting: opts.lighting ?? { preset: presetForBand(1, null), blend: 0, cycle: false },
       reducedMotion: opts.reducedMotion ?? false,
-      truth: app.truth, uniforms: app.uniforms,
+      truth: app.truth, uniforms: app.uniforms, tiles: app.tiles,
     };
     app.store.truthSink = app.truth;
     app.uniforms.uReducedMotion.value = opts.reducedMotion ? 1 : 0;
@@ -145,6 +150,11 @@ export class App {
     this.uniforms.uTickT.value = frame.arrivedAt;
     const events = acceptFrame(frame, this.store, this.ui);
     this.reduces++;
+    if (this.store.layout.key !== this.platesKey) { // the plates are rebuilt only when the (id, parent) set changed
+      this.platesKey = this.store.layout.key;
+      this.renderer.scene.add(this.tiles.build(this.store.layout.current, this.store));
+    }
+    this.tiles.update(this.store);
     this.rig.follow(this.store, frame, !this.source.live);
     for (const b of this.bands) b.onFrame(frame);
     for (const se of events) for (const b of this.bands) b.onEvent(se);
@@ -242,6 +252,7 @@ export class App {
     this.labels?.dispose();
     this.source.dispose();
     this.truth.dispose();
+    this.tiles.dispose();
     this.renderer.dispose();
   }
 }

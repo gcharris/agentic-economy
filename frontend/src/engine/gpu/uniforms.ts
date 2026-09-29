@@ -6,7 +6,7 @@ import { PULSE_RING } from '../store/clips.ts';
 
 export interface SharedUniforms {
   uTime: { value: number }; uTickT: { value: number }; uTickSeconds: { value: number }; uAltitude: { value: number };
-  uReducedMotion: { value: number }; uPxPerUnit: { value: number }; uDpr: { value: number }; uHatchWeight: { value: number };
+  uReducedMotion: { value: number }; uPxPerUnit: { value: number }; uDpr: { value: number }; uHatchWeight: { value: number }; uEdgeGain: { value: number };
   uFogTint: { value: THREE.Color }; uBurnRef: { value: number };
   uTruth: { value: THREE.DataTexture }; uTruthPrev: { value: THREE.DataTexture }; uTimes: { value: THREE.DataTexture };
   uPulses: { value: THREE.Vector4[] }; uPulseData: { value: THREE.Vector4[] };
@@ -16,7 +16,7 @@ export interface SharedUniforms {
 export function createUniforms(truth: { truth: THREE.DataTexture; prev: THREE.DataTexture; times: THREE.DataTexture }): SharedUniforms {
   return {
     uTime: { value: 0 }, uTickT: { value: -1e9 }, uTickSeconds: { value: 1.2 }, uAltitude: { value: 1 },
-    uReducedMotion: { value: 0 }, uPxPerUnit: { value: 10 }, uDpr: { value: 1 }, uHatchWeight: { value: 0.35 },
+    uReducedMotion: { value: 0 }, uPxPerUnit: { value: 10 }, uDpr: { value: 1 }, uHatchWeight: { value: 0.35 }, uEdgeGain: { value: 4 },
     uFogTint: { value: new THREE.Color('#5f5548') }, uBurnRef: { value: 1 },
     uTruth: { value: truth.truth }, uTruthPrev: { value: truth.prev }, uTimes: { value: truth.times },
     uPulses: { value: Array.from({ length: PULSE_RING }, () => new THREE.Vector4()) },
