@@ -21,6 +21,7 @@ eng = here.parent / "engine"
 loc = sum(int(l.split()[0]) for l in subprocess.run(["wc", "-l", *[str(p) for p in list((eng/"src").rglob("*.rs")) + list((eng/"tests").glob("*.rs"))]], capture_output=True, text=True).stdout.splitlines() if not l.strip().endswith("total"))
 import re
 rs = list((eng/"src").rglob("*.rs")) + list((eng/"tests").glob("*.rs"))
+rs = [p for p in rs if p.name != "vault.rs" and 'cfg(feature = "vault")' not in p.read_text()]  # the page counts what a plain `cargo test` runs
 attrs = sum(p.read_text().count("#[test]") + p.read_text().count("#[tokio::test") for p in rs)
 ignored = sum(len(re.findall(r"^\s*#\[ignore", p.read_text(), re.M)) for p in rs)  # attribute lines only, not the doc comment that mentions them
 tests = attrs - ignored  # what `cargo test` runs; the ignored ones are skipped on purpose

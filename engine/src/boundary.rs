@@ -225,7 +225,10 @@ pub fn dvp_binding(env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Option<Ve
 pub trait VerificationStrategy: Send + Sync {
     fn stage(&self) -> Stage;
     fn verify(&mut self, env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Verdict;
-    /// Batch hook. Default: one by one. Stages 2 and 3 override it.
+    /// Batch hook. Default: one by one. Stages 2 and 3 override it. The
+    /// engine's Verify phase calls this hook, so a wrapper that delegates to
+    /// another strategy must forward it too, or the wrapped strategy's batch
+    /// logic (Stage 2's lock map, Stage 3's netting) never runs.
     fn verify_batch(&mut self, envs: &[ProposalEnvelope], view: &BoundaryView<'_>) -> Vec<Verdict> {
         envs.iter().map(|e| self.verify(e, view)).collect()
     }
