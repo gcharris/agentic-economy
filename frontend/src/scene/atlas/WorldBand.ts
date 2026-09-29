@@ -15,16 +15,16 @@ import * as THREE from 'three';
 import type { SceneBand, SceneContext, SceneEvent } from '../../app/App.ts';
 import type { EnvelopeId, NodeId } from '../../engine/contract/state.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
-import { globeWeight } from '../camera/Dissolve.ts';
-import { GLOBE_R, globeFrame, greatCircle, ORBIT_R, RING_R, RING_TILT, rootOf, type GlobeFrame } from './globe.ts';
+import { globeWeight, weight } from '../camera/Dissolve.ts';
+import { fibreLift, GLOBE_R, globeFrame, greatCircle, ORBIT_R, RING_R, RING_TILT, rootOf, type GlobeFrame } from './globe.ts';
 
 const GROUND = new THREE.Color('#0a0806');
 const CYAN = '#2aa5b8';
 const PLATE_R = 620;
 const ORBIT_PERIOD = 3.2; // seconds per turn round the beacon
 
-interface BeaconMesh { id: NodeId; lantern: THREE.MeshLambertMaterial; halo: THREE.Mesh }
-interface Fibre { a: NodeId; b: NodeId; core: THREE.Mesh }
+interface BeaconMesh { id: NodeId; group: THREE.Group; lantern: THREE.MeshLambertMaterial; halo: THREE.Mesh }
+interface Fibre { a: NodeId; b: NodeId; ribbon: THREE.Mesh; core: THREE.Mesh }
 interface Orbit { envelope: EnvelopeId; country: NodeId; t0: number; until: number; card: THREE.Mesh }
 
 export class WorldBand implements SceneBand {
@@ -45,6 +45,8 @@ export class WorldBand implements SceneBand {
   private globe = new THREE.Group();
   private ringGroup = new THREE.Group();
   private background: THREE.Color | null = null;
+  /** A beacon's scale as the globe comes in: the focused country's own extent, so its relief becomes its plate in place. */
+  private born = 1;
   private readonly cardMat = new THREE.MeshBasicMaterial({ color: '#f0e6d2', side: THREE.DoubleSide });
 
   mount(ctx: SceneContext): void {
@@ -62,6 +64,8 @@ export class WorldBand implements SceneBand {
     for (const o of this.orbits.values()) o.card.removeFromParent();
     this.orbits.clear();
     this.frame = globeFrame(layout, focusRoot);
+    const tree = layout.trees.find((t) => t.id === focusRoot) ?? layout.trees[0];
+    this.born = Math.min(1, (tree?.extent ?? PLATE_R) / PLATE_R);
     if (!this.frame) return;
     const g = this.frame;
     const brass = new THREE.MeshLambertMaterial({ color: '#a8842e', emissive: '#a8842e', emissiveIntensity: 0.2 });
@@ -140,7 +144,7 @@ export class WorldBand implements SceneBand {
       at.add(plate, rim, pin, head, halo);
       at.name = `beacon-${b.id}`;
       this.group.add(at);
-      this.beacons.push({ id: b.id, lantern, halo });
+      this.beacons.push({ id: b.id, group: at, lantern, halo });
     }
 
     // Fibre: great-circle ribbons between country centres (every pair up to six countries, else neighbours).
@@ -150,10 +154,10 @@ export class WorldBand implements SceneBand {
     const toLocal = g.quat.clone().invert();
     for (const [i, j] of pairs) {
       const a = g.beacons[i].normal.clone().applyQuaternion(toLocal), b = g.beacons[j].normal.clone().applyQuaternion(toLocal);
-      const ribbon = new THREE.Mesh(ribbonGeometry(a, b, GLOBE_R + 14, 240), new THREE.MeshLambertMaterial({ color: '#4c3f30', emissive: '#4c3f30', emissiveIntensity: 0.4, side: THREE.DoubleSide }));
-      const core = new THREE.Mesh(ribbonGeometry(a, b, GLOBE_R + 20, 48), new THREE.MeshBasicMaterial({ color: CYAN, side: THREE.DoubleSide }));
+      const ribbon = new THREE.Mesh(ribbonGeometry(a, b, 0, 240), new THREE.MeshLambertMaterial({ color: '#4c3f30', emissive: '#4c3f30', emissiveIntensity: 0.4, side: THREE.DoubleSide }));
+      const core = new THREE.Mesh(ribbonGeometry(a, b, 8, 48), new THREE.MeshBasicMaterial({ color: CYAN, side: THREE.DoubleSide }));
       this.globe.add(ribbon, core);
-      this.fibres.push({ a: g.beacons[i].id, b: g.beacons[j].id, core });
+      this.fibres.push({ a: g.beacons[i].id, b: g.beacons[j].id, ribbon, core });
     }
     this.applyPartition();
   }
@@ -210,13 +214,16 @@ export class WorldBand implements SceneBand {
   }
 
   setAltitude(a: number): void {
-    const on = globeWeight(a) >= 0.5 && this.frame !== null;
-    this.group.visible = on;
-    // The World's floor is #0a0806: the ground beyond the globe goes dark as the globe comes up.
+    const g = globeWeight(a);
+    this.group.visible = g >= 0.5 && this.frame !== null;
+    // The beacons grow from the country's size to their own as the camera pulls back (4.5 → 4.85).
+    const grow = this.born + (1 - this.born) * weight(a, 4.5, 4.85);
+    for (const b of this.beacons) b.group.scale.setScalar(grow);
+    // The World's floor is #0a0806: night falls over the first half of the window, the globe comes up out of it.
     const bg = this.ctx.scene.background;
     if (bg instanceof THREE.Color) {
       if (!this.background) this.background = bg.clone();
-      bg.copy(on ? GROUND : this.background);
+      bg.copy(this.background).lerp(GROUND, Math.min(1, 2 * g));
     }
   }
 
@@ -251,8 +258,10 @@ export class WorldBand implements SceneBand {
 }
 
 /** A ribbon along the great circle from local normal a to b at radius r, `width` metres wide, lying on the sphere. */
-function ribbonGeometry(a: THREE.Vector3, b: THREE.Vector3, r: number, width: number): THREE.BufferGeometry {
-  const pts = greatCircle(a, b, r, 96);
+function ribbonGeometry(a: THREE.Vector3, b: THREE.Vector3, above: number, width: number): THREE.BufferGeometry {
+  // The great circle from a to b on the unit sphere, lifted off the surface by fibreLift (an arch, highest mid-span).
+  const omega = Math.acos(Math.min(1, Math.max(-1, a.dot(b))));
+  const pts = greatCircle(a, b, 1, 96).map((u, i) => u.multiplyScalar(GLOBE_R + above + fibreLift(i / 96, omega)));
   const pos: number[] = [], idx: number[] = [];
   pts.forEach((p, i) => {
     const next = pts[Math.min(pts.length - 1, i + 1)], prev = pts[Math.max(0, i - 1)];

@@ -80,3 +80,7 @@ export function greatCircle(a: THREE.Vector3, b: THREE.Vector3, r: number, steps
   }
   return out;
 }
+
+/** Fibre height above the sphere at t ∈ [0, 1] along a span of `omega` radians: 30 m at the beacons, arching to
+ *  30 m + 0.08·R·ω at mid-span, so a ribbon reads as a cable laid over the globe, never a chord through it. */
+export const fibreLift = (t: number, omega: number): number => 30 + 0.08 * GLOBE_R * omega * Math.sin(Math.PI * t);

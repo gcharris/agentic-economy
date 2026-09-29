@@ -27,6 +27,9 @@ const TAKES = {
   thumbnail: { ppm: 154, target: [3.5, 0.8, 0.3] as [number, number, number] },
   /** The zoom take: the rig's own framing at every altitude, no HUD, no card. */
   zoom: null,
+  /** The Door take: the room at 64 px/m, 2 m left of the rig's framing so the Door card stands right of the Door and the
+   *  room, the Porter and the step stay in view; the HUD and the card both shown. */
+  door: { ppm: 64, target: [2.0, 0.8, 0.8] as [number, number, number] },
 };
 
 async function makeSource(q: URLSearchParams): Promise<EngineSource> {

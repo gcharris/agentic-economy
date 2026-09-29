@@ -228,7 +228,9 @@ export class App {
     if (this.store.pulses.dirty) { uploadPulses(u, this.store.pulses.uPulses, this.store.pulses.uPulseData); this.store.pulses.markClean(); }
     const a = this.rig.visualA;
     for (const b of this.bands) { b.setAltitude(a); b.animate?.(t); }
-    // The globe (DESIGN §10, 4 → 5): at the veil's peak the flat world, plates and every lower band, gives way to it.
+    // The globe (DESIGN §10, 4 → 5): night falls over the country (the veil in the World's ground colour), which stays
+    // visible under it until the globe comes in at the veil's peak; then the flat world, plates, ground and every lower
+    // band, is gone (the relief would stand through the sphere, whose tangent there is not the ground's).
     const flat = globeWeight(a) < 0.5;
     this.tiles.group.visible = flat;
     if (!flat) for (const b of this.bands) if (b.stage < 5 && b.group) b.group.visible = false;

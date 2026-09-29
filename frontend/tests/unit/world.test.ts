@@ -56,6 +56,16 @@ test('world_full(3, 2, 3, 4) at the World: cities live, the heartbeat lands at t
   expect(world.frame?.beacons).toHaveLength(3);
   expect(world.beacons).toHaveLength(3);
   expect(world.fibres).toHaveLength(3); // every pair of three
+  // Fibre is a great-circle arc laid over the sphere (globe-local), never a chord through it: every vertex above the
+  // surface, the middle of each span higher than its ends.
+  for (const x of world.fibres) {
+    for (const m of [x.ribbon, x.core]) {
+      const p = m.geometry.getAttribute('position');
+      const r = (i: number) => Math.hypot(p.getX(i), p.getY(i), p.getZ(i));
+      for (let i = 0; i < p.count; i++) expect(r(i)).toBeGreaterThan(GLOBE_R + 25);
+      expect(r(p.count / 2 - 1)).toBeGreaterThan(r(0) + 100);
+    }
+  }
 
   let beat: { tick: number; latency: number } | null = null;
   for (let t = 2; t <= 16; t++) {

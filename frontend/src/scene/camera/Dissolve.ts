@@ -9,7 +9,7 @@ import * as THREE from 'three';
 /** DESIGN §10's windows: [1.35, 1.65] the lid, [2.35, 2.65] the baseboard, [3.35, 3.65] the plateau, [4.35, 4.65] the globe. */
 export const WINDOWS = [[1.35, 1.65], [2.35, 2.65], [3.35, 3.65], [4.35, 4.65]] as const;
 export const weight = (a: number, lo: number, hi: number): number => { const t = Math.min(1, Math.max(0, (a - lo) / (hi - lo))); return t * t * (3 - 2 * t); };
-/** The globe's weight: the flat world (plates, fixtures) gives way to the sphere at 0.5, the veil's peak. */
+/** The globe's weight: night falls over the country until 0.5, the veil's peak, where the globe comes in. */
 export const globeWeight = (a: number): number => weight(a, WINDOWS[3][0], WINDOWS[3][1]);
 
 
@@ -30,11 +30,11 @@ export class Dissolve {
   update(a: number, camera: THREE.PerspectiveCamera): void {
     let o = 0, globe = false;
     WINDOWS.slice(1).forEach(([lo, hi], i) => {
-      const w = weight(a, lo, hi), peak = i === 2 ? 0.85 : 0.35; // the globe: the relief is gone behind a thick veil
+      const w = weight(a, lo, hi), peak = i === 2 ? 0.7 : 0.35; // the globe: night falls over the relief, which stays visible under it
       const v = 4 * w * (1 - w) * peak;
       if (v > o) { o = v; globe = i === 2; }
     });
-    if (!this.reduced) this.mat.color.set(globe ? '#385b66' : '#6e6152');
+    if (!this.reduced) this.mat.color.set(globe ? '#0a0806' : '#6e6152'); // the World's ground: night falling, not a wipe
     this.mat.opacity = o;
     this.veil.visible = o > 0.002;
     // Fill the view just past the near plane.

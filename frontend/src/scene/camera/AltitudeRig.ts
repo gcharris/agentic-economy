@@ -12,7 +12,7 @@ import { STAGE_LEVEL } from '../../engine/contract/copy.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import type { Band } from '../../engine/store/bus.ts';
 import type { Store } from '../../engine/store/Store.ts';
-import { globeFrame, rootOf } from '../atlas/globe.ts';
+import { GLOBE_R, globeFrame, rootOf } from '../atlas/globe.ts';
 import { BANDS, dolly, heightAt, YAW_DEG } from './bands.ts';
 
 const HALF_LIFE = 0.12;
@@ -26,9 +26,6 @@ export interface Take { ppm: number; target: [number, number, number] }
 export const ROOM_PPM = 77;
 /** Band centres: where A rests when a band is chosen from the ladder or a recorded run's active_scale. */
 export const BAND_REST: Record<Band, number> = { 1: 1.0, 2: 2.0, 3: 3.0, 4: 4.0, 5: 5.0 };
-
-/** Band 5's view height at the veil's peak, where the globe takes over from the relief. */
-const GLOBE_SWAP_H = 5000;
 
 const smooth = (e0: number, e1: number, x: number) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
@@ -52,6 +49,8 @@ export class AltitudeRig {
   countryH = 400;
   /** The globe's centre (Stage 5): the focused country's beacon stands where its relief stood (scene/atlas/globe.ts). */
   readonly globeCentre = new THREE.Vector3();
+  /** The focused country's outward normal on the globe (its beacon's). */
+  readonly globeNormal = new THREE.Vector3(0, 1, 0);
   streetH = 70;
   cityH = 140;
   /** Target in house-local metres (between the Oak Table and the Desk by default). */
@@ -125,7 +124,10 @@ export class AltitudeRig {
     this.countryCentre.set(tree?.cx ?? 0, 0, tree?.cz ?? 0);
     this.countryH = Math.max(40 * k, 1.6 * (tree?.extent ?? layout.radius)); // at 55° pitch a disc stands taller in frame
     const globe = globeFrame(layout, root);
-    if (globe) this.globeCentre.copy(globe.centre); else this.globeCentre.copy(this.countryCentre);
+    if (globe) {
+      this.globeCentre.copy(globe.centre);
+      this.globeNormal.copy(globe.beacons.find((b) => b.id === root)?.normal ?? globe.beacons[0].normal);
+    } else this.globeCentre.copy(this.countryCentre);
     if (!frame) return;
     this.tick = frame.tick;
     const scale = STAGE_LEVEL[frame.state.active_scale];
@@ -184,29 +186,40 @@ export class AltitudeRig {
     // Band 1: the house's frame and local target; from A 1.5 to 2.0 blend to the street centre at world yaw.
     const s = smooth(1.5, 2.0, a);
     const houseTarget = this.local.clone().applyAxisAngle(UP, this.frameYaw).add(this.origin);
-    this.target.copy(houseTarget).lerp(this.streetCentre, s).lerp(this.cityCentre, smooth(2.5, 3.0, a)).lerp(this.countryCentre, smooth(3.5, 4.0, a)).lerp(this.globeCentre, smooth(4.35, 4.65, a));
     const yawTarget = this.frameYaw * (1 - s);
     this.yaw = dt >= 1 ? yawTarget : this.yaw + (yawTarget - this.yaw) * k;
-    if (dt >= 1) this.smoothTarget.copy(this.target); else this.smoothTarget.lerp(this.target, k);
-
-    let H = this.take ? this.rows / this.take.ppm
-      : heightAt(a, BANDS.map((b, i) => (i === 0 ? this.rows / ROOM_PPM : i === 1 ? this.streetH : i === 2 ? this.cityH : i === 3 ? this.countryH : b.H)));
-    // 4 → 5 is a swap behind the veil, not one continuous dolly: the country backs off only to 2.5 × its frame by the
-    // veil's peak (4.5), where the globe takes over from GLOBE_SWAP_H and opens out to band 5's 16,000.
-    if (!this.take && a > 4) {
-      H = a < 4.5 ? this.countryH * (1 + 1.5 * smooth(4.0, 4.5, a))
-        : Math.exp(Math.log(GLOBE_SWAP_H) + (Math.log(BANDS[4].H) - Math.log(GLOBE_SWAP_H)) * smooth(4.5, 5.0, a));
-    }
-    this.viewH = H;
     // Band 4 tips the camera up from 30° to 55° over [3.5, 4.0] (ARCHITECTURE §8): the country read as relief. Band 5
     // comes back down to 35° while the lens opens from 4° to 40° (DESIGN §10), from the globe's window to the rest.
     const orbit = smooth(4.35, 5.0, a);
     const fov = 4 + 36 * orbit;
-    const d = dolly(H, fov);
     const p = (30 + 25 * smooth(3.5, 4.0, a) - 20 * orbit) * DEG;
     const y = YAW_DEG * DEG;
-    const off = new THREE.Vector3(-Math.cos(p) * Math.sin(y), Math.sin(p), Math.cos(p) * Math.cos(y)).multiplyScalar(d);
-    off.applyAxisAngle(UP, this.yaw);
+    const view = new THREE.Vector3(-Math.cos(p) * Math.sin(y), Math.sin(p), Math.cos(p) * Math.cos(y)).applyAxisAngle(UP, this.yaw);
+    this.target.copy(houseTarget).lerp(this.streetCentre, s).lerp(this.cityCentre, smooth(2.5, 3.0, a)).lerp(this.countryCentre, smooth(3.5, 4.0, a));
+    // 4 → 5: the target backs away from the country along the line of sight first (the country stays centred while
+    // night falls over it), turning toward the globe's centre only as it arrives: at orbit 1 it is the centre.
+    if (orbit > 0) {
+      const dir = view.clone().lerp(this.globeNormal, orbit * orbit).normalize();
+      const end = this.countryCentre.clone().addScaledVector(dir, -GLOBE_R * orbit);
+      this.target.copy(end).lerp(this.globeCentre, orbit ** 4);
+    }
+    if (dt >= 1) this.smoothTarget.copy(this.target); else this.smoothTarget.lerp(this.target, k);
+
+    let H = this.take ? this.rows / this.take.ppm
+      : heightAt(a, BANDS.map((b, i) => (i === 0 ? this.rows / ROOM_PPM : i === 1 ? this.streetH : i === 2 ? this.cityH : i === 3 ? this.countryH : b.H)));
+    // 4 → 5 is one continuous move, set by how big the country stands in frame (P = its distance × tan(fov / 2)): it
+    // only ever recedes, slowly while night falls over it and faster as the globe comes in, from band 4's framing to
+    // band 5's (16,000 m at 40°, the target at the globe's centre, the country R nearer). The camera's distance from
+    // the target is that distance plus how far the target has backed away (GLOBE_R × orbit): never inside the sphere.
+    if (!this.take && a > 4) {
+      const half = Math.tan((fov * DEG) / 2);
+      const p4 = this.countryH / 2, p5 = (dolly(BANDS[4].H, 40) - GLOBE_R) * Math.tan(20 * DEG);
+      const size = Math.exp(Math.log(p4) + (Math.log(p5) - Math.log(p4)) * smooth(4.0, 5.0, a) ** 1.5);
+      H = (size / half + GLOBE_R * orbit) * 2 * half;
+    }
+    this.viewH = H;
+    const d = dolly(H, fov);
+    const off = view.multiplyScalar(d);
     camera.fov = fov;
     camera.near = d / 50;
     camera.far = d * 4;
