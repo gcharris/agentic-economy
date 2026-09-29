@@ -43,3 +43,4 @@ body[data-take] #hud, body[data-take] #ticker, body[data-take] #banner { display
 body[data-quality="balanced"]::after, body[data-quality="high"]::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
   background: radial-gradient(ellipse at 50% 48%, transparent 55%, rgba(14, 10, 6, 0.55) 100%); }
 #hud, #labels, #ticker, #banner { z-index: 2; }
+body[data-take="zoom"] dialog#door { display: none; }

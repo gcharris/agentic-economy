@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import type { SceneBand, SceneContext, SceneEvent } from '../../app/App.ts';
 import { attachPoint } from '../../engine/layout/layoutBulbs.ts';
+import { weight } from '../camera/Dissolve.ts';
 import { PULSE_KIND } from '../../engine/store/clips.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import { buildClearinghouse, flareAt, setFlare, type Clearinghouse } from './clearinghouse.ts';
@@ -86,7 +87,12 @@ export class CityBand implements SceneBand {
     }
   }
 
-  setAltitude(a: number): void { this.group.visible = a > CITY_VISIBLE_ABOVE; }
+  /** The baseboard (DESIGN §10, 2 → 3): over [2.35, 2.65] the city's fixtures rise out of the plate. */
+  setAltitude(a: number): void {
+    const w = weight(a, 2.35, 2.65);
+    this.group.visible = w > 0.001;
+    this.group.scale.y = Math.max(0.001, w);
+  }
 
   animate(t: number): void {
     if (!this.group.visible || !this.netted) { if (this.hall) setFlare(this.hall, 0); return; }

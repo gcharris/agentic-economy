@@ -8,15 +8,14 @@ import type { SceneBand, SceneContext, SceneEvent } from '../../app/App.ts';
 import { isHashMismatch } from '../../engine/contract/events.ts';
 import { normaliseBurn, type NodeId, type NodeStatus } from '../../engine/contract/state.ts';
 import type { Plate } from '../../engine/layout/layoutBulbs.ts';
+import { weight } from '../camera/Dissolve.ts';
 import type { Frame } from '../../engine/source/EngineSource.ts';
 import { buildCottage, setChimney, setLantern, SLOT_LOCAL, type Cottage } from './cottage.ts';
 import { BEAT_EDGES, beatsStart, Courier, courierAt, STATIC, staticAt, type Run } from './couriers.ts';
-import { buildCommons, lanternMesh, meetingStone } from './commons.ts';
+import { buildCommons, CENTRE_STONE_R, lanternMesh, meetingStone } from './commons.ts';
 
 /** The street band draws up to the city's dissolve edge; the city takes over above it. */
 export const STREET_VISIBLE_UP_TO = 3.5; // the street's life stays in the city view (§2c.1: roof and lantern)
-/** The focused house's body appears as the lid goes on (DESIGN §10: [1.35, 1.65]). */
-export const LID_ON_AT = 1.5;
 const COURIER_CAP = 64;
 const GOLD2 = new THREE.Color('#d4a755'), EMBER = new THREE.Color('#c95140'), OFF = new THREE.Color('#1c1610');
 const SLOT_REST = new THREE.Color('#b98626'), CYAN = new THREE.Color('#2aa5b8'), GOLD_LIGHT = new THREE.Color('#f2cb7a'), INK3 = new THREE.Color('#8a7a64');
@@ -38,6 +37,8 @@ export class StreetBand implements SceneBand {
   private layoutKey = '';
   private a = 1;
   private readonly settledRuns = new Set<number>();
+  private fade: THREE.Material[] = [];
+  private fadeFor: NodeId | null = null;
 
   mount(ctx: SceneContext): void {
     this.ctx = ctx;
@@ -50,7 +51,7 @@ export class StreetBand implements SceneBand {
     const { store } = this.ctx;
     const layout = store.layout.current;
     for (const c of this.cottages.values()) this.group.remove(c.group);
-    this.cottages.clear(); this.plates.clear(); this.posts = [];
+    this.cottages.clear(); this.plates.clear(); this.posts = []; this.fadeFor = null;
     for (const o of [...this.group.children]) if (o !== this.fx) this.group.remove(o);
     const housesOf = new Map<NodeId, Plate[]>();
     for (const p of layout.plates.values()) {
@@ -158,8 +159,31 @@ export class StreetBand implements SceneBand {
   setAltitude(a: number): void {
     this.a = a;
     this.group.visible = a <= STREET_VISIBLE_UP_TO;
+    this.fx.visible = a < 2.5; // couriers belong to the street band; the city shows the netting instead
     const focus = this.ctx.store.focus;
-    for (const [id, c] of this.cottages) c.house.visible = id !== focus || a >= LID_ON_AT;
+    // The lid (DESIGN §10, 1 → 2): over [1.35, 1.65] the focused cottage fades in while lowering 0.6 m into place.
+    const w = weight(a, 1.35, 1.65);
+    for (const [id, c] of this.cottages) {
+      const packed = this.houses.get(id)?.status === 'packed'; // a packed house folds into its street: no cottage
+      c.group.visible = !packed;
+      if (id !== focus) { c.house.visible = true; continue; }
+      if (this.fadeFor !== id) this.makeFadeable(c);
+      c.house.visible = w > 0.001;
+      c.house.position.y = 0.6 * (1 - w);
+      for (const m of this.fade) { m.opacity = w; m.transparent = w < 0.999; m.depthWrite = w > 0.5; }
+    }
+  }
+
+  /** The focused cottage gets its own materials, so the lid can fade it without fading its neighbours. */
+  private makeFadeable(c: Cottage): void {
+    this.fade = [];
+    this.fadeFor = c.id;
+    c.house.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const m = (o.material as THREE.Material).clone();
+      o.material = m;
+      this.fade.push(m);
+    });
   }
 
   animate(t: number): void {
@@ -216,8 +240,13 @@ export class StreetBand implements SceneBand {
   /** The settle beat: both rims tick --sage, and the amount rides a label over the seal. */
   private settle(r: Run, t: number): void {
     for (const id of [r.from, r.to]) if (id !== null) this.ctx.tiles.tickSage(id, t); // both rims tick --sage on the plates
-    if (r.outcome?.kind === 'settled' && this.a >= 1.5) {
-      this.ctx.bus.emit('label', { id: `settle-${r.envelope}`, world: r.meet.clone().setY(r.meet.y + 0.6), text: `${r.outcome.amount.toFixed(2)}`, kind: 'caption', ttl: 1.2 });
+    // One label per swap, 800 ms, at the midpoint of the receiving house's path (so a busy centre stone stays legible).
+    const to = r.to === null ? undefined : this.plates.get(r.to);
+    const street = to?.parent == null ? undefined : this.ctx.store.layout.plateOf(to.parent);
+    if (r.outcome?.kind === 'settled' && to && street && this.a >= 1.5 && this.a <= 2.6) {
+      const a = Math.atan2(to.cz - street.cz, to.cx - street.cx), mid = (CENTRE_STONE_R + street.r) / 2;
+      const world = new THREE.Vector3(street.cx + Math.cos(a) * mid, street.top + 1.0, street.cz + Math.sin(a) * mid);
+      this.ctx.bus.emit('label', { id: `settle-${r.envelope}`, world, text: r.outcome.amount.toFixed(2), kind: 'caption', ttl: 0.8 });
     }
   }
 

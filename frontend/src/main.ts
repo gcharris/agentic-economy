@@ -23,6 +23,8 @@ import { CityBand } from './scene/city/CityBand.ts';
 const TAKES = {
   /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
   thumbnail: { ppm: 154, target: [3.5, 0.8, 0.3] as [number, number, number] },
+  /** The zoom take: the rig's own framing at every altitude, no HUD, no card. */
+  zoom: null,
 };
 
 async function makeSource(q: URLSearchParams): Promise<EngineSource> {
@@ -60,7 +62,7 @@ async function main(): Promise<void> {
   const take = q.get('take');
   if (take && take in TAKES) {
     app.rig.setTake(TAKES[take as keyof typeof TAKES]);
-    document.body.dataset.take = take; // a director take shows the Door card and nothing else of the HUD
+    document.body.dataset.take = take; // a director take shows the Door card and nothing else of the HUD (the zoom take: not even the card)
   }
   const zoom = Number(q.get('zoom'));
   if (zoom >= 1 && zoom <= 5 && source.live) await app.command({ decision: 'zoom', stage: zoom as 1 | 2 | 3 | 4 | 5 });
@@ -74,6 +76,9 @@ async function main(): Promise<void> {
       frame: () => app.frame(),
       /** Set a shared shader uniform (a take or a diagnosis: uHatchWeight, uEdgeGain, …). */
       uniform: (name: string, value: number) => { const u = (app.uniforms as unknown as Record<string, { value: unknown }>)[name]; if (u && typeof u.value === 'number') u.value = value; return !!u; },
+      /** Director: put the camera at altitude A (no spring); returns the zoom still waiting for the engine, if any. */
+      altitude: (a: number) => { app.rig.jumpTo(a); return app.rig.pending?.band ?? null; },
+      pending: () => app.rig.pending?.band ?? null,
       /** DOM-free commands for scripted takes (a live source only): approve, reject, top up, zoom. */
       command: (c: Parameters<typeof app.command>[0]) => app.command(c),
       render: (at?: number) => { app.renderFrame(at); return true; },

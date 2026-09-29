@@ -70,11 +70,12 @@ void main() {
   vec3 normal = vtx.w < 0.5 ? vec3(0.0, 1.0, 0.0) : vtx.w < 1.5 ? normalize(vec3(cos(ang) * 0.2, 0.1, sin(ang) * 0.2)) : vec3(cos(ang), 0.0, sin(ang));
   vSide = side; vRho = rho; vSlot = aSlot; vKind = aKind; vSeed = aSeed; vStreet = iB.w; vSage = iC.w; vDye = iC.rgb; vCenter = aCenter;
   vec2 unit = vec2(cos(ang), sin(ang)) * rho;
-  float fog = 0.0; bool packed = false;
+  float fog = 0.0, fold = 0.0; bool packed = false;
   if (aSlot >= 0.0) {
     Truth t = fetchTruth(aSlot);
     fog = clamp(1.0 - visiblePhi(t, unit * 0.5), 0.0, 1.0);
     packed = t.status == 3;
+    fold = packed ? clamp((uTime - t.packT) / 0.6, 0.0, 1.0) : 0.0; // PACKED folds a bulb into its parent over 600 ms
   }
 #ifdef SPECK
   // Detached specks off a foggy rim (fog > 0.5): a tiny instance ring round each plate.
@@ -91,7 +92,8 @@ void main() {
              + 0.03 * rimNoise(ang, 9.0, aSeed + 0.37) * smoothstep(0.30, 0.40, fog)
              + 0.015 * rimNoise(ang, 27.0, aSeed + 0.71) * smoothstep(0.60, 0.70, fog);
   float rr = rho >= 0.9 && !packed ? rho * (1.0 + fog * uEdgeGain * disp) : rho;       // a packed plate is one smooth circle
-  vec3 p = vec3(cos(ang) * rr * aRadius, aBase + position.y * (aTop - aBase), sin(ang) * rr * aRadius);
+  rr *= 1.0 - 0.97 * fold;
+  vec3 p = vec3(cos(ang) * rr * aRadius, aBase + position.y * (aTop - aBase) * (1.0 - fold), sin(ang) * rr * aRadius);
   vUvC = unit * 0.5;
 #endif
   vec3 w = vec3(aCenter.x + p.x, p.y, aCenter.y + p.z);

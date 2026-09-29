@@ -56,3 +56,19 @@ test('the recorded street: six cottages on ring 1, settles at the kerb, snap-bac
   expect(street.group.visible).toBe(true);
   app.dispose();
 });
+
+test('the dissolves: the lid fades the focused cottage in over [1.35, 1.65]; the city rises over [2.35, 2.65]', async () => {
+  const { CityBand } = await import('../../src/scene/city/CityBand.ts');
+  const street = new StreetBand(), city = new CityBand();
+  const app = await App.boot({ source: TraceSource.fromTrace(loadTrace(), 'street'), renderer: new NullRenderer(), ui: NOOP_UI, clock: 'manual', bands: [street, city] });
+  await app.stepTo(1);
+  const focused = street.cottages.get(app.store.focus!)!;
+  const at = (a: number) => { street.setAltitude(a); city.setAltitude(a); };
+  at(1.2); expect(focused.house.visible).toBe(false);
+  at(1.5); expect(focused.house.visible).toBe(true); expect(focused.house.position.y).toBeCloseTo(0.3, 6);
+  at(1.7); expect(focused.house.position.y).toBe(0);
+  at(2.3); expect(city.group.visible).toBe(false);
+  at(2.5); expect(city.group.scale.y).toBeCloseTo(0.5, 6);
+  at(2.7); expect(city.group.scale.y).toBe(1);
+  app.dispose();
+});

@@ -4,6 +4,7 @@
 // and a brass-capped chimney pot on the ridge at x = −1.0 that glows with heat. House-local metres, as the room.
 
 import * as THREE from 'three';
+import { seedOf } from '../../engine/layout/layoutBulbs.ts';
 import type { NodeStatus } from '../../engine/contract/state.ts';
 
 const flat = (color: string, extra: THREE.MeshLambertMaterialParameters = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...extra });
@@ -37,32 +38,54 @@ export interface Cottage {
   lantern: THREE.MeshLambertMaterial;
   chimney: THREE.MeshLambertMaterial;
   smoke: THREE.Mesh[];
+  /** Seeded variation: the chimney's end of the ridge and the extra storey height (0 for most). */
+  chimneyX: number;
+  lift: number;
+  /** The lid gesture (DESIGN §10, 1 → 2): the roof and upper storey, faded and lowered into place. */
+  upper: THREE.Group;
+  materials: THREE.Material[];
+}
+
+/** Seeded house variation (the video's polish): roof tint ±8 %, the chimney at one end of the ridge, one in six taller. */
+export function variation(id: number): { tint: number; chimneyX: number; lift: number } {
+  const a = seedOf(id), b = seedOf(id + 7919), c = seedOf(id + 104729);
+  return { tint: 1 + (a - 0.5) * 0.16, chimneyX: b < 0.5 ? -3.0 : 2.4, lift: c < 1 / 6 ? 1.2 : 0 };
 }
 
 export function buildCottage(id: number): Cottage {
+  const v = variation(id);
+  const roofMat = M.roof.clone();
+  roofMat.color.multiplyScalar(v.tint);
   const group = new THREE.Group();
   group.name = `cottage-${id}`;
   const house = new THREE.Group();
   house.position.y = 0; // the group stands at the house plate's top (a terrace, DESIGN §2c.1)
   group.add(house);
+  const stretch = (EAVES + v.lift) / EAVES;
   const body = new THREE.Mesh(G.body, M.wall);
+  body.scale.y = stretch;
   body.castShadow = body.receiveShadow = true;
   house.add(body);
   for (const [x, z] of [[-4.0, -3.0], [4.0, -3.0], [-4.0, 3.0], [4.0, 3.0]]) {
     const p = new THREE.Mesh(G.post, M.timber);
     p.position.set(x, 0, z);
+    p.scale.y = stretch;
     house.add(p);
   }
+  // Everything above the eaves rides one group, lifted for a taller house and lowered in by the lid gesture.
+  const upper = new THREE.Group();
+  upper.position.y = v.lift;
+  house.add(upper);
   const gable = new THREE.Mesh(G.gable, M.wall);
   gable.castShadow = true;
-  house.add(gable);
+  upper.add(gable);
   const tilt = Math.atan2(RIDGE, G.half);
   for (const s of [-1, 1]) {
-    const r = new THREE.Mesh(G.roofPlane, M.roof);
+    const r = new THREE.Mesh(G.roofPlane, roofMat);
     r.position.set(0, EAVES + RIDGE / 2 + 0.06, (s * G.half) / 2);
     r.rotation.x = s * tilt;
     r.castShadow = true;
-    house.add(r);
+    upper.add(r);
   }
   // The Door on the east wall, under the east gable; the step outside.
   const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.1, 1.0), M.door);
@@ -84,19 +107,19 @@ export function buildCottage(id: number): Cottage {
   house.add(glass, cap);
   // The chimney: a 0.5 m pot on the ridge at x = −1.0 with a brass cap; its mouth glows with heat.
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.5, 8), M.pot);
-  pot.position.set(-1.0, EAVES + RIDGE + 0.2, 0);
+  pot.position.set(v.chimneyX, EAVES + RIDGE * (1 - Math.abs(v.chimneyX) / 4.4) + 0.2, 0);
   const chimney = new THREE.MeshLambertMaterial({ color: '#a8842e', emissive: '#c95140', emissiveIntensity: 0 });
   const potCap = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 8), chimney);
-  potCap.position.set(-1.0, EAVES + RIDGE + 0.48, 0);
-  house.add(pot, potCap);
+  potCap.position.set(v.chimneyX, pot.position.y + 0.28, 0);
+  upper.add(pot, potCap);
   const smokeMat = () => new THREE.MeshBasicMaterial({ color: '#8a7a64', transparent: true, opacity: 0, depthWrite: false });
   const smoke = [0, 1, 2].map(() => {
     const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), smokeMat());
-    m.position.set(-1.0, EAVES + RIDGE + 0.6, 0);
-    house.add(m);
+    m.position.set(v.chimneyX, pot.position.y + 0.4, 0);
+    upper.add(m);
     return m;
   });
-  return { id, group, house, slot, lantern, chimney, smoke };
+  return { id, group, house, slot, lantern, chimney, smoke, chimneyX: v.chimneyX, lift: v.lift, upper, materials: [roofMat] };
 }
 
 const PAPER = new THREE.Color('#f0e6d2'), GOLD_LIGHT = new THREE.Color('#f2cb7a'), EMBER = new THREE.Color('#c95140');
@@ -121,8 +144,9 @@ export function setChimney(c: Cottage, heat: number, t: number, reduced: boolean
   c.chimney.emissiveIntensity = h * 1.2;
   c.smoke.forEach((m, i) => {
     const phase = reduced ? 0.5 : (t * 0.5 + i / 3) % 1;
-    m.position.y = EAVES + RIDGE + 0.6 + phase * 1.6;
-    m.position.x = -1.0 + phase * 0.5;
+    const y0 = EAVES + RIDGE * (1 - Math.abs(c.chimneyX) / 4.4) + 0.6;
+    m.position.y = y0 + phase * 1.6;
+    m.position.x = c.chimneyX + phase * 0.5;
     m.scale.setScalar(0.6 + phase * 1.4);
     (m.material as THREE.MeshBasicMaterial).opacity = h * 0.45 * (1 - phase);
   });

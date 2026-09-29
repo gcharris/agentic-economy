@@ -15,7 +15,8 @@ import { AltitudeRig } from '../scene/camera/AltitudeRig.ts';
 import { Labels } from '../ui/labels.ts';
 import { presetForBand, WorldLights } from './lighting.ts';
 import { TruthBuffer } from '../engine/gpu/TruthBuffer.ts';
-import { TileMesh } from '../engine/gpu/TileMesh.ts';
+import { EDGE_GAIN, TileMesh } from '../engine/gpu/TileMesh.ts';
+import { Dissolve, weight } from '../scene/camera/Dissolve.ts';
 import { createUniforms, uploadPulses, type SharedUniforms } from '../engine/gpu/uniforms.ts';
 import type { Renderer } from './Renderer.ts';
 
@@ -84,6 +85,7 @@ export class App {
   ui: UiLayer = NOOP_UI;
   lights: WorldLights | null = null;
   labels: Labels | null = null;
+  dissolve: Dissolve | null = null;
   readonly truth = new TruthBuffer();
   readonly uniforms = createUniforms(this.truth);
   readonly tiles = new TileMesh(this.uniforms);
@@ -121,6 +123,8 @@ export class App {
     const ui = opts.ui ?? (async (a: App) => (await import('../ui/index.ts')).createUi(a, opts.root ?? document));
     app.ui = typeof ui === 'function' ? await ui(app) : ui;
     app.labels = new Labels((opts.root ?? (typeof document !== 'undefined' ? document : null))?.querySelector?.<HTMLElement>('#labels') ?? null, app.store.bus, app.now, (p) => app.project(p));
+    renderer.scene.add(renderer.camera); // the camera carries the dissolve veil
+    app.dissolve = new Dissolve(renderer.camera, opts.reducedMotion ?? false);
     app.lights = new WorldLights(app.ctx.lighting, app.ctx.quality !== 'low' && renderer.kind === 'webgl');
     renderer.scene.add(app.lights.group);
     app.rig.onZoom = (b) => { if (source.live) void app.command({ decision: 'zoom', stage: b }); };
@@ -207,6 +211,9 @@ export class App {
     this.lights?.follow(this.rig.lookTarget, this.rig.viewH);
     // The shared uniforms: numbers only, no Frame (ARCHITECTURE §4.5).
     const u = this.uniforms;
+    // Rim fray reads at every altitude: ×1 in the room rising to ×3 at the city, so a drifted street is a coastline from above.
+    u.uEdgeGain.value = EDGE_GAIN * (1 + 2 * weight(this.rig.visualA, 1.5, 3.0));
+    this.dissolve?.update(this.rig.visualA, this.renderer.camera);
     u.uTime.value = t; u.uAltitude.value = this.rig.visualA; u.uTickSeconds.value = this.store.tickSeconds;
     u.uPxPerUnit.value = this.renderer.rows / Math.max(1e-3, this.rig.viewH); u.uBurnRef.value = this.store.burnRef;
     if (this.lights) {

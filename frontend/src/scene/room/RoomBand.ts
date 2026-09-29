@@ -103,7 +103,7 @@ export class RoomBand implements SceneBand {
     }
   }
 
-  setAltitude(a: number): void { this.group.visible = a < ROOM_VISIBLE_BELOW; }
+  setAltitude(a: number): void { this.group.visible = a < ROOM_VISIBLE_BELOW; } // under the lid from 1.65
 
   animate(t: number): void {
     if (!this.group.visible) return;
