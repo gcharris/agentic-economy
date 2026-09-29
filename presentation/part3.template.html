@@ -286,7 +286,7 @@ impl SovereignNode {
     pub fn top_up(&mut self, credits: f64) { /* … */ }
 }`;
 CODE.run = `cd engine
-cargo test   # __TESTS__ passed, __IGNORED__ ignored on purpose
+cargo test   # __TESTS__ passed, 0 ignored
 cargo run --release --bin house -- --door interactive  # you, at the door
 cargo run --release --bin house -- --hidden-cost --budget 300 --tasks 10
 cargo run --release --bin house -- --scenario street --ticks 30

@@ -18,7 +18,7 @@ cargo test --no-fail-fast
   tests/golden_invariant.rs  14 passed
   tests/law_1_forgery.rs      5 passed
   tests/serve_smoke.rs        1 passed
-  tests/stage2_letter_slot.rs 10 passed, 2 ignored (by design)
+  tests/stage2_letter_slot.rs 12 passed (the two DvP lock tests un-ignored 2026-09-29: they guard ledger #4 and #11)
   tests/stage3_clearinghouse  9 passed
   tests/stage4_high_court.rs  8 passed
   tests/stage5_recursive_stark 8 passed
@@ -30,7 +30,7 @@ cargo fmt --check            clean (default rustfmt, no rustfmt.toml; the crate 
 
 **The reflow, for the record.** Commit `01b0b10` was authored wide and never formatted; the closing `cargo fmt` this file prescribes reflowed the crate once, whitespace only, and that reflow was committed on its own ("cargo fmt: reflow the crate once") before the test adaptations, so both diffs read cleanly. No `rustfmt.toml` was added: no stable configuration reproduces the authored style, and `disable_all_formatting` is a policy the Director sets, not a repair. `cargo fmt --check` is clean from here on.
 
-**Since the handoff, cloud session of 2026-09-28/29, in commit order:** `engine/target` untracked, the wasm kept in `engine/dist` (`build-wasm.sh`); the six tests adapted and `serve` answering 404 (§5); `engine_new(3|4|5)` and `--scenario city|country|world` expose the city, the forged country and the world to the browser and the server; the presentation refreshed and published (§6); `serve` honours `PORT` and `--bind` for a hosted run; `frontend/DESIGN.md` and `frontend/ARCHITECTURE.md` written (§9); a `VaultBackend` behind the `vault` feature, checkpointed with review findings open (§7 item 2); the frontend scaffold's engine layer, checkpointed (§9). Verified after the checkpoints: `cargo test` passed=75 failed=0 ignored=2; `cargo test --features vault` passed=99 failed=0 ignored=2.
+**Since the handoff, cloud session of 2026-09-28/29, in commit order:** `engine/target` untracked, the wasm kept in `engine/dist` (`build-wasm.sh`); the six tests adapted and `serve` answering 404 (§5); `engine_new(3|4|5)` and `--scenario city|country|world` expose the city, the forged country and the world to the browser and the server; the presentation refreshed and published (§6); `serve` honours `PORT` and `--bind` for a hosted run; `frontend/DESIGN.md` and `frontend/ARCHITECTURE.md` written (§9); a `VaultBackend` behind the `vault` feature, checkpointed with review findings open (§7 item 2); the frontend scaffold's engine layer, checkpointed (§9). The two Stage 2 DvP lock tests are un-ignored (chip session commit 8a633af on `claude/friendly-lovelace-8wrrll`, applied by intent: the test's `SharedSlot` wrapper now forwards `verify_batch`, which is where ledger #11's lock map lives; the trait doc in `src/boundary.rs` says so). Verified after the checkpoints: `cargo test` passed=77 failed=0 ignored=0; `cargo test --features vault` passed=101 failed=0 ignored=0.
 
 **The six lane tests are adapted (§5), and the suite is green.** They were written by parallel lane agents against the pre-audit engine and encoded behaviours that were then changed on purpose (see §4); §5 records each adaptation as applied.
 

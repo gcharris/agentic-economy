@@ -361,8 +361,8 @@
     <div class="law"><span class="n">LAW 4</span><h3>Sovereignty</h3><p>Irreversible commits need authorisation: a hand at the door, a swap, a netting run, a ruling, a proof.</p></div>
   </div>
   <div class="hero-meta">
-    <span><i class="dot"></i>Written in Rust. One crate, <span class="num" data-fact="loc">10,644</span> lines.</span>
-    <span><span class="num" data-fact="tests">71</span> invariant tests, all green; <span class="num" data-fact="ignored">2</span> more, written against the Letter Slot's lock phase, are ignored on purpose.</span>
+    <span><i class="dot"></i>Written in Rust. One crate, <span class="num" data-fact="loc">12,275</span> lines.</span>
+    <span><span class="num" data-fact="tests">77</span> invariant tests, all green; none ignored.</span>
     <span>Runs on ten cores under Tokio and as <span class="num" data-fact="wasm-kb">341</span> KB of WebAssembly inside this page. Same roots, tick for tick.</span>
   </div>
   <div class="btn-row">
@@ -976,7 +976,7 @@ impl SovereignNode {
     pub fn top_up(&mut self, credits: f64) { /* … */ }
 }`;
 CODE.run = `cd engine
-cargo test   # 71 passed, 2 ignored on purpose
+cargo test   # 77 passed, 0 ignored
 cargo run --release --bin house -- --door interactive  # you, at the door
 cargo run --release --bin house -- --hidden-cost --budget 300 --tasks 10
 cargo run --release --bin house -- --scenario street --ticks 30
