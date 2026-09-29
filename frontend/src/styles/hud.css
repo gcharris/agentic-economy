@@ -35,3 +35,5 @@
 @media (max-width: 1023px) { #ticker { display: none; } }
 @media (max-width: 719px) { #ladder, #gates, #totals, #controls, #drawer { display: none; } #focus { width: auto; left: 12px; top: 64px; } }
 body[data-take] #hud, body[data-take] #ticker, body[data-take] #banner { display: none; }
+#labels .label { position: absolute; left: 0; top: 0; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--paper-ink); background: var(--pill); border: 1px solid var(--oak-dark); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+#labels .label.caption { background: color-mix(in srgb, var(--gold) 85%, white); }

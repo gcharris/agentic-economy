@@ -15,7 +15,9 @@ import { SseSource } from './engine/source/SseSource.ts';
 import { RUN_NAMES, TraceSource, type RunName, type Trace } from './engine/source/TraceSource.ts';
 import { WasmSource } from './engine/source/WasmSource.ts';
 import type { LightingPreset, QualityPreset } from './engine/store/bus.ts';
+import { bindAltitudeInput } from './scene/camera/input.ts';
 import { RoomBand } from './scene/room/RoomBand.ts';
+import { StreetBand } from './scene/street/StreetBand.ts';
 
 const TAKES = {
   /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
@@ -47,8 +49,9 @@ async function main(): Promise<void> {
   const renderer = new ThreeRenderer(document.querySelector<HTMLCanvasElement>('#stage')!, quality, q.get('stats') === '1');
   const app = await App.boot({
     source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion,
-    lighting: { preset, blend: 0, cycle: false }, bands: [new RoomBand()],
+    lighting: { preset, blend: 0, cycle: false }, bands: [new RoomBand(), new StreetBand()],
   });
+  if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
   const take = q.get('take');
   if (take && take in TAKES) {
     app.rig.setTake(TAKES[take as keyof typeof TAKES]);

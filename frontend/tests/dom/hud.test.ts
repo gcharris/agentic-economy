@@ -49,3 +49,14 @@ test('no score, rank, reputation, leaderboard or rating appears anywhere, throug
     a.dispose();
   }
 });
+
+test('belief beside truth when they part (a frame edited to part them)', async () => {
+  const frames = structuredClone(trace.house.slice(0, 1));
+  const n = frames[0].state.nodes.find((x) => x.stage === 'House')!;
+  n.liquidity_belief = 10; n.liquidity_truth = 12;
+  const source = new TraceSource(frames, { version: trace.version, scenario: 'house', seed: 7 });
+  const a = await App.boot({ source, renderer: new NullRenderer(), root: document.body, clock: 'manual' });
+  await source.stepTo(1);
+  expect(document.querySelector('#focus-liquidity')!.textContent).toBe('belief 10.00 · truth 12.00');
+  a.dispose();
+});

@@ -5,13 +5,15 @@ import * as THREE from 'three';
 import type { EnvelopeId, NodeId } from '../engine/contract/state.ts';
 import type { Decision, EngineSource, Frame, SourceHello } from '../engine/source/EngineSource.ts';
 import { nowSeconds } from '../engine/source/EngineSource.ts';
-import { TickClock } from '../engine/source/TickClock.ts';
+import { TICK_SECONDS_BY_BAND, TickClock } from '../engine/source/TickClock.ts';
 import type { Band, LightingState, QualityPreset, SceneBus, SceneEvent } from '../engine/store/bus.ts';
 import type { ClipScheduler } from '../engine/store/clips.ts';
 import { acceptFrame } from '../engine/store/reducer.ts';
 import { NOOP_UI, Store, type UiLayer } from '../engine/store/Store.ts';
 import type { LayoutHandle } from '../engine/layout/layoutCity.ts';
 import { AltitudeRig } from '../scene/camera/AltitudeRig.ts';
+import { Labels } from '../ui/labels.ts';
+import { WorldLights } from './lighting.ts';
 import type { Renderer } from './Renderer.ts';
 
 export type { SceneEvent } from '../engine/store/bus.ts';
@@ -73,11 +75,14 @@ export class App {
   readonly bands: SceneBand[] = [];
   readonly clock: TickClock | null;
   ui: UiLayer = NOOP_UI;
+  lights: WorldLights | null = null;
+  labels: Labels | null = null;
   hello: SourceHello | null = null;
   ready = false;
   private ctx: SceneContext | null = null;
   private raf = 0;
   private reduces = 0;
+  private tickBand: Band = 1;
   private readonly unsub: (() => void)[] = [];
   private readonly now: () => number;
 
@@ -100,6 +105,10 @@ export class App {
     };
     const ui = opts.ui ?? (async (a: App) => (await import('../ui/index.ts')).createUi(a, opts.root ?? document));
     app.ui = typeof ui === 'function' ? await ui(app) : ui;
+    app.labels = new Labels((opts.root ?? (typeof document !== 'undefined' ? document : null))?.querySelector?.<HTMLElement>('#labels') ?? null, app.store.bus, app.now, (p) => app.project(p));
+    app.lights = new WorldLights(app.ctx.lighting);
+    renderer.scene.add(app.lights.group);
+    app.rig.onZoom = (b) => { if (source.live) void app.command({ decision: 'zoom', stage: b }); };
     for (const b of opts.bands ?? []) app.register(b);
     app.unsub.push(source.onFrame((f) => app.accept(f)));
     app.unsub.push(source.onStatus((s) => { app.store.status = s; app.store.bus.emit('status', s); }));
@@ -125,7 +134,7 @@ export class App {
     frame.arrivedAt = this.now(); // "app clock seconds when accepted": one clock for clips and the render loop
     const events = acceptFrame(frame, this.store, this.ui);
     this.reduces++;
-    this.rig.follow(this.store);
+    this.rig.follow(this.store, frame, !this.source.live);
     for (const b of this.bands) b.onFrame(frame);
     for (const se of events) for (const b of this.bands) b.onEvent(se);
   }
@@ -162,7 +171,15 @@ export class App {
   renderFrame(t = this.now()): void {
     this.rig.rows = this.renderer.rows;
     this.rig.update(t, this.renderer.camera);
-    for (const b of this.bands) { b.setAltitude(this.rig.a); b.animate?.(t); }
+    const band = this.rig.band;
+    if (band !== this.tickBand) { // tick seconds follow the band: 1.2 s in the room, 0.25 s in orbit
+      this.tickBand = band;
+      this.store.tickSeconds = TICK_SECONDS_BY_BAND[band];
+      if (this.clock) this.clock.tickSeconds = TICK_SECONDS_BY_BAND[band];
+    }
+    const a = this.rig.visualA;
+    for (const b of this.bands) { b.setAltitude(a); b.animate?.(t); }
+    this.labels?.frame(t);
     this.renderer.render();
   }
 
@@ -192,6 +209,7 @@ export class App {
     for (const u of this.unsub) u();
     for (const b of this.bands) b.dispose();
     this.ui.dispose?.();
+    this.labels?.dispose();
     this.source.dispose();
     this.renderer.dispose();
   }

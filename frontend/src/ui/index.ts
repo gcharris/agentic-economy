@@ -15,7 +15,7 @@ export function createUi(app: App, root: ParentNode): UiLayer {
   const clock = app.clock;
   const hud = new Hud({
     root, source: app.source,
-    zoom: (band) => { void app.command({ decision: 'zoom', stage: band }); },
+    zoom: (band) => app.rig.setBand(band), // the rig crosses the band edge and asks the engine once
     controls: clock ? {
       run: () => clock.start(), pause: () => clock.pause(), step: () => { void clock.stepOnce(); },
       speed: (x) => clock.setSpeed(x), running: () => clock.running,
