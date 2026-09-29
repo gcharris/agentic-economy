@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>The Agentic Economy</title>
+  <meta name="description" content="A simulation of an economy of autonomous agents at five nested scales. State moves only at a boundary, and nothing is shared by default." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Schibsted+Grotesk:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap"
+  />
+  <style>
+    /* Shell base only. The ui lane owns src/styles/** (tokens.css, hud.css, door.css, note.css, ticker.css). */
+    :root {
+      --ground: #16110c; --panel: #1e1710; --line: #3a2f24; --ink: #ece2cf; --ink-3: #8a7a64;
+      --gold: #d4a755; --paper: #f0e6d2; --paper-ink: #1c150e;
+      --display: "Fraunces", Georgia, "Times New Roman", serif;
+      --ui: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+      --mono: "JetBrains Mono", Menlo, Consolas, monospace;
+    }
+    html, body { height: 100%; margin: 0; }
+    body { background: var(--ground); color: var(--ink); font: 17px/1.55 var(--ui); overflow: hidden; }
+    #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    #hud, #labels, #banner { position: fixed; inset: 0; pointer-events: none; }
+    #hud > * { pointer-events: auto; }
+    #ticker { position: fixed; left: 0; right: 0; bottom: 0; font-family: var(--mono); }
+    [hidden] { display: none !important; }
+    dialog#door { background: var(--paper); color: var(--paper-ink); border: 0; padding: 0; max-width: 440px; }
+    dialog#door::backdrop { background: rgba(10, 8, 6, 0.35); }
+    .eyebrow { font: 600 0.78rem/1.2 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+    .mono { font-family: var(--mono); font-size: 0.86em; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <!-- The canvas: every glyph is DOM, the canvas draws no text. -->
+  <canvas id="stage" aria-label="The Agentic Economy: the house, the street, the city, the country, the world"></canvas>
+
+  <!-- HUD zones (ARCHITECTURE §B.2). Static shells only; hud.ts patches them in reduce(). -->
+  <div id="hud">
+    <nav id="ladder" aria-label="Stages"></nav>
+    <div id="block" aria-live="polite"></div>
+    <section id="focus" aria-label="Focused node">
+      <h2 id="focus-name"></h2>
+      <span id="focus-status" class="pill"></span>
+      <div id="focus-purse" class="mono"></div>
+      <div id="focus-phi" class="mono"></div>
+      <div id="focus-tasks" class="mono"></div>
+      <div id="focus-task"></div>
+      <div id="focus-burn" class="mono"></div>
+      <div id="focus-liquidity" class="mono"></div>
+      <div id="focus-papers" class="mono"></div>
+      <div id="focus-root" class="mono"></div>
+    </section>
+    <ul id="gates" aria-label="Gates"></ul>
+    <dl id="totals" aria-label="Totals"></dl>
+    <div id="controls" aria-label="Playback"></div>
+    <div id="drawer">
+      <ol id="receipts" class="mono" aria-label="Receipts"></ol>
+      <ol id="feed" class="mono" aria-label="Feed"></ol>
+    </div>
+    <aside id="more" hidden></aside>
+  </div>
+
+  <!-- The Door (DESIGN §3): a real <dialog>. Static copy only; door.ts owns showModal/close and every dynamic span. -->
+  <dialog id="door" aria-labelledby="door-node">
+    <p class="eyebrow">The Porter is at the Door</p>
+    <h2 id="door-node"></h2>
+    <p id="door-desc"></p>
+    <p>Sending costs <span id="door-cost" class="mono"></span>. It comes out of the purse only if you say yes.</p>
+    <hr />
+    <p><strong>Nothing burns while you decide.</strong></p>
+    <p class="mono" id="door-proof">
+      <span id="door-proof-ticks"></span> · <span id="door-proof-purse"></span> · <span id="door-proof-phi"></span>
+    </p>
+    <p id="door-camera" hidden></p>
+    <p id="door-count" hidden></p>
+    <div id="door-actions">
+      <button type="button" id="door-no" autofocus>No, leave it on the table</button>
+      <button type="button" id="door-yes">Yes, send it</button>
+    </div>
+    <p id="door-sent" hidden>sent to the Door…</p>
+    <p id="door-recorded" hidden>Recorded run · the person's answer replays at the recorded tick</p>
+  </dialog>
+
+  <!-- The Note on the table (shown while node.note !== null; note.ts fills it). -->
+  <aside id="note" hidden aria-label="A note on the table"></aside>
+
+  <!-- Projected labels (≤ 8), the root ticker, the recorded/lagged banner. -->
+  <div id="labels" aria-hidden="true"></div>
+  <div id="ticker" aria-label="Root history"></div>
+  <div id="banner" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
