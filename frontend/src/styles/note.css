@@ -1,0 +1,9 @@
+/* The Note (DESIGN §3): a --paper card on the Oak Table while node.note !== null. */
+#note { position: fixed; left: 50%; top: 30vh; transform: translateX(-50%); width: min(380px, calc(100vw - 32px)); background: var(--paper); color: var(--paper-ink); border-radius: 8px; padding: 16px 18px; box-shadow: 0 14px 40px rgba(0,0,0,0.45); font-size: 14px; }
+#note h2 { font: 400 22px/1.2 var(--display); margin: 0 0 8px; }
+#note dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 8px; }
+#note dt { color: #6b5a44; } #note dd { margin: 0; }
+#note .reason { font-weight: 600; }
+#note form { display: flex; gap: 8px; }
+#note input { width: 90px; font: 14px var(--mono); }
+#note button { font: 600 14px var(--ui); background: var(--gold); border: 1px solid var(--gold-2); border-radius: 7px; padding: 7px 12px; cursor: pointer; }

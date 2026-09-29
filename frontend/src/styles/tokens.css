@@ -1,0 +1,14 @@
+/* tokens.css (ARCHITECTURE §B): the brief's validated set, the world bible's oak set, DESIGN §2's additions. */
+:root {
+  --ground:#16110c; --panel:#1e1710; --raised:#27201a; --line:#3a2f24; --line-2:#4c3f30;
+  --ink:#ece2cf; --ink-2:#b9a88f; --ink-3:#8a7a64; --dim:#7a6c5c;
+  --gold:#d4a755; --gold-2:#b98626; --cyan:#2aa5b8; --cyan-2:#7cc8d3; --ember:#c95140; --ember-2:#e0705f;
+  --sage:#6a9a6e; --sage-2:#8fbf92; --paper:#f0e6d2; --paper-2:#e3d6bb; --paper-ink:#1c150e;
+  --wall:#2c2219; --wall-2:#201811; --floor:#19130d; --oak:#5a422f; --oak-dark:#3e2d1f; --oak-top:#423021; --oak-leg:#312318;
+  --door:#4a3525; --door-frame:#2e2116; --gold-light:#f2cb7a; --shelf:#4f3926; --case:#3a2a1c;
+  --spine-a:#7a4f32; --spine-b:#8b3a2b; --spine-c:#3d5c48; --spine-d:#a6884e; --pill:#fff8ed; --paper-aged:#d8c8a8;
+  --fur-scout:#d4913b; --fur-scribble:#7a624d; --fur-inspector:#5c5148; --fur-penny:#b9a88f; --fur-porter:#3e3b38;
+  --baize:#120e0a; --brass:#a8842e; --linen:#e9dfc6; --plinth:#2b2117; --plinth-lit:#4a3826; --roof:#7d4a34; --resin:#3e3a34; --soot:#0e0a06;
+  --fog-1:#8a7a64; --fog-2:#6e6152; --fog-3:#5f5548; --fog-4:#4f4740; --fog-5:#385b66;
+  --display:"Fraunces",Georgia,"Times New Roman",serif; --ui:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif; --mono:"JetBrains Mono",Menlo,Consolas,monospace;
+}

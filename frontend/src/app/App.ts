@@ -122,7 +122,7 @@ export class App {
 
   /** One frame from the source: the store, the reducer, the DOM, then the bands (§4 steps 2–4). */
   accept(frame: Frame): void {
-    if (!frame.arrivedAt) frame.arrivedAt = this.now();
+    frame.arrivedAt = this.now(); // "app clock seconds when accepted": one clock for clips and the render loop
     const events = acceptFrame(frame, this.store, this.ui);
     this.reduces++;
     this.rig.follow(this.store);

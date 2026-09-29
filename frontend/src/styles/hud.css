@@ -1,0 +1,35 @@
+/* The HUD (DESIGN §3): six --panel cards; canvas draws no glyph. */
+#hud > * { position: fixed; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+#hud button { font: 600 12px var(--ui); color: var(--ink); background: var(--raised); border: 1px solid var(--line-2); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+#hud button:disabled { cursor: default; opacity: 0.75; }
+#ladder { top: 12px; left: 12px; display: flex; flex-direction: column; gap: 4px; }
+#ladder button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: transparent; border-color: transparent; color: var(--ink-2); padding: 3px 8px; }
+#ladder button.active { color: var(--gold); border-color: var(--line-2); background: var(--raised); }
+#ladder button.pending::after { content: "asking the engine…"; font-weight: 400; color: var(--ink-3); }
+#ladder .gate { font-weight: 400; color: var(--ink-3); font-size: 11px; }
+#block { top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; white-space: nowrap; color: var(--ink-2); }
+#block .b-tick { color: var(--ink); font-weight: 600; }
+#block .b-mode { color: var(--gold); }
+#focus { top: 12px; right: 12px; width: 280px; }
+#focus h2 { font: 400 22px/1.2 var(--display); margin: 0 0 6px; }
+#focus .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--raised); border: 1px solid var(--line-2); margin-bottom: 8px; }
+#focus .pill[data-status="waiting_at_door"] { color: var(--gold-light); border-color: var(--gold-2); }
+#focus .pill[data-status="halted"] { color: var(--ember-2); border-color: var(--ember); }
+#focus-purse .bar { display: block; height: 4px; background: var(--line); border-radius: 2px; margin: 3px 0 6px; overflow: hidden; }
+#focus-purse .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold-2), var(--gold)); }
+#focus-purse.low .bar i { background: var(--ember); }
+#focus-task { color: var(--ink-2); font-size: 12px; }
+#gates { bottom: 12px; left: 12px; margin: 0; padding: 10px 12px 10px 28px; color: var(--ink-2); max-width: 300px; }
+#totals { bottom: 12px; right: 12px; margin: 0; display: grid; grid-template-columns: auto auto; gap: 0 12px; }
+#totals dt { color: var(--ink-3); } #totals dd { margin: 0; text-align: right; }
+#controls { bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; }
+#controls select { font: 12px var(--ui); background: var(--raised); color: var(--ink); border: 1px solid var(--line-2); border-radius: 6px; }
+#drawer { bottom: 64px; left: 50%; transform: translateX(-50%); width: min(560px, 50vw); max-height: 78px; overflow: auto; }
+#drawer ol { list-style: none; margin: 0; padding: 0; }
+#receipts li { color: var(--gold); } #feed li { color: var(--ink-2); }
+#ticker { display: flex; justify-content: flex-end; gap: 4px; padding: 0 12px 2px; font-size: 10px; color: var(--ink-3); pointer-events: none; }
+#ticker .tab { padding: 1px 4px; border-top: 1px solid var(--line-2); }
+#banner { top: auto; bottom: 8px; left: 12px; right: auto; font-size: 11px; color: var(--ink-3); }
+@media (max-width: 1023px) { #ticker { display: none; } }
+@media (max-width: 719px) { #ladder, #gates, #totals, #controls, #drawer { display: none; } #focus { width: auto; left: 12px; top: 64px; } }
+body[data-take] #hud, body[data-take] #ticker, body[data-take] #banner { display: none; }

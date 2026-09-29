@@ -70,12 +70,15 @@ export class DoorDialog {
     }
   }
 
+  /** Beside the Door, never over it: the Porter and the lit frame stay in view while the card is open. */
   private place(): void {
     const p = this.deps.locate?.();
     if (!p || typeof innerWidth === 'undefined') { this.el.style.removeProperty('left'); this.el.style.removeProperty('top'); return; }
     const w = Math.min(440, innerWidth - 32);
-    this.el.style.left = `${Math.round(Math.min(innerWidth - w - 16, Math.max(16, p.x - w / 2)))}px`;
-    this.el.style.top = `${Math.round(Math.max(16, Math.min(innerHeight * 0.5, p.y - 360)))}px`;
+    const right = p.x + 48, left = p.x - 48 - w;
+    const x = right + w <= innerWidth - 16 ? right : left >= 16 ? left : (innerWidth - w) / 2;
+    this.el.style.left = `${Math.round(x)}px`;
+    this.el.style.top = `${Math.round(Math.max(16, Math.min(innerHeight - 380, p.y - 220)))}px`;
   }
 
   private async decide(decision: 'approve' | 'reject'): Promise<void> {

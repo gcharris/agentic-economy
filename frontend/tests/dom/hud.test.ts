@@ -38,3 +38,14 @@ test('the focus card is the house, and its figures are the frame\'s', async () =
   expect(document.querySelector('#focus-tasks')!.textContent).toBe(`${n.tasks_done} / ${n.tasks_total} tasks`);
   expect([...document.querySelectorAll('#receipts li')].map((l) => l.textContent)).toEqual(n.receipts);
 });
+
+test('no score, rank, reputation, leaderboard or rating appears anywhere, through the real UI, on every recorded frame', async () => {
+  const FORBIDDEN = /\b(score|rank|reputation|leaderboard|rating)\b/i;
+  for (const run of ['house', 'house_hidden_cost', 'house_visible_cost', 'street'] as const) {
+    loadShell();
+    const source = TraceSource.fromTrace(trace, run);
+    const a = await App.boot({ source, renderer: new NullRenderer(), root: document.body, clock: 'manual' });
+    while (await source.step()) expect(document.body.textContent, `${run} t${a.frame()!.tick}`).not.toMatch(FORBIDDEN);
+    a.dispose();
+  }
+});

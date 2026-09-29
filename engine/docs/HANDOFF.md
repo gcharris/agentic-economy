@@ -112,7 +112,7 @@ The six copy corrections listed at the 2026-09-29 handoff (decay attribution, th
 
 ## 7. Open work, in priority order (updated 2026-09-29)
 
-1. **The frontend build** (`../frontend/`, brief §6). The spec is written (`DESIGN.md`, `ARCHITECTURE.md`) and the scaffold's engine layer is in (contract types, the three `EngineSource`s and the worker, store/reducer/clips/bus, hex layout, 69 unit tests). Not started: the GPU/app layer (truth buffer, tile mesh, shaders, `App`, camera rig, `main.ts`), the ui lane (HUD, the Door dialog, the Note, receipts), the room, street, city and atlas bands, the design-system page, `RECORDING-PLAN.md`, the Door-at-recorded-tick tests. Build order: ARCHITECTURE §14. Run: `cd frontend && npm install && npm run copy-assets && npm test`.
+1. **The frontend build** (`../frontend/`, brief §6). The spec is written (`DESIGN.md`, `ARCHITECTURE.md`) and the scaffold's engine layer is in (contract types, the three `EngineSource`s and the worker, store/reducer/clips/bus, hex layout, 69 unit tests). Done since: `App`, `main.ts`, the band-1 rig, the ui lane (HUD, the Door dialog, the Note, receipts) and the room (see §9). Not started: the truth buffer and tile mesh, the street, city and atlas bands, the design-system page, `RECORDING-PLAN.md`, the Door-at-recorded-tick tests. Build order: ARCHITECTURE §14. Run: `cd frontend && npm install && npm run copy-assets && npm test`.
 2. **VaultBackend review findings** (commit ab260bb): bound the request's `max_tokens` by the seat's reservation (blocking); do not retry a timeout or an unreadable 2xx body; debit failed attempts in the ledger; compile `log` at `max_level_debug` so ureq's TRACE wire dump can never print the key; require https except loopback; halt the house on a reservation refusal. Then `cargo test --features vault`. No live call has been made; the Director key is not in this environment.
 3. Policy questions in `docs/AUDIT-LEDGER.md` (#28 court rollback depth, #30 Stage 3 LOD tension, #31 receiver-side DvP, #32 Stage 5 ledger lines): the Director's.
 4. Persistence: an append-only tick journal (decisions, top-ups, zooms, seeds) so a run is a fold of its inputs.
@@ -122,17 +122,20 @@ The six copy corrections listed at the 2026-09-29 handoff (decay attribution, th
 
 | deliverable (brief §6) | state |
 |---|---|
+| figure check (§11.5a) | done: `presentation/figure_check.py`, run by `build.py`; 16 claims against the JSON, D1/D2/D6 seeded, `--self-test` |
 | design-system page | spec only (`frontend/DESIGN.md`) |
-| playable Stage 1 and 2 against `serve` and the trace, Door flow complete | data layer only; no renderer, no UI |
+| playable Stage 1 and 2 against `serve` and the trace, Door flow complete | Stage 1 done on the trace (App, `NullRenderer`/`ThreeRenderer`, band-1 rig, `RoomBand`: fixtures, Φ haze, peg-cats with morph poses, L1/L2/L3/L4, the Porter's walk, the Door's 70° swing; ui: Door dialog, HUD, Note). Live wasm/SSE wired in `main.ts` but not exercised; Stage 2 not started. Not built yet: THOUGHT bubbles, sound, settings popover, zoom/dissolve, the chroma split |
 | Stage 3 hex city with the `NETTED` pulse | not started (scenario 3 is in the wasm and in `serve`) |
 | recording plan | not started |
-| headless test: the Door at the recorded tick | harness in place (vitest projects, jsdom dialog polyfill); the test not written |
+| headless test: the Door at the recorded tick | green: `tests/dom/door.test.ts` (3), `note`, `hud` (incl. the forbidden-word scan through the real UI), `tests/unit/room.test.ts`; SwiftShader `tests/gpu/door-swiftshader.spec.ts` (ticks 1–4–5 and the thumbnail take `?take=thumbnail`) |
 
 Share of this handoff's total effort done: about half. The engine side is near complete, the presentation is published, and the frontend is a spec plus its data layer; its rendering is most of what remains.
 
 ## 10. Usage record
 
 Cloud session `session_017K6GES9PnR23AwS2vThJFM` (2026-09-28 21:02 to 2026-09-29): five subagent workflows, 50 agent runs, about 7.3M subagent tokens; the session's own record reports USD 252.78 of usage on the overage pool, with the seven-day limit in `rejected` state from about 23:41 UTC on 28 September until 11:00 UTC on 29 September. Two workflows (the Vault repair round and the frontend scaffold) died on that limit; their partial work is the two WIP checkpoint commits. `TECH-STACK-DECISION.md` records the previous local session's judges stopping on the same limit the day before.
+
+Session `session_01XfouYeTaaQi2P4RF3mnWhV` (2026-09-29, Opus 5.5 at high, no workflows, no subagents): §11.5 (a) and (b). The session record exposes no `cost_usd`, only `rate_limit_info` (five-hour window, `allowed`), so spend was not measurable from inside the session.
 
 ## 8. Provenance you will be asked about
 
