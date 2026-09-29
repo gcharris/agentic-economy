@@ -58,3 +58,10 @@ export function freshEngine(mod: WebAssembly.Module = loadWasmModule()) {
     tick: (): number => Number(x.engine_tick()),
   };
 }
+
+/** index.html's body without its scripts: the shell every DOM test mounts, so the tests and the page share one markup. */
+export function loadShell(): void {
+  const html = readFileSync(resolve(FRONTEND_ROOT, 'index.html'), 'utf8');
+  const body = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? '';
+  document.body.innerHTML = body.replace(/<script[\s\S]*?<\/script>/gi, '');
+}
