@@ -54,6 +54,16 @@ The Director's ruling, replacing the hex zoning of doc 03 §3 and §6–§7 wher
 
 The room (§4) is untouched. Everything else in §6–§10 that says "hex", "ring", "axial" or "spiral" reads "plate", "rim", "centre and radius", "bulbs".
 
+### 2c.1 Composition fix (2026-09-29, after the first bulb screenshots)
+
+The plates read as empty discs with houses on one side. Three corrections, all to §2c:
+
+1. **Bud all the way round.** Children sit around the whole rim except the attachment arc (±35° around the direction of the parent), not a 200° arc. The parent's radius is the smallest that seats them: R = max(2.2·r, n·r·1.15/π). For six houses of 6.5 m that is a 14 m street plate, not 25 m; for eight, 19 m. Grandchildren likewise bud around their whole rim minus the attachment arc.
+2. **Terraces.** Each generation steps up 0.35 m with a 0.25 m bevelled wall, so bulbs visibly grow out of their parent and cast shadows at Noon: city plate lowest, street plates above it, house plates above those.
+3. **A plate carries its own life inside.** The interior is never bare limestone. A street plate: a commons tinted with the street's rim dye (turf, not paint), the kerb ring inside the rim with lantern posts between houses, paths from each Letter Slot to a centre stone where couriers meet and swaps settle, and five to nine low-poly trees (round canopies in moss and ochre, oak trunks) placed by seed. The city plate: paving rings around the dome, the foundries and data yards standing on the plate between the streets' attachments rather than as satellites, trees along the tubes. The ground beyond every plate: dark earth `#1c1610` with faint contour rings, never black.
+
+The rim fray gain (×4) and 96 segments stand as built. Houses at city altitude may render as roof and lantern only.
+
 ## 3. Type and the HUD
 
 Fraunces 400 for display, Schibsted Grotesk for UI (17 px / 1.55; eyebrows 0.78 rem 600 uppercase in `--gold`), JetBrains Mono at `0.86em`, tabular, for receipts, hashes, ids, Φ and credits. Credits two decimals (`754.95 cr`), costs one (`10.0 cr`), Φ one-decimal percent, hashes first 8 hex. Canvas draws no glyph; DOM draws every one, patched in `reduce()` and on clip boundaries, never per render frame, except `transform` on at most eight projected labels.
