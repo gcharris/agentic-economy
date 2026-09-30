@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest';
 import { App } from '../../src/app/App.ts';
 import { NullRenderer } from '../../src/app/Renderer.ts';
 import { NOOP_UI } from '../../src/engine/store/Store.ts';
-import { composeCards, PhoneView } from '../../src/ui/phone.ts';
+import { composeCards, resolveHouse, PhoneView } from '../../src/ui/phone.ts';
 import { NotesTable } from '../../src/ui/notes.ts';
 import { engineSource } from '../helpers/engineSource.ts';
 import { loadShell } from '../helpers/assets.ts';
@@ -115,4 +115,36 @@ test('Friday: the phone shows its week’s Note; the TV lays the Notes side by s
   for (const s of tv) expect(s.textContent).toContain('The week is over. The Note is on the table.');
   expect(document.querySelector('#notes')!.textContent).not.toMatch(/total/i);
   expect(document.body.textContent).not.toMatch(BANNED);
+});
+
+
+test('numbered phone URLs follow --names creation order, even for unsorted names', async () => {
+  const a = await phone('1');
+  await a.step();
+  const state = a.store.frame!.state;
+  const houses = state.nodes.filter((n) => n.stage === 'House').sort((a, b) => a.house_number! - b.house_number!);
+  houses[0].name = 'Zoe'; houses[1].name = 'Ada'; houses[2].name = 'Ben';
+  expect(resolveHouse(state, '1')?.name).toBe('Zoe');
+  expect(resolveHouse(state, '2')?.name).toBe('Ada');
+  expect(resolveHouse(state, 'ben')?.id).toBe(houses[2].id);
+});
+
+
+test('an unaffordable oracle is disabled; a refused command clears its pending state', async () => {
+  const a = await phone('Ada');
+  await untilCard(a);
+  const frame = a.store.frame!;
+  const ada = frame.state.nodes.find((n) => n.name === 'Ada')!;
+  const view = new PhoneView(document, 'Ada', async () => false, true);
+  ada.compute = 5;
+  view.apply(frame, a.store);
+  expect(buttons()[2].disabled).toBe(true);
+  ada.compute = 100;
+  view.apply(frame, a.store);
+  buttons()[2].click();
+  await Promise.resolve();
+  expect(document.querySelector('section.oracle .asking')).toBeNull();
+  expect(buttons()[2].disabled).toBe(false);
+  view.apply(frame, a.store);
+  expect(buttons()[2].disabled).toBe(false);
 });

@@ -102,6 +102,7 @@ export interface NodeView {
   oak_root: Hash32;
   papers: number;
   oracle_price: number | null; // the oracle's last answer to this house: the courier's truth price (doc 06 §5)
+  house_number?: number | null; // one-based --names order; absent in older recorded traces
   oracle_tick: number | null;
   receipts: string[]; // newest first; ≤ 6 live, 3 in the trace
 }
@@ -191,7 +192,7 @@ const nodeViewKeys = [
   'compute', 'compute_allocated', 'compute_burned', 'joules_burned', 'compute_reclaimed',
   'liquidity_belief', 'liquidity_truth', 'confidence', 'fog',
   'generation', 'idle_ticks', 'calibrations', 'tasks_total', 'tasks_done', 'current_task',
-  'held', 'packed', 'note', 'burned_this_tick', 'oak_root', 'papers', 'oracle_price', 'oracle_tick', 'receipts',
+  'held', 'packed', 'note', 'burned_this_tick', 'oak_root', 'papers', 'oracle_price', 'oracle_tick', 'house_number', 'receipts',
 ] as const;
 export const NODE_VIEW_KEYS: Exhaustive<NodeView, typeof nodeViewKeys> = nodeViewKeys;
 

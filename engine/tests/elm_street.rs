@@ -298,3 +298,193 @@ fn the_price_walk_is_seeded_and_moves_about_once_a_day() {
     }
     assert!(seen.len() >= 2, "the truth moved in a week: {seen:?}");
 }
+
+#[test]
+fn oracle_reprices_the_waiting_hire_without_another_formatting_tax() {
+    let mut e = game(11, 2);
+    let ada = houses(&e)[0];
+    let (send, hire, _, _) = knock(&mut e, ada);
+    e.graph.service_prices.insert("courier".into(), 14.0);
+    let burned = e.node(ada).unwrap().purse.compute_burned;
+    e.sync(ada);
+    block_on(e.tick());
+    let env = e
+        .node(ada)
+        .unwrap()
+        .held_at_door
+        .iter()
+        .find(|x| x.id == hire)
+        .unwrap();
+    assert_eq!(env.requested_liquidity, 14.0);
+    assert_eq!(env.tax_paid, 0.5);
+    assert_eq!(e.node(ada).unwrap().purse.compute_burned - burned, 15.0);
+    e.authorize(hire);
+    e.reject(send);
+    block_on(e.tick());
+    block_on(e.tick());
+    assert_eq!(e.node(ada).unwrap().tally.swaps_settled, 1);
+}
+
+#[test]
+fn yes_to_send_and_hire_pays_twice_but_delivers_once() {
+    let mut e = game(11, 2);
+    let ada = houses(&e)[0];
+    let (send, hire, task, _) = knock(&mut e, ada);
+    e.replace_staff(ada, vec![]);
+    let burned = e.node(ada).unwrap().purse.compute_burned;
+    e.authorize(send);
+    e.authorize(hire);
+    block_on(e.tick());
+    block_on(e.tick());
+    assert_eq!(task_state(&e, ada, &task), TaskState::Sent);
+    assert_eq!(e.events().iter().filter(|ev| matches!(ev, EngineEvent::Delivered { envelope, .. } if *envelope == send || *envelope == hire)).count(), 1);
+    assert_eq!(e.node(ada).unwrap().tally.swaps_settled, 1);
+    assert_eq!(e.graph.liquidity_of(ada), 190.0);
+    assert!((e.node(ada).unwrap().purse.compute_burned - burned - 12.0).abs() < 1e-9);
+}
+
+#[test]
+fn an_unaffordable_hire_at_commit_is_counted_as_reverted() {
+    let mut e = game(11, 2);
+    let ada = houses(&e)[0];
+    let (send, hire, _, _) = knock(&mut e, ada);
+    e.authorize(hire);
+    e.reject(send);
+    block_on(e.tick());
+    e.replace_staff(ada, vec![]); // Keep the initiator alive, so rejection occurs at commit, not preflight.
+    e.node_mut(ada).unwrap().purse.compute = 0.0;
+    block_on(e.tick());
+    assert_eq!(e.node(ada).unwrap().tally.swaps_reverted, 1);
+    assert_eq!(e.graph.liquidity_of(ada), 200.0);
+}
+
+#[test]
+fn friday_freezes_unanswered_and_in_flight_envelopes_and_notes() {
+    let mut e = game(11, 2);
+    let ada = houses(&e)[0];
+    let (send, hire, _, _) = knock(&mut e, ada);
+    e.config.week_ticks = Some(e.tick + 1);
+    e.authorize(hire);
+    e.reject(send);
+    block_on(e.tick());
+    let state = e.state_json();
+    e.top_up(ada, 20.0);
+    assert!(!e.authorize(hire));
+    for _ in 0..3 {
+        block_on(e.tick());
+    }
+    assert_eq!(e.state_json(), state);
+}
+
+#[test]
+fn halted_target_and_unbacked_initiator_revert_but_a_poor_seller_can_sell() {
+    for case in 0..3 {
+        let mut e = game(11, 2);
+        let ada = houses(&e)[0];
+        let (send, hire, _, _) = knock(&mut e, ada);
+        let target = e
+            .node(ada)
+            .unwrap()
+            .held_at_door
+            .iter()
+            .find(|h| h.id == hire)
+            .unwrap()
+            .target;
+        match case {
+            0 => {}
+            1 => {
+                e.graph.set_liquidity(ada, 1.0);
+            }
+            _ => {
+                e.graph.set_liquidity(target, 0.0);
+            }
+        }
+        e.authorize(hire);
+        e.reject(send);
+        block_on(e.tick());
+        if case == 0 {
+            e.close(target);
+        } // Target closes after the Door, before the kerb.
+        block_on(e.tick());
+        assert_eq!(
+            e.node(ada).unwrap().tally.swaps_settled,
+            u32::from(case == 2)
+        );
+        assert_eq!(
+            e.node(ada).unwrap().tally.swaps_reverted,
+            u32::from(case != 2)
+        );
+    }
+}
+
+#[test]
+fn friday_replaces_an_exhaustion_note_and_includes_a_house_with_no_tasks() {
+    let mut e = elm_street(
+        EngineConfig {
+            week_ticks: Some(3),
+            oracle_policy: OraclePolicy::Person,
+            ..Default::default()
+        },
+        &names(2),
+        5.0,
+        15,
+    );
+    block_on(e.tick());
+    for id in houses(&e) {
+        assert!(matches!(
+            e.node(id).unwrap().note.as_ref().unwrap().reason,
+            HaltReason::RunwayExhausted { .. }
+        ));
+    }
+    block_on(e.tick());
+    block_on(e.tick());
+    for id in houses(&e) {
+        assert!(e.node(id).unwrap().note.as_ref().unwrap().week.is_some());
+    }
+    let mut empty = elm_street(
+        EngineConfig {
+            week_ticks: Some(1),
+            ..Default::default()
+        },
+        &names(2),
+        800.0,
+        0,
+    );
+    block_on(empty.tick());
+    for id in houses(&empty) {
+        assert_eq!(
+            empty
+                .node(id)
+                .unwrap()
+                .note
+                .as_ref()
+                .unwrap()
+                .week
+                .as_ref()
+                .unwrap()
+                .pieces_total,
+            0
+        );
+    }
+}
+
+#[test]
+fn state_view_numbers_houses_in_supplied_names_order() {
+    let mut e = elm_street(
+        EngineConfig::default(),
+        &["Zoe".into(), "Ada".into(), "Ben".into()],
+        800.0,
+        15,
+    );
+    let view = e.state_view();
+    let mut numbered: Vec<_> = view
+        .nodes
+        .iter()
+        .filter(|n| n.stage == Stage::House)
+        .collect();
+    numbered.sort_by_key(|n| n.house_number);
+    assert_eq!(
+        numbered.iter().map(|n| n.name.as_str()).collect::<Vec<_>>(),
+        vec!["Zoe", "Ada", "Ben"]
+    );
+}

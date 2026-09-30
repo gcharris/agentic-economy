@@ -315,13 +315,19 @@ impl Engine {
 
     /// The click at the Door. Returns whether the envelope is actually held.
     pub fn authorize(&mut self, envelope: EnvelopeId) -> bool {
+        if self.week_over() || !self.is_held(envelope) {
+            return false;
+        }
         self.decisions.approve(envelope);
-        self.is_held(envelope)
+        true
     }
 
     pub fn reject(&mut self, envelope: EnvelopeId) -> bool {
+        if self.week_over() || !self.is_held(envelope) {
+            return false;
+        }
         self.decisions.reject(envelope);
-        self.is_held(envelope)
+        true
     }
 
     pub fn is_held(&self, envelope: EnvelopeId) -> bool {
@@ -334,6 +340,9 @@ impl Engine {
     /// `StateSync` (15 cr, Φ → 1.0, the Oak Table's `price/courier` set to the truth), even while its Porter waits at
     /// the Door: looking is not sending. Returns whether the node exists and is not halted.
     pub fn sync(&mut self, node: NodeId) -> bool {
+        if self.week_over() {
+            return false;
+        }
         match self.nodes.get_mut(&node) {
             Some(n) if n.status != NodeStatus::Halted && n.status != NodeStatus::Packed => {
                 n.sync_requested = true;
@@ -345,6 +354,9 @@ impl Engine {
 
     /// Put money in the purse. A halted house continues.
     pub fn top_up(&mut self, node: NodeId, credits: f64) {
+        if self.week_over() {
+            return;
+        }
         let tick = self.tick;
         if let Some(n) = self.nodes.get_mut(&node) {
             n.top_up(credits);
@@ -454,8 +466,20 @@ impl Engine {
 
     // ───────────────────────────────── the tick ───────────────────────────
 
+    fn week_over(&self) -> bool {
+        self.config.week_ticks.is_some_and(|end| self.tick >= end)
+    }
+
     /// One temporal block. See the module docs for the four phases.
     pub async fn tick(&mut self) -> TickReport {
+        // Keep Friday's Notes and unresolved papers as one immutable end-of-week snapshot.
+        if self.week_over() {
+            return TickReport {
+                tick: self.tick,
+                root: self.graph.root(),
+                ..Default::default()
+            };
+        }
         self.tick += 1;
         let tick = self.tick;
         let mut report = TickReport {
@@ -853,7 +877,7 @@ impl Engine {
         let houses: Vec<NodeId> = self
             .nodes
             .values()
-            .filter(|n| n.scale_level == Stage::House && !n.tasks.is_empty())
+            .filter(|n| n.scale_level == Stage::House)
             .map(|n| n.id)
             .collect();
         for id in houses {
@@ -1193,6 +1217,11 @@ impl Engine {
                 .map(|n| n.purse.can_burn(env.compute_weight))
                 .unwrap_or(false);
             if !affordable {
+                if matches!(env.payload, Payload::HireService { .. }) && env.gate != Stage::House {
+                    if let Some(n) = self.nodes.get_mut(&env.initiator) {
+                        n.tally.swaps_reverted += 1;
+                    }
+                }
                 if env.gate == Stage::World {
                     self.stark.note_rejection(env.initiator);
                 }
@@ -1304,6 +1333,34 @@ impl Engine {
                         n.purse.liquidity = truth;
                         if let Some(p) = truth_price {
                             n.oak_table.put("price/courier", format!("{p}"));
+                            // Refresh only unsigned offers still waiting at this house's Door.
+                            // An already authorised hire keeps the price the person approved.
+                            for offer in &mut n.held_at_door {
+                                if offer.door_cleared {
+                                    continue;
+                                }
+                                if let Payload::HireService {
+                                    service,
+                                    believed_price,
+                                    believed_price_hash,
+                                    ..
+                                } = &mut offer.payload
+                                {
+                                    if service != "courier" {
+                                        continue;
+                                    }
+                                    *believed_price = p;
+                                    *believed_price_hash = SovereignGraph::hash_price(service, p);
+                                    offer.requested_liquidity = p;
+                                    offer.payload_hash = offer.payload.hash();
+                                    offer.auth_signature = ProposalEnvelope::signature_for(
+                                        n.id,
+                                        n.secret,
+                                        &offer.payload_hash,
+                                        offer.created_tick,
+                                    );
+                                }
+                            }
                         }
                         n.epistemics.calibrate(tick);
                         if let Some(p) = truth_price {
@@ -1350,6 +1407,9 @@ impl Engine {
         };
         let to = n.parent.unwrap_or(env.initiator);
         if let Some(t) = n.task_mut(task_id) {
+            if t.state == TaskState::Sent {
+                return;
+            } // Paid twice, delivered once.
             t.state = TaskState::Sent;
         }
         let message = format!(
@@ -1691,6 +1751,12 @@ impl Engine {
             .values()
             .map(|n| (n.id, n.name.clone()))
             .collect();
+        let house_numbers: BTreeMap<NodeId, usize> = self
+            .nodes
+            .values()
+            .flat_map(|n| n.children.iter().enumerate().map(|(i, id)| (*id, i + 1)))
+            .filter(|(id, _)| self.nodes[id].scale_level == Stage::House)
+            .collect();
         for id in ids {
             let truth = self.graph.liquidity_of(id);
             let n = self.nodes.get_mut(&id).expect("node");
@@ -1762,6 +1828,7 @@ impl Engine {
                 papers: n.oak_table.papers.len(),
                 oracle_price: n.oracle.map(|o| o.price),
                 oracle_tick: n.oracle.map(|o| o.tick),
+                house_number: house_numbers.get(&n.id).copied(),
                 receipts: n
                     .receipts
                     .iter()
@@ -1863,6 +1930,8 @@ pub struct NodeView {
     /// The oracle's last answer to this house (doc 06 §5, the phone): the courier's truth price and when.
     pub oracle_price: Option<f64>,
     pub oracle_tick: Option<u64>,
+    /// One-based position in the parent's ordered children (the --names order).
+    pub house_number: Option<usize>,
     pub receipts: Vec<String>,
 }
 

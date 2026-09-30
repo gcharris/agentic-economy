@@ -1,5 +1,5 @@
 // The phone view (doc 06 §5, §8.6): one house's Door on a phone at the kitchen table. `?house=<name or n>`: the
-// house by its name, or its place in the street's houses in the order of their names (Ada 1, Ben 2, …).
+// house by its name, or its place in the street's houses in creation order (Ada 1, Ben 2, …).
 //
 // The Porter proposes both a send and a hire for the same finished draft; both knock. The card composes them into
 // one: "Send it (10.0 cr)" says yes to the send and no to the hire; "Hire Ben's courier at 10.0 cr" the reverse;
@@ -17,9 +17,9 @@ import { dayLabel, noteSheet } from './week.ts';
 
 export const ORACLE_CR = 15;
 
-/** The house a phone belongs to: by name (any case), else the n-th house in the order of the houses' names. */
+/** The house a phone belongs to: by name (any case), else the n-th house in creation order. */
 export function resolveHouse(state: StateView, key: string): NodeView | undefined {
-  const houses = state.nodes.filter((n) => n.stage === 'House').sort((a, b) => a.name.localeCompare(b.name));
+  const houses = state.nodes.filter((n) => n.stage === 'House').sort((a, b) => (a.house_number ?? a.id) - (b.house_number ?? b.id));
   const byName = houses.find((n) => n.name.toLowerCase() === key.trim().toLowerCase());
   if (byName) return byName;
   const i = Number(key);
@@ -162,9 +162,14 @@ export class PhoneView implements UiLayer {
       this.asking = n.oracle_tick;
       ask.disabled = true;
       this.el.querySelector('section.oracle')?.append(this.p('asking', 'Asking the oracle… the answer comes back at the next tick.'));
-      void this.command({ decision: 'sync', node: n.id });
+      void this.command({ decision: 'sync', node: n.id }).then((ok) => {
+        if (ok) return;
+        this.asking = undefined;
+        this.el.querySelector('section.oracle .asking')?.remove();
+        ask.disabled = !this.live || sent || n.compute < ORACLE_CR;
+      });
     });
-    if (this.asking !== undefined) ask.disabled = true;
+    if (this.asking !== undefined || n.compute < ORACLE_CR) ask.disabled = true;
     btn(LEAVE_LABEL, 'leave', () => decide([], a.leave));
     el.append(buttons);
     if (sent) el.append(this.p('sent', 'sent to the Door…'));
