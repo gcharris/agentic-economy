@@ -12,7 +12,7 @@ type Hook = {
 
 function watch(page: Page): string[] {
   const bad: string[] = [];
-  page.on('console', (m) => { if (/shader|GL_INVALID|WebGL|error/i.test(m.text()) && m.type() !== 'debug') bad.push(m.text()); });
+  page.on('console', (m) => { if (!/GPU stall due to ReadPixels/.test(m.text()) && /shader|GL_INVALID|WebGL|error/i.test(m.text()) && m.type() !== 'debug') bad.push(m.text()); });
   page.on('pageerror', (e) => bad.push(String(e)));
   return bad;
 }

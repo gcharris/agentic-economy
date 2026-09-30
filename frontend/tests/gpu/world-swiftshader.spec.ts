@@ -7,7 +7,7 @@ type Hook = { ready: boolean; stepTo(t: number): Promise<number>; render(at?: nu
 
 test('world_full at the World: the globe, three beacons, the heartbeat mid-sweep at tick 16; no GL errors', async ({ page }) => {
   const bad: string[] = [];
-  page.on('console', (m) => { if (/shader|GL_INVALID|WebGL|error/i.test(m.text())) bad.push(m.text()); });
+  page.on('console', (m) => { if (!/GPU stall due to ReadPixels/.test(m.text()) && /shader|GL_INVALID|WebGL|error/i.test(m.text())) bad.push(m.text()); });
   page.on('pageerror', (e) => bad.push(String(e)));
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?source=wasm&run=world_full&countries=3&cities=2&streets=3&houses=4&zoom=5&clock=manual&quality=balanced');

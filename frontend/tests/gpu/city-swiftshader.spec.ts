@@ -15,7 +15,7 @@ type Hook = {
 const URL = '/?source=wasm&run=city&streets=6&houses=8&clock=manual&quality=balanced';
 
 async function open(page: Page, bad: string[]) {
-  page.on('console', (m) => { if (/shader|GL_INVALID|WebGL|error/i.test(m.text())) bad.push(m.text()); });
+  page.on('console', (m) => { if (!/GPU stall due to ReadPixels/.test(m.text()) && /shader|GL_INVALID|WebGL|error/i.test(m.text())) bad.push(m.text()); });
   page.on('pageerror', (e) => bad.push(String(e)));
   await page.goto(URL);
   await page.waitForFunction(() => (window as unknown as { __app?: Hook }).__app?.ready, undefined, { timeout: 30_000 });

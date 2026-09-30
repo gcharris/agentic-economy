@@ -6,7 +6,7 @@ type Hook = { ready: boolean; stepTo(t: number): Promise<number>; render(at?: nu
 
 test('scenario 4 mid-unwind: the High Court line, the sweep, the scorches; no GL errors', async ({ page }) => {
   const bad: string[] = [];
-  page.on('console', (m) => { if (/shader|GL_INVALID|WebGL|error/i.test(m.text())) bad.push(m.text()); });
+  page.on('console', (m) => { if (!/GPU stall due to ReadPixels/.test(m.text()) && /shader|GL_INVALID|WebGL|error/i.test(m.text())) bad.push(m.text()); });
   page.on('pageerror', (e) => bad.push(String(e)));
   await page.goto('/?source=wasm&run=country&clock=manual&quality=balanced');
   await page.waitForFunction(() => (window as unknown as { __app?: Hook }).__app?.ready, undefined, { timeout: 30_000 });

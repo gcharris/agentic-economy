@@ -1,7 +1,7 @@
-// Tier 3: Playwright + the preinstalled Chromium on SwiftShader (software
-// WebGL2). Never run `playwright install` here: PLAYWRIGHT_BROWSERS_PATH is
-// /opt/pw-browsers and downloads are disabled; the binary is used by path.
+// Tier 3: Chromium on SwiftShader. Use the cloud image's browser when present,
+// otherwise Playwright's installed Chromium (npx playwright install chromium).
 //   npx playwright test tests/gpu/door-swiftshader.spec.ts
+import { existsSync } from 'node:fs';
 import { defineConfig } from '@playwright/test';
 
 const PORT = 5173;
@@ -30,7 +30,7 @@ export default defineConfig({
       use: {
         browserName: 'chromium',
         launchOptions: {
-          executablePath: '/opt/pw-browsers/chromium',
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined),
           args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
         },
       },
