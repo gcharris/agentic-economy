@@ -100,6 +100,8 @@ export class SseSource implements EngineSource {
   reject(envelope: EnvelopeId): Promise<boolean> { return this.post(`/reject/${idToString(envelope)}`); }
   topUp(node: NodeId, credits: number): Promise<boolean> { return this.post(`/top-up/${idToString(node)}/${String(credits)}`); }
   zoom(stage: 1 | 2 | 3 | 4 | 5): Promise<boolean> { return this.post(`/zoom/${stage}`); }
+  answer(node: NodeId, offer: EnvelopeId, answer: 'send' | 'hire' | 'ask' | 'leave'): Promise<boolean> { return this.post(`/answer/${idToString(node)}/${idToString(offer)}/${answer}`); }
+  close(node: NodeId): Promise<boolean> { return this.post(`/close/${idToString(node)}`); }
   sync(node: NodeId): Promise<boolean> { return this.post(`/sync/${idToString(node)}`); }
 
   dispose(): void {

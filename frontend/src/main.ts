@@ -51,7 +51,7 @@ async function makeSource(q: URLSearchParams): Promise<EngineSource> {
     if (run === ('game' as RunName)) {
       return new WasmSource({
         scenario: 'street', seed: q.get('seed') ?? 7, budget: Number(q.get('budget') ?? 800), tasks: Number(q.get('tasks') ?? 15), costVisible: true,
-        game: { houses: Number(q.get('houses') ?? 4), week: Number(q.get('week') ?? 40), priceWalk: q.get('walk') !== '0', oraclePerson: q.get('oracle') !== 'staff' },
+        game: { houses: Number(q.get('houses') ?? 4), week: Number(q.get('week') ?? 40), priceWalk: q.get('walk') !== '0', oraclePerson: q.get('oracle') !== 'staff', oracleCost: Number(q.get('oracle-cost') ?? 15), cadence: Number(q.get('cadence') ?? 8) },
       });
     }
     const scenario = run.startsWith('house') ? 'house' : run === 'street_doors' ? 'street' : run === ('world_full' as RunName) || run === ('country' as RunName) ? 'country' : (run as 'street' | 'city' | 'world');

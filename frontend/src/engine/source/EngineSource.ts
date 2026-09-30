@@ -22,7 +22,12 @@ export interface PackedTruth {
   burnRef: number;
 }
 
+export type DoorAnswer = 'send' | 'hire' | 'ask' | 'leave';
+
 export type Decision =
+  | { tick: number; decision: 'answer'; node: NodeId; offer: EnvelopeId; answer: DoorAnswer }
+  | { tick: number; decision: 'close'; node: NodeId }
+  | { tick: number; decision: 'sync'; node: NodeId }
   | { tick: number; decision: 'approve' | 'reject'; envelope: EnvelopeId; description?: string }
   | { tick: number; decision: 'top_up'; node: NodeId; credits: number }
   | { tick: number; decision: 'zoom'; stage: 1 | 2 | 3 | 4 | 5 }
@@ -51,6 +56,8 @@ export interface EngineSource {
   authorize(envelope: EnvelopeId): Promise<boolean>; // false: no Door holds that envelope (wasm 0 / serve 404)
   reject(envelope: EnvelopeId): Promise<boolean>;
   topUp(node: NodeId, credits: number): Promise<boolean>;
+  answer?(node: NodeId, offer: EnvelopeId, answer: DoorAnswer): Promise<boolean>;
+  close?(node: NodeId): Promise<boolean>;
   sync(node: NodeId): Promise<boolean>; // the person asks the oracle (doc 06 §8.1): wasm engine_sync, serve POST /sync; trace false
   zoom(stage: 1 | 2 | 3 | 4 | 5): Promise<boolean>;
   setTruthPrice?(price: number): Promise<boolean>; // wasm only: engine_set_truth_price

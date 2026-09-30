@@ -340,12 +340,13 @@ fn yes_to_send_and_hire_pays_twice_but_delivers_once() {
     assert_eq!(e.events().iter().filter(|ev| matches!(ev, EngineEvent::Delivered { envelope, .. } if *envelope == send || *envelope == hire)).count(), 1);
     assert_eq!(e.node(ada).unwrap().tally.swaps_settled, 1);
     assert_eq!(e.graph.liquidity_of(ada), 190.0);
-    assert!((e.node(ada).unwrap().purse.compute_burned - burned - 12.0).abs() < 1e-9);
+    assert!((e.node(ada).unwrap().purse.compute_burned - burned - 10.0).abs() < 1e-9);
 }
 
 #[test]
 fn an_unaffordable_hire_at_commit_is_counted_as_reverted() {
     let mut e = game(11, 2);
+    e.config.game = false; // The demo retains its 2-cr base fee; the game has no base fee.
     let ada = houses(&e)[0];
     let (send, hire, _, _) = knock(&mut e, ada);
     e.authorize(hire);

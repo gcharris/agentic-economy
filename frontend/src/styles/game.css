@@ -52,3 +52,10 @@ body[data-view="tv"] #controls, body[data-view="tv"] #drawer, body[data-view="tv
 #notes > h2 { font: 400 26px/1.2 var(--display); color: var(--paper); margin: 0 0 14px; text-align: center; }
 #notes .sheets { display: flex; gap: 16px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
 #notes .note-sheet { flex: 0 1 260px; }
+
+/* The person's pocket stays reachable after the Door card or the Note. */
+#phone .pocket { order: 2; display: flex; flex-direction: column; gap: 8px; }
+#phone .pocket button { font: 600 14px var(--ui); min-height: 46px; padding: 10px 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--raised); color: var(--ink); text-align: left; cursor: pointer; }
+#phone .pocket button:disabled { opacity: 0.5; cursor: default; }
+#phone .door-card .formatting { font-size: 12px; line-height: 1.35; color: #6b5a44; }
+#phone .command-failure { order: 3; color: var(--ember-2); }

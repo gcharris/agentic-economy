@@ -184,8 +184,48 @@ pub extern "C" fn engine_reject(envelope: u64) -> u32 {
 }
 
 #[no_mangle]
-pub extern "C" fn engine_top_up(node: u64, credits: f64) {
-    with_engine(|e| e.top_up(NodeId(node), credits));
+pub extern "C" fn engine_top_up(node: u64, credits: f64) -> u32 {
+    with_engine(|e| e.top_up(NodeId(node), credits) as u32).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn engine_answer(node: u64, offer: u64, answer: u32) -> u32 {
+    let answer = match answer {
+        0 => crate::tick::DoorAnswer::Send,
+        1 => crate::tick::DoorAnswer::Hire,
+        2 => crate::tick::DoorAnswer::Ask,
+        3 => crate::tick::DoorAnswer::Leave,
+        _ => return 0,
+    };
+    with_engine(|e| e.answer(NodeId(node), EnvelopeId(offer), answer) as u32).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn engine_close(node: u64) -> u32 {
+    with_engine(|e| e.close(NodeId(node)).is_some() as u32).unwrap_or(0)
+}
+
+/// Test and experiment knobs only: defaults remain 15 cr and cadence 8.
+#[no_mangle]
+pub extern "C" fn engine_game_options(oracle_cost: f64, cadence: u32) -> u32 {
+    with_engine(|e| {
+        if !e.config.game
+            || e.tick != 0
+            || !oracle_cost.is_finite()
+            || oracle_cost <= 0.0
+            || cadence == 0
+        {
+            return 0;
+        }
+        e.config.oracle_cost = oracle_cost;
+        e.config.price_period = if cadence == 8 {
+            None
+        } else {
+            Some(cadence as u64)
+        };
+        1
+    })
+    .unwrap_or(0)
 }
 
 #[no_mangle]

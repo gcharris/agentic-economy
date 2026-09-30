@@ -24,7 +24,7 @@ export class NotesTable {
     this.key = key;
     this.el.hidden = notes.length === 0;
     if (!notes.length) { this.el.replaceChildren(); return; }
-    const h = document.createElement('h2'); h.textContent = 'Friday evening · the Notes on the table';
+    const h = document.createElement('h2'); h.textContent = state.tick >= (state.game?.week_ticks ?? 40) || notes.every((n) => n.reason.kind === 'week_over') ? 'Friday evening · the Notes on the table' : 'The Notes on the table';
     const row = document.createElement('div'); row.className = 'sheets';
     row.append(...notes.map((n) => noteSheet(n, 'The week’s Note')));
     this.el.replaceChildren(h, row);

@@ -20,7 +20,7 @@ const isId = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >
 const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
 
 function checkState(state: StateView, tick: number) {
-  expect(keysOf(state)).toEqual(sorted(STATE_VIEW_KEYS));
+  expect(keysOf(state)).toEqual(sorted(STATE_VIEW_KEYS.filter((k) => k !== 'game' || 'game' in state)));
   expect(state.tick).toBe(tick);
   expect(STAGES).toContain(state.active_scale);
   expect(isHash32(state.root)).toBe(true);
@@ -37,7 +37,7 @@ function checkState(state: StateView, tick: number) {
   for (let i = 1; i < state.nodes.length; i++) expect(state.nodes[i].id).toBeGreaterThan(state.nodes[i - 1].id); // ascending id
   const ids = new Set(state.nodes.map((n) => n.id));
   for (const n of state.nodes) {
-    expect(keysOf(n)).toEqual(sorted(NODE_VIEW_KEYS));
+    expect(keysOf(n)).toEqual(sorted(NODE_VIEW_KEYS.filter((k) => k !== 'pocket_left' || 'pocket_left' in n)));
     expect(isId(n.id)).toBe(true);
     expect(typeof n.name).toBe('string');
     expect(STAGES).toContain(n.stage);

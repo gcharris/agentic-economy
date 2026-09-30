@@ -22,7 +22,10 @@ interface EngineExports {
   engine_tick(): bigint;
   engine_authorize(envelope: bigint): number;
   engine_reject(envelope: bigint): number;
-  engine_top_up(node: bigint, credits: number): void;
+  engine_top_up(node: bigint, credits: number): number;
+  engine_answer(node: bigint, offer: bigint, answer: number): number;
+  engine_close(node: bigint): number;
+  engine_game_options(cost: number, cadence: number): number;
   engine_new_game?(houses: number, budget: number, tasks: number, weekTicks: number, priceWalk: number, oraclePerson: number, seed: bigint, costVisible: number): void;
   engine_sync?(node: bigint): number;
   engine_zoom(stage: number): void;
@@ -89,13 +92,16 @@ scope.onmessage = async (ev: MessageEvent<ToWorker>) => {
         else if (m.world && x.engine_new_world) x.engine_new_world(m.world.countries, m.world.cities, m.world.streets, m.world.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
         else if (m.city && x.engine_new_city) x.engine_new_city(m.city.streets, m.city.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
         else x.engine_new(m.scenario, BigInt(m.seed), m.budget, m.tasks, m.costVisible ? 1 : 0);
+        if (m.game) x.engine_game_options(m.game.oracleCost ?? 15, m.game.cadence ?? 8);
         post({ t: 'hello', version: read(x, x.engine_version()) });
         break;
       }
       case 'tick': tick(); break;
       case 'authorize': post({ t: 'ack', id: m.id, ok: engine().engine_authorize(BigInt(m.envelope)) === 1 }); break;
       case 'reject': post({ t: 'ack', id: m.id, ok: engine().engine_reject(BigInt(m.envelope)) === 1 }); break;
-      case 'topUp': engine().engine_top_up(BigInt(m.node), m.credits); post({ t: 'ack', id: m.id, ok: true }); break;
+      case 'topUp': post({ t: 'ack', id: m.id, ok: engine().engine_top_up(BigInt(m.node), m.credits) === 1 }); break;
+      case 'answer': post({ t: 'ack', id: m.id, ok: engine().engine_answer(BigInt(m.node), BigInt(m.offer), ['send', 'hire', 'ask', 'leave'].indexOf(m.answer)) === 1 }); break;
+      case 'close': post({ t: 'ack', id: m.id, ok: engine().engine_close(BigInt(m.node)) === 1 }); break;
       case 'sync': post({ t: 'ack', id: m.id, ok: (engine().engine_sync?.(BigInt(m.node)) ?? 0) === 1 }); break;
       case 'zoom': engine().engine_zoom(m.stage); post({ t: 'ack', id: m.id, ok: true }); break;
       case 'setTruthPrice': engine().engine_set_truth_price(m.price); post({ t: 'ack', id: m.id, ok: true }); break;

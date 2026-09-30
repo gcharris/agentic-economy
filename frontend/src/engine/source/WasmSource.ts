@@ -14,11 +14,13 @@ import {
 
 export type ScenarioCode = 1 | 2 | 3 | 4 | 5;
 /** A Week on Elm Street (doc 06) through engine_new_game: named houses (Ada, Ben, …) at the House, every Door knocks. */
-export interface GameOptions { houses: number; week: number; priceWalk: boolean; oraclePerson: boolean }
+export interface GameOptions { houses: number; week: number; priceWalk: boolean; oraclePerson: boolean; oracleCost?: number; cadence?: number }
 
 export type ToWorker =
   | { t: 'new'; scenario: ScenarioCode; seed: string /* decimal u64 */; budget: number; tasks: number; costVisible: boolean; wasmUrl: string; city?: { streets: number; houses: number }; world?: { countries: number; cities: number; streets: number; houses: number }; game?: GameOptions }
   | { t: 'tick' }
+  | { t: 'answer'; id: number; node: string; offer: string; answer: 'send' | 'hire' | 'ask' | 'leave' }
+  | { t: 'close'; id: number; node: string }
   | { t: 'sync'; id: number; node: string }
   | { t: 'authorize'; id: number; envelope: string /* decimal */ }
   | { t: 'reject'; id: number; envelope: string }
@@ -127,6 +129,8 @@ export class WasmSource implements EngineSource {
   reject(envelope: EnvelopeId): Promise<boolean> { return this.command((id) => ({ t: 'reject', id, envelope: idToString(envelope) })); }
   topUp(node: NodeId, credits: number): Promise<boolean> { return this.command((id) => ({ t: 'topUp', id, node: idToString(node), credits })); }
   zoom(stage: ScenarioCode): Promise<boolean> { return this.command((id) => ({ t: 'zoom', id, stage })); }
+  answer(node: NodeId, offer: EnvelopeId, answer: 'send' | 'hire' | 'ask' | 'leave'): Promise<boolean> { return this.command((id) => ({ t: 'answer', id, node: idToString(node), offer: idToString(offer), answer })); }
+  close(node: NodeId): Promise<boolean> { return this.command((id) => ({ t: 'close', id, node: idToString(node) })); }
   sync(node: NodeId): Promise<boolean> { return this.command((id) => ({ t: 'sync', id, node: idToString(node) })); }
   setTruthPrice(price: number): Promise<boolean> { return this.command((id) => ({ t: 'setTruthPrice', id, price })); }
 

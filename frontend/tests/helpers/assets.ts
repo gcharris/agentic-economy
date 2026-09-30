@@ -32,7 +32,10 @@ export interface EngineExports {
   engine_tick(): bigint;
   engine_authorize(envelope: bigint): number;
   engine_reject(envelope: bigint): number;
-  engine_top_up(node: bigint, credits: number): void;
+  engine_top_up(node: bigint, credits: number): number;
+  engine_answer(node: bigint, offer: bigint, answer: number): number;
+  engine_close(node: bigint): number;
+  engine_game_options(cost: number, cadence: number): number;
   engine_zoom(stage: number): void;
   engine_set_truth_price(price: number): void;
   engine_state(): number;

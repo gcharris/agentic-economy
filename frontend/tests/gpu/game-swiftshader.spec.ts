@@ -33,7 +33,7 @@ test('the phone view: Ada’s Door, the composed card after the oracle answered'
   await expect(page.locator('#phone section.oracle')).toContainText('The oracle said the courier costs');
   await expect(card.getByRole('button')).toHaveText([/^Send it \(10\.0 cr\)$/, /^Hire (Ben|Cal|Dee)'s courier at 10\.0 cr$/, 'Ask the oracle first (15 cr)', 'Leave it on the table']);
   await expect(page.locator('#stage')).toBeHidden();
-  await page.screenshot({ path: 'tests/gpu/out/phone-door.png' });
+  await page.screenshot({ path: 'tests/gpu/out/phone-door.png', fullPage: true });
   expect(bad).toEqual([]);
 });
 
@@ -78,5 +78,27 @@ test('the TV: the street with the cottages named, and on Friday the Notes on the
   await expect(page.locator('#notes')).toBeVisible();
   await expect(page.locator('#notes')).toContainText('Friday evening · the Notes on the table');
   await page.screenshot({ path: 'tests/gpu/out/tv-notes.png' });
+  expect(bad).toEqual([]);
+});
+
+test('real pocket controls stop at 200 cr and closing puts the house Note on the phone', async ({ page }) => {
+  const bad = watch(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/?source=wasm&run=game&houses=4&house=Ada&week=48&oracle-cost=10&clock=manual');
+  await page.waitForFunction(() => (window as unknown as { __app?: Hook }).__app?.ready);
+  await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.step(); });
+  const topup = page.getByRole('button', { name: 'Put in 50 cr from your pocket' });
+  for (let count = 1; count <= 4; count++) {
+    await topup.click();
+    await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.step(); });
+    await expect(page.locator('.pocket')).toContainText(`Your pocket: ${200-count*50}.0 cr left.`);
+  }
+  await expect(topup).toBeDisabled();
+  await page.getByRole('button', { name: 'The week is over for my house' }).click();
+  await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.step(); });
+  await expect(page.locator('#phone .note-sheet')).toContainText('Closed by the person.');
+  await expect(page.locator('#phone .note-sheet')).toContainText('4 times · 200.0 cr');
+  await expect(page.getByRole('button', { name: 'The week is over for my house' })).toBeDisabled();
+  await page.screenshot({ path: 'tests/gpu/out/phone-closed-pocket.png', fullPage: true });
   expect(bad).toEqual([]);
 });

@@ -94,11 +94,12 @@ fn piece_name(scale: Stage, house: usize, t: usize) -> String {
 }
 
 pub fn elm_street(
-    config: EngineConfig,
+    mut config: EngineConfig,
     names: &[String],
     budget_each: f64,
     tasks_each: usize,
 ) -> Engine {
+    config.game = true;
     street_of(config, names, budget_each, tasks_each, Stage::House)
 }
 

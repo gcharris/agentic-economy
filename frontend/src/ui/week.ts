@@ -4,16 +4,17 @@
 import { fmtCost, fmtCr, haltReasonLine } from '../engine/contract/copy.ts';
 import type { Note, WeekNote } from '../engine/contract/state.ts';
 
-/** Doc 06 §3: five days of eight ticks. */
-export const TICKS_PER_DAY = 8;
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-/** "Tuesday · tick 3 of 8" for engine tick 11; past Friday, "the week is over". */
-export function dayLabel(tick: number): string {
+/** Five days divided over the configured week, including a non-multiple such as 48. */
+export function dayLabel(tick: number, weekTicks = 40): string {
+  const week = Math.max(1, Math.floor(weekTicks));
   if (tick < 1) return 'Monday morning';
-  const day = Math.floor((tick - 1) / TICKS_PER_DAY);
-  if (day >= DAYS.length) return 'the week is over';
-  return `${DAYS[day]} · tick ${((tick - 1) % TICKS_PER_DAY) + 1} of ${TICKS_PER_DAY}`;
+  if (tick > week) return 'the week is over';
+  const day = Math.min(4, Math.floor((tick - 1) * DAYS.length / week));
+  const start = Math.ceil(day * week / DAYS.length);
+  const end = Math.ceil((day + 1) * week / DAYS.length);
+  return `${DAYS[day]} · tick ${tick - start} of ${end - start}`;
 }
 
 /** The week's numbers as the Note writes them (doc 06 §3, "Friday"). */

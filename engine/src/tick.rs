@@ -61,6 +61,23 @@ pub struct EngineConfig {
     /// The week's length in ticks (doc 06 §8.4): at the last tick every house halts with the week's Note.
     #[serde(default)]
     pub week_ticks: Option<u64>,
+    /// Round-2 rules apply only to the explicit Elm Street game, never the demo.
+    #[serde(default)]
+    pub game: bool,
+    #[serde(default = "default_retry_drafts")]
+    pub retry_drafts: bool,
+    #[serde(default = "default_oracle_cost")]
+    pub oracle_cost: f64,
+    /// Experiment: regular price changes; None keeps the original random walk.
+    #[serde(default)]
+    pub price_period: Option<u64>,
+}
+
+fn default_retry_drafts() -> bool {
+    true
+}
+fn default_oracle_cost() -> f64 {
+    crate::epistemics::ORACLE_COST
 }
 
 fn default_pack_depth() -> u8 {
@@ -129,6 +146,10 @@ impl Default for EngineConfig {
             oracle_policy: OraclePolicy::Staff,
             price_walk: None,
             week_ticks: None,
+            game: false,
+            retry_drafts: true,
+            oracle_cost: default_oracle_cost(),
+            price_period: None,
         }
     }
 }
@@ -336,6 +357,311 @@ impl Engine {
             .any(|n| n.held_at_door.iter().any(|e| e.id == envelope))
     }
 
+    /// One checked answer for one visible draft. Unknown, stale or unaffordable answers mutate nothing.
+    pub fn answer(&mut self, node: NodeId, offer: EnvelopeId, answer: DoorAnswer) -> bool {
+        if !self.config.game || self.week_over() {
+            return false;
+        }
+        let Some(n) = self.nodes.get(&node) else {
+            return false;
+        };
+        if n.status != NodeStatus::WaitingAtDoor {
+            return false;
+        }
+        let Some(env) = n
+            .held_at_door
+            .iter()
+            .find(|e| e.id == offer && !e.door_cleared)
+        else {
+            return false;
+        };
+        let task = match &env.payload {
+            Payload::Dispatch { task_id, .. } => task_id.clone(),
+            Payload::HireService {
+                task_id: Some(t), ..
+            } => t.clone(),
+            _ => return false,
+        };
+        let group: Vec<_> = n
+            .held_at_door
+            .iter()
+            .filter(|e| Self::payload_task(&e.payload) == Some(task.as_str()))
+            .cloned()
+            .collect();
+        if n.sync_requested || group.iter().any(|e| self.decisions.get(e.id).is_some()) {
+            return false;
+        }
+        if answer == DoorAnswer::Ask {
+            if n.sync_requested || !n.purse.can_burn(self.config.oracle_cost) {
+                return false;
+            }
+            return self.sync(node);
+        }
+        let chosen = match answer {
+            DoorAnswer::Send => group
+                .iter()
+                .find(|e| matches!(e.payload, Payload::Dispatch { .. })),
+            DoorAnswer::Hire => group
+                .iter()
+                .find(|e| matches!(e.payload, Payload::HireService { .. })),
+            _ => None,
+        };
+        if answer != DoorAnswer::Leave && chosen.is_none() {
+            return false;
+        }
+        if chosen.is_some_and(|e| {
+            matches!(e.payload, Payload::Dispatch { .. }) && !n.purse.can_burn(e.compute_weight)
+        }) {
+            return false;
+        }
+        if !self.config.retry_drafts {
+            for env in &group {
+                if chosen.is_some_and(|e| e.id == env.id) {
+                    self.decisions.approve(env.id);
+                } else {
+                    self.decisions.reject(env.id);
+                }
+            }
+            return true;
+        }
+        let chosen_id = chosen.map(|e| e.id);
+        let n = self.nodes.get_mut(&node).expect("validated house");
+        // Withdraw the complementary offer without a rejection verdict or any change to the finished asset.
+        n.held_at_door.retain(|e| {
+            Self::payload_task(&e.payload) != Some(task.as_str()) || Some(e.id) == chosen_id
+        });
+        if let Some(id) = chosen_id {
+            self.decisions.approve(id);
+            if let Some(d) = n.finished_drafts.iter_mut().find(|d| d.task_id == task) {
+                d.state = crate::node::DraftDisposition::InFlight;
+            }
+        } else {
+            let after = n.current_task().map(|t| t.id.clone());
+            if let Some(d) = n.finished_drafts.iter_mut().find(|d| d.task_id == task) {
+                d.state = crate::node::DraftDisposition::Deferred;
+                d.after_piece = after;
+                d.ready_tick = self.tick + 1;
+            }
+            if let Some(t) = n.task_mut(&task) {
+                t.state = TaskState::Finished;
+            }
+            if n.held_at_door.is_empty() {
+                n.status = NodeStatus::Active;
+            }
+        }
+        true
+    }
+
+    fn payload_task(payload: &Payload) -> Option<&str> {
+        match payload {
+            Payload::Dispatch { task_id, .. } => Some(task_id),
+            Payload::HireService {
+                task_id: Some(t), ..
+            } => Some(t),
+            _ => None,
+        }
+    }
+
+    fn finish_game_draft(&mut self, node: NodeId, payload: &Payload) {
+        if let Some(task) = Self::payload_task(payload) {
+            if let Some(n) = self.nodes.get_mut(&node) {
+                if let Some(d) = n.finished_drafts.iter_mut().find(|d| d.task_id == task) {
+                    d.state = crate::node::DraftDisposition::Delivered;
+                }
+            }
+        }
+    }
+
+    fn return_failed_offer(&mut self, env: &ProposalEnvelope, tick: u64) {
+        let Some(task) = Self::payload_task(&env.payload) else {
+            return;
+        };
+        let Some(n) = self.nodes.get_mut(&env.initiator) else {
+            return;
+        };
+        if let Some(d) = n.finished_drafts.iter_mut().find(|d| d.task_id == task) {
+            // A complementary no at the Door must never schedule a retry of an authorised alternative.
+            if env.gate == Stage::House && d.state == crate::node::DraftDisposition::InFlight {
+                return;
+            }
+            if d.state == crate::node::DraftDisposition::Delivered {
+                return;
+            }
+            if matches!(env.payload, Payload::HireService { .. }) && env.gate != Stage::House {
+                d.hire = None; // Only a consumed attempt needs a new paid envelope.
+                d.state = crate::node::DraftDisposition::Ready;
+                d.ready_tick = tick + 1;
+                d.after_piece = None;
+            } else if env.gate != Stage::House
+                || matches!(env.payload, Payload::Dispatch { .. })
+                    && self.decisions.get(env.id).is_some()
+            {
+                d.state = crate::node::DraftDisposition::Ready;
+                d.ready_tick = tick + 1;
+            }
+        }
+    }
+
+    fn refresh_quote(n: &SovereignNode, mut offer: ProposalEnvelope) -> ProposalEnvelope {
+        if let Payload::HireService {
+            service,
+            believed_price,
+            believed_price_hash,
+            ..
+        } = &mut offer.payload
+        {
+            let price = n
+                .oak_table
+                .get("price/courier")
+                .and_then(|p| p.parse::<f64>().ok())
+                .unwrap_or(*believed_price);
+            *believed_price = price;
+            *believed_price_hash = SovereignGraph::hash_price(service, price);
+            offer.requested_liquidity = price;
+            offer.payload_hash = offer.payload.hash();
+            offer.auth_signature = n.sign(&offer.payload_hash, offer.created_tick);
+        }
+        offer.asked_human = false;
+        offer.door_cleared = false;
+        offer
+    }
+
+    fn offer_finished_drafts(&mut self, tick: u64, report: &mut TickReport) {
+        use crate::node::DraftDisposition;
+        let ids: Vec<_> = self
+            .nodes
+            .values()
+            .filter(|n| n.status == NodeStatus::Active && n.held_at_door.is_empty())
+            .map(|n| n.id)
+            .collect();
+        for id in ids {
+            let n = &self.nodes[&id];
+            let Some(draft) = n
+                .finished_drafts
+                .iter()
+                .filter(|d| {
+                    matches!(
+                        d.state,
+                        DraftDisposition::Ready | DraftDisposition::Deferred
+                    ) && d.after_piece.is_none()
+                        && d.ready_tick <= tick
+                })
+                .min_by_key(|d| d.drafted_tick)
+                .cloned()
+            else {
+                continue;
+            };
+            let send_weight = n
+                .tasks
+                .iter()
+                .find(|t| t.id == draft.task_id)
+                .map_or(10.0, |t| t.spend);
+            let tax_needed = if draft.send.is_none() {
+                self.tax
+                    .tax_only(self.crossing(id, draft.target), send_weight)
+            } else {
+                0.0
+            } + if draft.hire.is_none() {
+                draft.hire_target.map_or(0.0, |target| {
+                    self.tax.tax_only(self.crossing(id, target), 2.0)
+                })
+            } else {
+                0.0
+            };
+            if !n.purse.can_burn(tax_needed) {
+                let n = self.nodes.get_mut(&id).unwrap();
+                let shortfall = tax_needed - n.purse.compute;
+                let note = n.halt(
+                    tick,
+                    format!("formatting the offer for {}", draft.task_id),
+                    HaltReason::RunwayExhausted { shortfall },
+                );
+                self.events.push(EngineEvent::Halted {
+                    tick,
+                    node: id,
+                    note,
+                });
+                report.halted += 1;
+                continue;
+            }
+            let send = if let Some(env) = draft.send.clone() {
+                let env = Self::refresh_quote(&self.nodes[&id], env);
+                self.mempool
+                    .submit(env.clone())
+                    .expect("saved send is valid");
+                Some(env)
+            } else {
+                self.mint_own(
+                    id,
+                    crate::node::ProposalDraft {
+                        target: draft.target,
+                        payload: Payload::Dispatch {
+                            task_id: draft.task_id.clone(),
+                            message: draft.message.clone(),
+                        },
+                        requested_liquidity: 0.0,
+                        compute_weight: send_weight,
+                    },
+                    tick,
+                    report,
+                )
+            };
+            let hire = if let Some(env) = draft.hire.clone() {
+                let env = Self::refresh_quote(&self.nodes[&id], env);
+                self.mempool
+                    .submit(env.clone())
+                    .expect("saved hire is valid");
+                Some(env)
+            } else if let Some(target) = draft.hire_target {
+                let price = self.nodes[&id]
+                    .oak_table
+                    .get("price/courier")
+                    .and_then(|p| p.parse::<f64>().ok())
+                    .unwrap_or(10.0);
+                self.mint_own(
+                    id,
+                    crate::node::ProposalDraft {
+                        target,
+                        payload: Payload::HireService {
+                            service: "courier".into(),
+                            believed_price: price,
+                            believed_price_hash: SovereignGraph::hash_price("courier", price),
+                            task_id: Some(draft.task_id.clone()),
+                        },
+                        requested_liquidity: price,
+                        compute_weight: 2.0,
+                    },
+                    tick,
+                    report,
+                )
+            } else {
+                None
+            };
+            let n = self.nodes.get_mut(&id).unwrap();
+            for env in send.iter().chain(hire.iter()) {
+                n.remember_offer(env);
+            }
+            if send.is_some() || hire.is_some() {
+                n.status = NodeStatus::WaitingAtDoor;
+            }
+        }
+    }
+
+    fn week_numbers(n: &SovereignNode, liquidity: f64) -> crate::receipt::WeekNote {
+        crate::receipt::WeekNote {
+            pieces_done: n.tasks_done(),
+            pieces_total: n.tasks.len(),
+            compute_burned: n.purse.compute_burned,
+            purse_left: n.purse.compute,
+            liquidity_left: liquidity,
+            swaps_settled: n.tally.swaps_settled,
+            swaps_reverted: n.tally.swaps_reverted,
+            oracle_queries: n.tally.oracle_queries,
+            top_ups: n.tally.top_ups,
+            top_up_credits: n.tally.top_up_credits,
+        }
+    }
+
     /// The person asks the oracle (doc 06 §3, "Ask the oracle first"). At the next Draft the house proposes a
     /// `StateSync` (15 cr, Φ → 1.0, the Oak Table's `price/courier` set to the truth), even while its Porter waits at
     /// the Door: looking is not sending. Returns whether the node exists and is not halted.
@@ -343,8 +669,17 @@ impl Engine {
         if self.week_over() {
             return false;
         }
+        let cost = if self.config.game {
+            self.config.oracle_cost
+        } else {
+            crate::epistemics::ORACLE_COST
+        };
         match self.nodes.get_mut(&node) {
-            Some(n) if n.status != NodeStatus::Halted && n.status != NodeStatus::Packed => {
+            Some(n)
+                if n.status != NodeStatus::Halted
+                    && n.status != NodeStatus::Packed
+                    && (!self.config.game || n.purse.can_burn(cost)) =>
+            {
                 n.sync_requested = true;
                 true
             }
@@ -353,9 +688,21 @@ impl Engine {
     }
 
     /// Put money in the purse. A halted house continues.
-    pub fn top_up(&mut self, node: NodeId, credits: f64) {
-        if self.week_over() {
-            return;
+    pub fn top_up(&mut self, node: NodeId, credits: f64) -> bool {
+        if self.week_over() || !credits.is_finite() || credits <= 0.0 {
+            return false;
+        }
+        let Some(n) = self.nodes.get(&node) else {
+            return false;
+        };
+        if self.config.game
+            && (credits > 200.0 - n.tally.top_up_credits
+                || matches!(
+                    n.note.as_ref().map(|n| &n.reason),
+                    Some(HaltReason::Closed | HaltReason::WeekOver)
+                ))
+        {
+            return false;
         }
         let tick = self.tick;
         if let Some(n) = self.nodes.get_mut(&node) {
@@ -366,17 +713,30 @@ impl Engine {
                 credits,
             });
         }
+        true
     }
 
     /// The week is over. Nothing is deleted.
     pub fn close(&mut self, node: NodeId) -> Option<Note> {
+        if self.week_over() {
+            return None;
+        }
         let tick = self.tick;
         let n = self.nodes.get_mut(&node)?;
         let doing = n
             .current_task()
             .map(|t| t.id.clone())
             .unwrap_or_else(|| "idle".into());
-        let note = n.halt(tick, doing, HaltReason::Closed);
+        if self.config.game
+            && matches!(n.note.as_ref().map(|n| &n.reason), Some(HaltReason::Closed))
+        {
+            return None;
+        }
+        let mut note = n.halt(tick, doing, HaltReason::Closed);
+        if self.config.game {
+            note.week = Some(Self::week_numbers(n, self.graph.liquidity_of(node)));
+            n.note = Some(note.clone());
+        }
         self.events.push(EngineEvent::Halted {
             tick,
             node,
@@ -491,7 +851,15 @@ impl Engine {
         // The courier's truth moves without warning, and without an event: only the oracle knows.
         if let Some(walk) = &self.config.price_walk {
             if let Some(p) = self.graph.service_prices.get("courier").copied() {
-                let next = walk.step(tick, p);
+                let next = match self.config.price_period {
+                    Some(period) if period > 0 && tick % period == 0 => {
+                        let mut regular = walk.clone();
+                        regular.every = 1;
+                        regular.step(tick, p)
+                    }
+                    Some(_) => p,
+                    None => walk.step(tick, p),
+                };
                 self.graph.service_prices.insert("courier".into(), next);
             }
         }
@@ -513,11 +881,18 @@ impl Engine {
                     target: id,
                     payload: Payload::StateSync,
                     requested_liquidity: 0.0,
-                    compute_weight: crate::epistemics::ORACLE_COST,
+                    compute_weight: if self.config.game {
+                        self.config.oracle_cost
+                    } else {
+                        crate::epistemics::ORACLE_COST
+                    },
                 },
                 tick,
                 &mut report,
             );
+        }
+        if self.config.game && self.config.retry_drafts {
+            self.offer_finished_drafts(tick, &mut report);
         }
         let staff_oracle = self.config.oracle_policy == OraclePolicy::Staff;
 
@@ -708,6 +1083,46 @@ impl Engine {
             return;
         }
 
+        if self.config.game && self.config.retry_drafts {
+            if let Some((task, message, target)) =
+                out.proposals.iter().find_map(|p| match &p.payload {
+                    Payload::Dispatch { task_id, message } => {
+                        Some((task_id.clone(), message.clone(), p.target))
+                    }
+                    _ => None,
+                })
+            {
+                let hire = out
+                    .proposals
+                    .iter()
+                    .find(|p| matches!(p.payload, Payload::HireService { .. }))
+                    .cloned();
+                for draft in &mut node.finished_drafts {
+                    if draft.after_piece.as_deref() == Some(&task) {
+                        draft.after_piece = None;
+                        draft.ready_tick = tick + 1;
+                        draft.state = crate::node::DraftDisposition::Ready;
+                    }
+                }
+                if !node.finished_drafts.iter().any(|d| d.task_id == task) {
+                    node.finished_drafts.push(crate::node::FinishedDraft {
+                        task_id: task.clone(),
+                        message,
+                        target,
+                        hire_target: hire.as_ref().map(|p| p.target),
+                        send: None,
+                        hire: None,
+                        state: crate::node::DraftDisposition::Ready,
+                        drafted_tick: tick,
+                        ready_tick: tick + 1,
+                        after_piece: None,
+                    });
+                    if let Some(t) = node.task_mut(&task) {
+                        t.state = TaskState::Finished;
+                    }
+                }
+            }
+        }
         // Mint envelopes. The crossing tax is paid now (the envelope was
         // formatted); the base send cost is paid only after approval.
         for (i, p) in out.proposals.drain(..).enumerate() {
@@ -760,8 +1175,15 @@ impl Engine {
             };
             if let Payload::Dispatch { task_id, .. } = &env.payload {
                 if let Some(t) = node.task_mut(task_id) {
-                    t.state = TaskState::Drafted;
+                    t.state = if self.config.game && self.config.retry_drafts {
+                        TaskState::Finished
+                    } else {
+                        TaskState::Drafted
+                    };
                 }
+            }
+            if self.config.game && self.config.retry_drafts {
+                node.remember_offer(&env);
             }
             match self.mempool.submit(env) {
                 Ok(()) => {
@@ -799,14 +1221,12 @@ impl Engine {
         p: crate::node::ProposalDraft,
         tick: u64,
         report: &mut TickReport,
-    ) {
+    ) -> Option<ProposalEnvelope> {
         let crossing = self.crossing(node_id, p.target);
         let id = EnvelopeId(self.mint_id());
         let active_scale = self.config.active_scale;
         let tax_due = self.tax.tax_only(crossing, p.compute_weight);
-        let Some(node) = self.nodes.get_mut(&node_id) else {
-            return;
-        };
+        let node = self.nodes.get_mut(&node_id)?;
         if !node.allowed_target(p.target) || !node.purse.can_burn(tax_due) {
             self.events.push(EngineEvent::DroppedByCourier {
                 tick,
@@ -815,7 +1235,7 @@ impl Engine {
                 reason: format!("cannot afford the crossing tax of {tax_due:.1} cr"),
             });
             report.dropped_by_courier += 1;
-            return;
+            return None;
         }
         let _ = node.purse.burn_credits(tax_due);
         report.tax_paid += tax_due;
@@ -845,6 +1265,7 @@ impl Engine {
             env.requested_liquidity,
             env.tax_paid,
         );
+        let saved = env.clone();
         match self.mempool.submit(env) {
             Ok(()) => {
                 report.envelopes_minted += 1;
@@ -867,8 +1288,10 @@ impl Engine {
                     to: env.target,
                     reason,
                 });
+                return None;
             }
         }
+        Some(saved)
     }
 
     /// Friday (doc 06 §3): every house halts and leaves the week's Note on the table. A house already halted (its
@@ -1028,6 +1451,17 @@ impl Engine {
             });
         for mut env in to_kerb {
             env.door_cleared = true;
+            if self.config.game && self.config.retry_drafts {
+                if let Some(n) = self.nodes.get_mut(&env.initiator) {
+                    if let Some(d) = n
+                        .finished_drafts
+                        .iter_mut()
+                        .find(|d| Self::payload_task(&env.payload) == Some(d.task_id.as_str()))
+                    {
+                        d.state = crate::node::DraftDisposition::InFlight;
+                    }
+                }
+            }
             self.mempool.submit(env).ok();
         }
         self.approved.extend(approved);
@@ -1071,6 +1505,9 @@ impl Engine {
         }
 
         for (env, verdict) in rejected {
+            if self.config.game && self.config.retry_drafts {
+                self.return_failed_offer(&env, tick);
+            }
             self.decisions.take(env.id);
             let reason = match &verdict {
                 Verdict::Rejected { reason } => reason.clone(),
@@ -1108,7 +1545,9 @@ impl Engine {
                     .get_mut(&env.initiator)
                     .and_then(|n| n.task_mut(task_id))
                 {
-                    t.state = TaskState::Rejected;
+                    if !(self.config.game && self.config.retry_drafts) {
+                        t.state = TaskState::Rejected;
+                    }
                 }
             }
             report.rejected += 1;
@@ -1149,6 +1588,27 @@ impl Engine {
             }
         }
 
+        if self.config.game && self.config.retry_drafts {
+            for n in self.nodes.values_mut() {
+                let after = n.current_task().map(|t| t.id.clone());
+                for d in &mut n.finished_drafts {
+                    if d.state == crate::node::DraftDisposition::AtDoor
+                        && !n
+                            .held_at_door
+                            .iter()
+                            .any(|e| Self::payload_task(&e.payload) == Some(d.task_id.as_str()))
+                        && !self.approved.iter().any(|e| {
+                            e.initiator == n.id
+                                && Self::payload_task(&e.payload) == Some(d.task_id.as_str())
+                        })
+                    {
+                        d.state = crate::node::DraftDisposition::Deferred;
+                        d.ready_tick = tick + 1;
+                        d.after_piece = after.clone();
+                    }
+                }
+            }
+        }
         // Stage 4: the circuit breaker watches the whole tick.
         stats.offenders.sort();
         stats.offenders.dedup();
@@ -1211,10 +1671,15 @@ impl Engine {
         for env in approved {
             // The cost of sending comes out of the purse after yes, and it
             // must be there: a send the purse cannot pay for does not go out.
+            let fee = if self.config.game && matches!(env.payload, Payload::HireService { .. }) {
+                0.0
+            } else {
+                env.compute_weight
+            };
             let affordable = self
                 .nodes
                 .get(&env.initiator)
-                .map(|n| n.purse.can_burn(env.compute_weight))
+                .map(|n| n.purse.can_burn(fee))
                 .unwrap_or(false);
             if !affordable {
                 if matches!(env.payload, Payload::HireService { .. }) && env.gate != Stage::House {
@@ -1235,6 +1700,9 @@ impl Engine {
                     ),
                     sunk_compute: env.tax_paid,
                 });
+                if self.config.game && self.config.retry_drafts {
+                    self.return_failed_offer(&env, tick);
+                }
                 report.rejected += 1;
                 continue;
             }
@@ -1244,8 +1712,7 @@ impl Engine {
                     .transfer(env.initiator, env.target, env.requested_liquidity)
                 {
                     Ok(()) => {
-                        report.compute_burned +=
-                            self.charge_send(env.initiator, env.compute_weight);
+                        report.compute_burned += self.charge_send(env.initiator, fee);
                         if let Some(n) = self.nodes.get_mut(&env.initiator) {
                             n.purse.liquidity -= env.requested_liquidity;
                             if let Payload::HireService { service, .. } = &env.payload {
@@ -1298,11 +1765,14 @@ impl Engine {
                             reason: format!("stale belief at commit: truth {have:.1}"),
                             sunk_compute: env.tax_paid,
                         });
+                        if self.config.game && self.config.retry_drafts {
+                            self.return_failed_offer(&env, tick);
+                        }
                         report.rejected += 1;
                     }
                 },
                 Payload::Dispatch { message, task_id } => {
-                    report.compute_burned += self.charge_send(env.initiator, env.compute_weight);
+                    report.compute_burned += self.charge_send(env.initiator, fee);
                     // The only cross-node write besides settlement: a
                     // delivery, from an approved envelope, into the
                     // recipient's inbox.
@@ -1318,6 +1788,7 @@ impl Engine {
                     {
                         t.state = TaskState::Sent;
                     }
+                    self.finish_game_draft(env.initiator, &env.payload);
                     self.events.push(EngineEvent::Delivered {
                         tick,
                         envelope: env.id,
@@ -1325,7 +1796,7 @@ impl Engine {
                     });
                 }
                 Payload::StateSync => {
-                    report.compute_burned += self.charge_send(env.initiator, env.compute_weight);
+                    report.compute_burned += self.charge_send(env.initiator, fee);
                     let truth = self.graph.liquidity_of(env.initiator);
                     let truth_price = self.graph.service_prices.get("courier").copied();
                     if let Some(n) = self.nodes.get_mut(&env.initiator) {
@@ -1377,7 +1848,7 @@ impl Engine {
                     }
                 }
                 Payload::Close { contract } => {
-                    report.compute_burned += self.charge_send(env.initiator, env.compute_weight);
+                    report.compute_burned += self.charge_send(env.initiator, fee);
                     self.graph.record_contract(Contract {
                         id: env.id,
                         tick,
@@ -1405,6 +1876,9 @@ impl Engine {
         let Some(task_id) = task_id else {
             return;
         };
+        if let Some(d) = n.finished_drafts.iter_mut().find(|d| &d.task_id == task_id) {
+            d.state = crate::node::DraftDisposition::Delivered;
+        }
         let to = n.parent.unwrap_or(env.initiator);
         if let Some(t) = n.task_mut(task_id) {
             if t.state == TaskState::Sent {
@@ -1829,6 +2303,8 @@ impl Engine {
                 oracle_price: n.oracle.map(|o| o.price),
                 oracle_tick: n.oracle.map(|o| o.tick),
                 house_number: house_numbers.get(&n.id).copied(),
+                pocket_left: (self.config.game && n.scale_level == Stage::House)
+                    .then_some((200.0 - n.tally.top_up_credits).max(0.0)),
                 receipts: n
                     .receipts
                     .iter()
@@ -1843,6 +2319,11 @@ impl Engine {
         gates.push(self.stark.describe());
         StateView {
             tick: self.tick,
+            game: self.config.game.then_some(GameView {
+                week_ticks: self.config.week_ticks.unwrap_or(40),
+                oracle_cost: self.config.oracle_cost,
+                retry_drafts: self.config.retry_drafts,
+            }),
             active_scale,
             root: self.graph.root(),
             executor: self.executor.name(),
@@ -1932,6 +2413,8 @@ pub struct NodeView {
     pub oracle_tick: Option<u64>,
     /// One-based position in the parent's ordered children (the --names order).
     pub house_number: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pocket_left: Option<f64>,
     pub receipts: Vec<String>,
 }
 
@@ -1971,6 +2454,8 @@ pub struct Totals {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StateView {
     pub tick: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub game: Option<GameView>,
     pub active_scale: Stage,
     pub root: Hash32,
     pub executor: &'static str,
@@ -1981,4 +2466,20 @@ pub struct StateView {
     pub gates: Vec<String>,
     pub last_report: Option<TickReport>,
     pub root_history: Vec<(u64, String)>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GameView {
+    pub week_ticks: u64,
+    pub oracle_cost: f64,
+    pub retry_drafts: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DoorAnswer {
+    Send,
+    Hire,
+    Ask,
+    Leave,
 }

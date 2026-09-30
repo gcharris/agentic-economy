@@ -27,7 +27,9 @@
 //! | `POST` | `/authorize/<envelope_id>` | `{"ok":true}` — the click at the Door (`envelope_id` is the decimal `u64` from `state.held[].envelope`); `404` if no Door holds that envelope |
 //! | `POST` | `/reject/<envelope_id>` | `{"ok":true}` — the envelope is destroyed, its compute sunk; `404` if no Door holds that envelope |
 //! | `POST` | `/sync/<node_id>` | `{"ok":true}` — the person asks the oracle (doc 06 §8.1): the house proposes the sync at the next Draft (15 cr, Φ → 1.0); `404` for an unknown or halted house |
-//! | `POST` | `/top-up/<node_id>/<credits>` | `{"ok":true}` — money in the purse (`node_id` decimal `u64`, credits `f64`) |
+//! | `POST` | `/top-up/<node_id>/<credits>` | Money in the purse; game pocket is 200 cr, excess/closed/Friday returns 404 |
+//! | `POST` | `/answer/<node_id>/<offer_id>/<send|hire|ask|leave>` | One atomic game answer; 404 on stale, wrong-house, pending or unaffordable commands |
+//! | `POST` | `/close/<node_id>` | Close the house and leave its Note; 404 if already closed/Friday/unknown |
 //! | `POST` | `/zoom/<1-5>` | `{"ok":true}` — the camera: House=1 … World=5; packs/unpacks accordingly |
 //! | `POST` | `/pause`, `/resume` | `{"ok":true}` — stop/restart the tick interval (state and commands still answer) |
 //! | `OPTIONS` | any | `204` with CORS preflight headers |
@@ -70,6 +72,8 @@ struct Args {
     week: Option<u64>,
     price_walk: bool,
     oracle_person: bool,
+    oracle_cost: f64,
+    price_every: u64,
 }
 
 fn parse_args() -> Args {
@@ -95,6 +99,8 @@ fn parse_args() -> Args {
         week: None,
         price_walk: false,
         oracle_person: false,
+        oracle_cost: ORACLE_COST,
+        price_every: 8,
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -146,6 +152,20 @@ fn parse_args() -> Args {
             "--week" => a.week = it.next().and_then(|v| v.parse().ok()).filter(|w| *w > 0),
             "--price-walk" => a.price_walk = true,
             "--oracle" => a.oracle_person = it.next().as_deref() == Some("person"),
+            "--oracle-cost" => {
+                a.oracle_cost = it
+                    .next()
+                    .and_then(|v| v.parse::<f64>().ok())
+                    .filter(|v| v.is_finite() && *v > 0.0)
+                    .unwrap_or(a.oracle_cost)
+            }
+            "--price-every" => {
+                a.price_every = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .filter(|v| *v > 0)
+                    .unwrap_or(a.price_every)
+            }
             "--houses" => {
                 a.houses_set = true;
                 a.houses = it
@@ -172,6 +192,8 @@ enum Cmd {
     Reject(EnvelopeId),
     TopUp(NodeId, f64),
     Sync(NodeId),
+    Answer(NodeId, EnvelopeId, DoorAnswer),
+    Close(NodeId),
     Zoom(Stage),
     Pause,
     Resume,
@@ -215,8 +237,25 @@ fn apply(engine: &mut Engine, cmd: Cmd, paused: &mut bool) -> String {
             if engine.node(node).is_none() {
                 return format!(r#"{{"ok":false,"error":"unknown node {}"}}"#, node.0);
             }
-            engine.top_up(node, credits);
-            OK.into()
+            if engine.top_up(node, credits) {
+                OK.into()
+            } else {
+                r#"{"ok":false,"error":"top-up refused: pocket empty or house closed"}"#.into()
+            }
+        }
+        Cmd::Answer(node, offer, answer) => {
+            if engine.answer(node, offer, answer) {
+                OK.into()
+            } else {
+                r#"{"ok":false,"error":"answer refused: offer stale or purse cannot pay"}"#.into()
+            }
+        }
+        Cmd::Close(node) => {
+            if engine.close(node).is_some() {
+                OK.into()
+            } else {
+                r#"{"ok":false,"error":"house is already closed or unknown"}"#.into()
+            }
         }
         Cmd::Sync(node) => {
             if engine.sync(node) {
@@ -331,6 +370,25 @@ fn route_post(path: &str) -> Result<Cmd, Vec<u8>> {
             }
             Ok(Cmd::TopUp(node, credits))
         }
+        ["answer", node, offer, answer] => {
+            let node = node.parse().map(NodeId).map_err(|_| bad("node id"))?;
+            let offer = offer
+                .parse()
+                .map(EnvelopeId)
+                .map_err(|_| bad("envelope id"))?;
+            let answer = match *answer {
+                "send" => DoorAnswer::Send,
+                "hire" => DoorAnswer::Hire,
+                "ask" => DoorAnswer::Ask,
+                "leave" => DoorAnswer::Leave,
+                _ => return Err(bad("answer")),
+            };
+            Ok(Cmd::Answer(node, offer, answer))
+        }
+        ["close", id] => id
+            .parse()
+            .map(|v| Cmd::Close(NodeId(v)))
+            .map_err(|_| bad("node id")),
         ["sync", id] => id
             .parse()
             .map(|v| Cmd::Sync(NodeId(v)))
@@ -421,6 +479,12 @@ async fn main() {
             .unwrap_or(if a.scenario == "city" { 3 } else { 2 }),
         week_ticks: a.week,
         price_walk: a.price_walk.then(|| PriceWalk::elm_street(a.seed)),
+        oracle_cost: a.oracle_cost,
+        price_period: if a.price_every == 8 {
+            None
+        } else {
+            Some(a.price_every)
+        },
         oracle_policy: if a.oracle_person {
             OraclePolicy::Person
         } else {

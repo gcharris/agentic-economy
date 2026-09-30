@@ -1,11 +1,4 @@
-// The phone view (doc 06 §5, §8.6): one house's Door on a phone at the kitchen table. `?house=<name or n>`: the
-// house by its name, or its place in the street's houses in creation order (Ada 1, Ben 2, …).
-//
-// The Porter proposes both a send and a hire for the same finished draft; both knock. The card composes them into
-// one: "Send it (10.0 cr)" says yes to the send and no to the hire; "Hire Ben's courier at 10.0 cr" the reverse;
-// "Ask the oracle first (15 cr)" asks and leaves the card up (the answer comes back on the phone); "Leave it on the
-// table" says no to both. Below it: the purse and the liquidity, the oracle's last answer, and the Note when there is
-// one. Every number is a field of the current frame.
+// The phone composes a finished draft into one atomic answer; all numbers come from the frame.
 
 import type { App } from '../app/App.ts';
 import { fmtCost, fmtCr, fmtPhi } from '../engine/contract/copy.ts';
@@ -60,19 +53,8 @@ export function composeCards(state: StateView, house: number): DoorCard[] {
   return cards;
 }
 
-/** The card's answers: which envelopes each button approves and rejects. */
-export function answers(card: DoorCard): { send: { approve: HeldView[]; reject: HeldView[] } | null; hire: { approve: HeldView[]; reject: HeldView[] } | null; leave: HeldView[] } {
-  const others = (keep: HeldView) => card.envelopes.filter((h) => h !== keep);
-  return {
-    send: card.send ? { approve: [card.send], reject: others(card.send) } : null,
-    hire: card.hire ? { approve: [card.hire], reject: others(card.hire) } : null,
-    leave: card.envelopes,
-  };
-}
-
 export const sendLabel = (h: HeldView): string => `Send it (${fmtCost(h.cost)} cr)`;
 export const hireLabel = (h: HeldView): string => `Hire ${h.target_name}'s courier at ${fmtCost(h.believed_price ?? 0)} cr`;
-export const ORACLE_LABEL = `Ask the oracle first (${ORACLE_CR} cr)`;
 export const LEAVE_LABEL = 'Leave it on the table';
 
 type Command = App['command'];
@@ -83,6 +65,10 @@ export class PhoneView implements UiLayer {
   private answered = new Set<number>();
   /** An oracle question in flight: the oracle tick it was asked after. */
   private asking: number | null | undefined = undefined;
+  private answeredTick = -1;
+  private failure = '';
+  private pendingHouse = false;
+  private oracleCost = ORACLE_CR;
   private readonly el: HTMLElement;
 
   constructor(private readonly root: ParentNode, private readonly key: string, private readonly command: Command, private readonly live: boolean) {
@@ -94,6 +80,9 @@ export class PhoneView implements UiLayer {
 
   apply(frame: Frame, _store: Store): void {
     const s = frame.state;
+    if (s.tick > this.answeredTick) this.answered.clear();
+    this.pendingHouse = false;
+    this.oracleCost = s.game?.oracle_cost ?? ORACLE_CR;
     this.house = resolveHouse(s, this.key);
     const n = this.house;
     if (!n) { this.el.replaceChildren(this.p('who', `No house called “${this.key}” on this street.`)); return; }
@@ -104,7 +93,7 @@ export class PhoneView implements UiLayer {
     const head = document.createElement('header');
     const h1 = document.createElement('h1'); h1.textContent = n.name;
     const pill = document.createElement('span'); pill.className = 'pill'; pill.dataset.status = n.status; pill.textContent = pillText(n.status);
-    head.append(h1, this.p('day mono', dayLabel(s.tick)), pill);
+    head.append(h1, this.p('day mono', dayLabel(s.tick, s.game?.week_ticks)), pill);
 
     const purse = document.createElement('section'); purse.className = 'purse';
     const share = n.compute_allocated > 0 ? n.compute / n.compute_allocated : 0;
@@ -120,10 +109,29 @@ export class PhoneView implements UiLayer {
     const oracle = document.createElement('section'); oracle.className = 'oracle';
     oracle.append(this.p('', n.oracle_price === null || n.oracle_tick === null
       ? 'You have not asked the oracle this week.'
-      : `The oracle said the courier costs ${fmtCost(n.oracle_price)} cr (${dayLabel(n.oracle_tick)}).`));
+      : `The oracle said the courier costs ${fmtCost(n.oracle_price)} cr (${dayLabel(n.oracle_tick, s.game?.week_ticks)}).`));
     if (this.asking !== undefined) oracle.append(this.p('asking', 'Asking the oracle… the answer comes back at the next tick.'));
 
     const parts: HTMLElement[] = [head, purse, oracle];
+    if (s.game) {
+      const pocket = document.createElement('section'); pocket.className = 'pocket';
+      pocket.append(this.p('mono', `Your pocket: ${fmtCost(n.pocket_left ?? 0)} cr left.`));
+      const ended = s.tick >= s.game.week_ticks || n.note?.reason.kind === 'closed';
+      const control = (label: string, cmd: Parameters<Command>[0], disabled: boolean) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+        b.disabled = !this.live || ended || disabled || this.pendingHouse;
+        b.onclick = () => {
+          this.pendingHouse = true; b.disabled = true;
+          void this.command(cmd).then((ok) => { if (!ok) this.failed('The house command was refused.'); })
+            .catch(() => this.failed('The house command could not reach the engine.'));
+        };
+        pocket.append(b);
+      };
+      control('Put in 50 cr from your pocket', { decision: 'top_up', node: n.id, credits: 50 }, (n.pocket_left ?? 0) < 50);
+      control('The week is over for my house', { decision: 'close', node: n.id }, false);
+      parts.push(pocket);
+    }
+    if (this.failure) { const p = this.p('command-failure', this.failure); p.setAttribute('role', 'alert'); parts.push(p); }
     const cards = composeCards(s, n.id);
     if (n.note) parts.push(noteSheet(n.note, n.note.week ? 'The week’s Note' : 'A note on the table'));
     else if (cards.length) parts.push(this.card(cards[0], n, s));
@@ -142,38 +150,50 @@ export class PhoneView implements UiLayer {
       this.p('proof mono', `Held ${held} ${held === 1 ? 'tick' : 'ticks'} · Φ ${fmtPhi(n.confidence)} now`),
     );
     if (c.waiting > 1) el.append(this.p('count', `1 of ${c.waiting} at the Door`));
-    const a = answers(c);
+    el.append(this.p('formatting', 'Formatting costs 2.5 cr once per draft and 0.5 cr per hire attempt. These offers are already paid for.'));
     const buttons = document.createElement('div'); buttons.className = 'answers';
-    const btn = (label: string, cls: string, fn: () => void) => {
+    const cost = s.game?.oracle_cost ?? ORACLE_CR;
+    const decide = (answer: 'send' | 'hire' | 'ask' | 'leave') => {
+      this.failure = ''; this.el.querySelector('.command-failure')?.remove();
+      if (answer === 'ask') {
+        this.asking = n.oracle_tick;
+        this.el.querySelector('section.oracle')?.append(this.p('asking', 'Asking the oracle… the answer comes back at the next tick.'));
+      } else {
+        for (const h of c.envelopes) this.answered.add(h.envelope);
+        this.answeredTick = s.tick;
+        el.append(this.p('sent', 'sent to the Door…'));
+      }
+      buttons.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      void this.command({ decision: 'answer', node: n.id, offer: c.envelopes[0].envelope, answer })
+        .then((ok) => { if (!ok) this.failed('The answer was refused. The card is still on the table.'); })
+        .catch(() => this.failed('The answer could not reach the engine. The card is still on the table.'));
+    };
+    const btn = (label: string, cls: string, answer: 'send' | 'hire' | 'ask' | 'leave', unaffordable = false) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = label;
-      b.disabled = !this.live || sent; b.addEventListener('click', fn); buttons.append(b); return b;
+      b.disabled = !this.live || sent || this.asking !== undefined || unaffordable;
+      b.addEventListener('click', () => decide(answer)); buttons.append(b);
     };
-    const decide = (approve: HeldView[], reject: HeldView[]) => {
-      for (const h of [...approve, ...reject]) this.answered.add(h.envelope);
-      for (const h of approve) void this.command({ decision: 'approve', envelope: h.envelope, description: h.description });
-      for (const h of reject) void this.command({ decision: 'reject', envelope: h.envelope, description: h.description });
-      el.querySelectorAll('button').forEach((b) => { b.disabled = true; });
-      el.append(this.p('sent', 'sent to the Door…'));
-    };
-    if (a.send) btn(sendLabel(a.send.approve[0]), 'send primary', () => decide(a.send!.approve, a.send!.reject));
-    if (a.hire) btn(hireLabel(a.hire.approve[0]), 'hire', () => decide(a.hire!.approve, a.hire!.reject));
-    if (!a.send && !a.hire) btn('Yes', 'send primary', () => decide(c.envelopes, []));
-    const ask = btn(ORACLE_LABEL, 'oracle', () => {
-      this.asking = n.oracle_tick;
-      ask.disabled = true;
-      this.el.querySelector('section.oracle')?.append(this.p('asking', 'Asking the oracle… the answer comes back at the next tick.'));
-      void this.command({ decision: 'sync', node: n.id }).then((ok) => {
-        if (ok) return;
-        this.asking = undefined;
-        this.el.querySelector('section.oracle .asking')?.remove();
-        ask.disabled = !this.live || sent || n.compute < ORACLE_CR;
-      });
-    });
-    if (this.asking !== undefined || n.compute < ORACLE_CR) ask.disabled = true;
-    btn(LEAVE_LABEL, 'leave', () => decide([], a.leave));
+    if (c.send) btn(sendLabel(c.send), 'send primary', 'send', n.compute < c.send.cost);
+    if (c.hire) btn(hireLabel(c.hire), 'hire', 'hire');
+    btn(`Ask the oracle first (${cost} cr)`, 'oracle', 'ask', n.compute < cost);
+    btn(LEAVE_LABEL, 'leave', 'leave');
     el.append(buttons);
     if (sent) el.append(this.p('sent', 'sent to the Door…'));
     return el;
+  }
+
+  private failed(message: string): void {
+    this.failure = message; this.asking = undefined; this.answered.clear(); this.pendingHouse = false;
+    this.el.querySelector('section.oracle .asking')?.remove();
+    this.el.querySelector('.command-failure')?.remove();
+    this.el.querySelector('.door-card .sent')?.remove();
+    const p = this.p('command-failure', message); p.setAttribute('role', 'alert'); this.el.append(p);
+    // Refresh button affordability from the most recent authoritative frame on the next apply.
+    this.el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+      b.disabled = !this.live || (b.classList.contains('oracle') && (this.house?.compute ?? 0) < this.oracleCost)
+        || (b.classList.contains('send') && (this.house?.compute ?? 0) < 10)
+        || (b.textContent?.startsWith('Put in 50') === true && (this.house?.pocket_left ?? 0) < 50);
+    });
   }
 
   private p(cls: string, text: string): HTMLElement {

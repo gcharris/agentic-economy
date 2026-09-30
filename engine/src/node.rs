@@ -174,6 +174,8 @@ pub enum TaskState {
     AtDoor,
     Sent,
     Rejected,
+    /// Game only: staff have finished the asset; only the Porter may re-offer it.
+    Finished,
 }
 
 /// A unit of work the house was asked to do this week.
@@ -257,6 +259,31 @@ pub struct SovereignNode {
     /// The week's running numbers, written on Friday's Note (doc 06 §3).
     #[serde(default)]
     pub tally: WeekTally,
+    #[serde(default)]
+    pub finished_drafts: Vec<FinishedDraft>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DraftDisposition {
+    Ready,
+    AtDoor,
+    InFlight,
+    Deferred,
+    Delivered,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FinishedDraft {
+    pub task_id: String,
+    pub message: String,
+    pub target: NodeId,
+    pub hire_target: Option<NodeId>,
+    pub send: Option<ProposalEnvelope>,
+    pub hire: Option<ProposalEnvelope>,
+    pub state: DraftDisposition,
+    pub drafted_tick: u64,
+    pub ready_tick: u64,
+    pub after_piece: Option<String>,
 }
 
 /// What the oracle last told a house.
@@ -309,6 +336,27 @@ impl SovereignNode {
             sync_requested: false,
             oracle: None,
             tally: WeekTally::default(),
+            finished_drafts: Vec::new(),
+        }
+    }
+
+    pub fn remember_offer(&mut self, env: &ProposalEnvelope) {
+        let task = match &env.payload {
+            Payload::Dispatch { task_id, .. } => Some(task_id),
+            Payload::HireService { task_id, .. } => task_id.as_ref(),
+            _ => None,
+        };
+        if let Some(d) = self
+            .finished_drafts
+            .iter_mut()
+            .find(|d| Some(&d.task_id) == task)
+        {
+            if matches!(env.payload, Payload::Dispatch { .. }) {
+                d.send = Some(env.clone());
+            } else {
+                d.hire = Some(env.clone());
+            }
+            d.state = DraftDisposition::AtDoor;
         }
     }
 

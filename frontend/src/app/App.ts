@@ -59,6 +59,8 @@ export interface SceneContext {
 /** What the DOM asks of the engine. The answer returns only as a later Frame. */
 export type Command =
   | { decision: 'approve' | 'reject'; envelope: EnvelopeId; description?: string }
+  | { decision: 'answer'; node: NodeId; offer: EnvelopeId; answer: 'send' | 'hire' | 'ask' | 'leave' }
+  | { decision: 'close'; node: NodeId }
   | { decision: 'top_up'; node: NodeId; credits: number }
   | { decision: 'sync'; node: NodeId }
   | { decision: 'zoom'; stage: Band };
@@ -175,6 +177,8 @@ export class App {
     switch (c.decision) {
       case 'approve': ok = await s.authorize(c.envelope); break;
       case 'reject': ok = await s.reject(c.envelope); break;
+      case 'answer': ok = await s.answer?.(c.node, c.offer, c.answer) ?? false; break;
+      case 'close': ok = await s.close?.(c.node) ?? false; break;
       case 'top_up': ok = await s.topUp(c.node, c.credits); break;
       case 'sync': ok = await s.sync(c.node); break;
       case 'zoom': ok = await s.zoom(c.stage); break;

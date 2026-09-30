@@ -59,7 +59,7 @@ test('the card composes the send and the hire for one draft: four answers, the p
   expect(document.body.textContent).not.toMatch(BANNED);
 });
 
-test('"Hire" says yes to the hire and no to the send; the swap settles at the kerb and the draft is done', async () => {
+test('"Hire" atomically selects the hire and withdraws the send; the swap settles at the kerb and the draft is done', async () => {
   const a = await phone('1'); // the first house in the order of the names: Ada
   await untilCard(a);
   const s = a.store.frame!.state;
@@ -70,7 +70,7 @@ test('"Hire" says yes to the hire and no to the send; the swap settles at the ke
   expect(document.querySelector('#phone .door-card .sent')!.textContent).toBe('sent to the Door…');
   expect(buttons().every((b) => b.disabled)).toBe(true);
   const f1 = (await a.step())!;
-  expect(f1.events.some((e) => e.type === 'REJECTED' && e.envelope === card.send!.envelope && e.gate === 'House')).toBe(true);
+  expect(f1.events.some((e) => e.type === 'REJECTED' && e.envelope === card.send!.envelope && e.gate === 'House')).toBe(false);
   expect(f1.events.some((e) => e.type === 'APPROVED' && e.envelope === card.hire!.envelope && e.gate === 'House')).toBe(true);
   const f2 = (await a.step())!;
   expect(f2.events.some((e) => e.type === 'SETTLED' && e.envelope === card.hire!.envelope)).toBe(true);
@@ -147,4 +147,33 @@ test('an unaffordable oracle is disabled; a refused command clears its pending s
   expect(buttons()[2].disabled).toBe(false);
   view.apply(frame, a.store);
   expect(buttons()[2].disabled).toBe(false);
+});
+
+test('the phone sends one atomic command, acknowledges failure, and offers the finite pocket and close', async () => {
+  const a = await phone('Ada'); await untilCard(a);
+  const calls: Parameters<App['command']>[0][] = [];
+  const view = new PhoneView(document, 'Ada', async (cmd) => { calls.push(cmd); return false; }, true);
+  const frame = a.store.frame!; view.apply(frame, a.store);
+  buttons()[1].click(); await Promise.resolve();
+  expect(calls).toHaveLength(1); expect(calls[0]).toMatchObject({ decision: 'answer', answer: 'hire' });
+  expect(document.querySelector('[role=alert]')?.textContent).toContain('refused');
+  expect(buttons()[1].disabled).toBe(false);
+  const pocket = [...document.querySelectorAll<HTMLButtonElement>('#phone .pocket button')];
+  pocket[0].click(); await Promise.resolve();
+  expect(calls[1]).toMatchObject({ decision: 'top_up', credits: 50 });
+  pocket[1].click(); await Promise.resolve(); expect(calls[2]).toMatchObject({ decision: 'close' });
+  const ada = frame.state.nodes.find((n) => n.name === 'Ada')!; ada.pocket_left = 0;
+  view.apply(frame, a.store);
+  expect(document.querySelector<HTMLButtonElement>('.pocket button')!.disabled).toBe(true);
+});
+
+test('a forty-eight tick week and ten-credit oracle are painted from game configuration', async () => {
+  const source = engineSource('street', { game: { houses: 3, week: 48, priceWalk: true, oraclePerson: true, oracleCost: 10, cadence: 12 } });
+  app = await App.boot({ source, renderer: new NullRenderer(), root: document.body, clock: 'manual', ui: (a) => new PhoneView(document, 'Ada', a.command.bind(a), true) });
+  await untilCard(app); expect(buttons()[2].textContent).toBe('Ask the oracle first (10 cr)');
+  expect(document.querySelector('#phone .day')!.textContent).toBe('Monday · tick 1 of 10');
+  const frame = app.store.frame!; frame.state.tick = 48;
+  new PhoneView(document, 'Ada', app.command.bind(app), true).apply(frame, app.store);
+  expect(document.querySelector('#phone .day')!.textContent).toBe('Friday · tick 9 of 9');
+  expect([...document.querySelectorAll<HTMLButtonElement>('.pocket button')].every((b) => b.disabled)).toBe(true);
 });
