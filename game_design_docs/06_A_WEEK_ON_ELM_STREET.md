@@ -108,3 +108,19 @@ Round 1 is the playable street: the engine changes below, the phone Door, the No
 ## 9. What comes after, only if the table says so
 
 A second street (the Clearinghouse netting the day between streets) makes a season of it. The High Court's rollback makes the shared catastrophe. Neither is worth a token until people at a kitchen table have lied about the price of a courier.
+
+## 10. Round 2: the rules the Director authorized on 2026-09-30
+
+After the Codex review and playtest (`engine/docs/CODEX-REVIEW-2026-09-30.md`), whose first playtest measured lost drafts as much as economics. These rules are approved; Codex implements them on its own branch; the demo's runs and takes stay as they are, behind the explicit game configuration, with regression checks.
+
+1. **A finished draft is drafted once and never bought again.** After the staff finish a piece it stays on the table until delivered. No later step runs Scout, Scribble or Inspector on it again.
+2. **What a retry costs.** Formatting is paid once per finished draft for the send offer (2.5 cr) and once per hire attempt (0.5 cr). Re-offering the same draft mints nothing and charges nothing. A wrong guess therefore costs the tick and the half credit; "leave it on the table" costs ticks and Φ, not compute. The unchosen offer of a composed answer is withdrawn to the table, not destroyed.
+3. **When a draft comes back.** A draft whose hire reverted: the Porter knocks again with it at his next free tick, at the house's current belief. A deferred draft ("leave it on the table"): after the staff finish the next piece, offered after the new draft, one knock each; if nothing is left to draft, at the next tick. Never immediately, so the house keeps drafting.
+4. **A successful hire costs the price in liquidity plus its 0.5 cr, nothing else.** The 2 cr base weight is not burned on settlement.
+5. **The pocket.** 200 cr per house, enforced by the engine: a top-up beyond it is refused. Two controls on the phone: "Put in 50 cr from your pocket" (with what is left) and "The week is over for my house". Top-ups stay on the Note.
+6. **The answer is atomic.** One command carries the person's answer for a draft (send, hire, ask, leave); the engine applies it whole or not at all, and the phone acknowledges failure.
+7. **The calendar** (days and ticks per day) derives from the week's length, not constants.
+8. **The budget of 720 cr is a candidate, not a default.** Staff already spend less when the purse is light, so sending everything at 720 is measured before anything is claimed about it.
+9. **The matrix**, on the playtest harness, retries on: budget 720 and 800; price cadence every 12 ticks against the current walk; oracle at 10 and 15 cr; 40 and 48 ticks; 20 seeds each, the four strategies, mixed streets and controls. Reported as tables. No default changes from the results; proposals only.
+10. **What counts as working.** The strategies separate on the Notes and none dominates. "Oracle-and-hire finishes without a top-up" is a hypothesis the matrix tests, not an outcome to tune for. If sending everything wins at every budget, that is a finding about the design and it stands.
+11. Repository visibility stays as it is unless the Director chooses otherwise. No pull request; no push to a `claude/*` branch; no hosting.
