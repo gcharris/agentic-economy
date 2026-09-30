@@ -65,6 +65,8 @@ export class SseSource implements EngineSource {
         const text = String((e as MessageEvent).data ?? '');
         const { version, scenario, seed } = parseHello(text);
         this.status$.emit({ kind: 'streaming' });
+        // A paused table and a reconnect after Friday still need their current frame.
+        this.enqueue(async () => this.emit(await this.getState()));
         if (!said) { said = true; resolve({ version, scenario, seed, tickSeconds: SERVE_INTERVAL_SECONDS, recorded: false }); }
       });
       es.addEventListener('tick', (e) => {
