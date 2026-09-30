@@ -1,0 +1,118 @@
+// A Week on Elm Street, the phone (doc 06 §8.6) through the real UI on the real wasm (engine_new_game): the Door card
+// composes the send and the hire for one draft; its answers reach the engine; the oracle answers on the phone; on
+// Friday the phone and the TV show the week's Notes.
+
+import { afterEach, beforeEach, expect, test } from 'vitest';
+import { App } from '../../src/app/App.ts';
+import { NullRenderer } from '../../src/app/Renderer.ts';
+import { NOOP_UI } from '../../src/engine/store/Store.ts';
+import { composeCards, PhoneView } from '../../src/ui/phone.ts';
+import { NotesTable } from '../../src/ui/notes.ts';
+import { engineSource } from '../helpers/engineSource.ts';
+import { loadShell } from '../helpers/assets.ts';
+
+let app: App | null = null;
+beforeEach(() => loadShell());
+afterEach(() => { app?.dispose(); app = null; });
+
+const BANNED = /\b(score|rank|reputation|leaderboard|rating)\b/i;
+
+async function phone(key: string, game = { houses: 3, week: 40, priceWalk: false, oraclePerson: true }) {
+  const source = engineSource('street', { game });
+  app = await App.boot({ source, renderer: new NullRenderer(), root: document.body, clock: 'manual', ui: (a) => new PhoneView(document, key, a.command.bind(a), true) });
+  return app;
+}
+
+async function untilCard(a: App, max = 12) {
+  for (let i = 0; i < max; i++) {
+    await a.step();
+    if (document.querySelector('#phone .door-card')) return;
+  }
+  throw new Error('no knock at the Door');
+}
+
+const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('#phone .door-card button')];
+
+test('the card composes the send and the hire for one draft: four answers, the purse, the liquidity, the oracle', async () => {
+  const a = await phone('Ada');
+  await untilCard(a);
+  const s = a.store.frame!.state;
+  const ada = s.nodes.find((n) => n.name === 'Ada')!;
+  const cards = composeCards(s, ada.id);
+  expect(cards[0].send?.kind).toBe('dispatch');
+  expect(cards[0].hire?.kind).toBe('hire_service');
+  expect(cards[0].hire?.task_id).toBe(cards[0].send?.task_id);
+  const neighbour = cards[0].hire!.target_name;
+  expect(['Ben', 'Cal']).toContain(neighbour);
+  expect(document.querySelectorAll('#phone .door-card')).toHaveLength(1);
+  expect(buttons().map((b) => b.textContent)).toEqual([
+    'Send it (10.0 cr)', `Hire ${neighbour}'s courier at 10.0 cr`, 'Ask the oracle first (15 cr)', 'Leave it on the table',
+  ]);
+  const text = document.querySelector('#phone')!.textContent!;
+  expect(text).toContain('The Porter is at the Door');
+  expect(text).toContain(`The finished draft for ${cards[0].task}.`);
+  expect(text).toContain('Nothing burns while you decide.');
+  expect(text).toContain(`purse ${ada.compute.toFixed(2)} / 800.00 cr`);
+  expect(text).toContain('liquidity 200.00 cr');
+  expect(text).toContain('You have not asked the oracle this week.');
+  expect(document.querySelector('#phone h1')!.textContent).toBe('Ada');
+  expect(document.body.textContent).not.toMatch(BANNED);
+});
+
+test('"Hire" says yes to the hire and no to the send; the swap settles at the kerb and the draft is done', async () => {
+  const a = await phone('1'); // the first house in the order of the names: Ada
+  await untilCard(a);
+  const s = a.store.frame!.state;
+  const ada = s.nodes.find((n) => n.name === 'Ada')!;
+  const card = composeCards(s, ada.id)[0];
+  buttons()[1].click();
+  await Promise.resolve();
+  expect(document.querySelector('#phone .door-card .sent')!.textContent).toBe('sent to the Door…');
+  expect(buttons().every((b) => b.disabled)).toBe(true);
+  const f1 = (await a.step())!;
+  expect(f1.events.some((e) => e.type === 'REJECTED' && e.envelope === card.send!.envelope && e.gate === 'House')).toBe(true);
+  expect(f1.events.some((e) => e.type === 'APPROVED' && e.envelope === card.hire!.envelope && e.gate === 'House')).toBe(true);
+  const f2 = (await a.step())!;
+  expect(f2.events.some((e) => e.type === 'SETTLED' && e.envelope === card.hire!.envelope)).toBe(true);
+  expect(f2.events.some((e) => e.type === 'DELIVERED' && e.envelope === card.hire!.envelope)).toBe(true);
+  expect(f2.state.nodes.find((n) => n.id === ada.id)!.liquidity_truth).toBe(200 - card.hire!.believed_price!);
+});
+
+test('"Ask the oracle first" asks, keeps the card, and the answer comes back on the phone', async () => {
+  const a = await phone('ada');
+  await untilCard(a);
+  const task = composeCards(a.store.frame!.state, a.store.frame!.state.nodes.find((n) => n.name === 'Ada')!.id)[0].task;
+  const ask = buttons()[2];
+  ask.click();
+  await Promise.resolve();
+  expect(document.querySelector('#phone section.oracle .asking')).not.toBeNull();
+  const f = (await a.step())!;
+  const ada = f.state.nodes.find((n) => n.name === 'Ada')!;
+  expect(f.events.some((e) => e.type === 'STATE_SYNC' && e.node === ada.id && e.cost === 15)).toBe(true);
+  expect(ada.oracle_price).toBe(10);
+  expect(document.querySelector('#phone section.oracle')!.textContent).toBe(`The oracle said the courier costs 10.0 cr (Monday · tick ${f.tick} of 8).`);
+  expect(document.querySelector('#phone .door-card .what')!.textContent).toBe(`The finished draft for ${task}.`); // the card comes back
+  expect(buttons()[0].disabled).toBe(false);
+});
+
+test('Friday: the phone shows its week’s Note; the TV lays the Notes side by side, with no totals row', async () => {
+  const source = engineSource('street', { game: { houses: 4, week: 6, priceWalk: true, oraclePerson: true } });
+  const notes = new NotesTable(document);
+  app = await App.boot({ source, renderer: new NullRenderer(), root: document.body, clock: 'manual', ui: NOOP_UI });
+  const view = new PhoneView(document, 'Ben', app.command.bind(app), true);
+  for (let t = 1; t <= 6; t++) {
+    for (const h of app.store.frame?.state.held ?? []) await app.command({ decision: 'approve', envelope: h.envelope });
+    const f = (await app.step())!;
+    view.apply(f, app.store);
+    notes.apply(f.state);
+    expect(document.querySelector<HTMLElement>('#notes')!.hidden).toBe(t < 6);
+  }
+  const sheet = document.querySelector('#phone .note-sheet')!;
+  expect(sheet.querySelector('h2')!.textContent).toBe('The week’s Note');
+  expect(sheet.textContent).toMatch(/pieces done\d+ of 15/);
+  const tv = [...document.querySelectorAll('#notes .note-sheet')];
+  expect(tv.map((s) => s.querySelector('.who')!.textContent)).toEqual(['Ada', 'Ben', 'Cal', 'Dee']);
+  for (const s of tv) expect(s.textContent).toContain('The week is over. The Note is on the table.');
+  expect(document.querySelector('#notes')!.textContent).not.toMatch(/total/i);
+  expect(document.body.textContent).not.toMatch(BANNED);
+});

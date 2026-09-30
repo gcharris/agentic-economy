@@ -1,0 +1,54 @@
+/* A Week on Elm Street (doc 06 §5): the phone's Door and the TV's Notes on the table. Tokens only (tokens.css). */
+
+/* ── The phone: one Door, no canvas ── */
+body[data-view="phone"] { overflow: auto; }
+body[data-view="phone"] #stage, body[data-view="phone"] #hud, body[data-view="phone"] #ticker,
+body[data-view="phone"] #labels, body[data-view="phone"] #banner, body[data-view="phone"] #note,
+body[data-view="phone"] dialog#door { display: none !important; }
+#phone { max-width: 440px; margin: 0 auto; padding: 16px 16px 32px; display: flex; flex-direction: column; gap: 12px; }
+#phone header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+#phone h1 { font: 400 30px/1.15 var(--display); margin: 0; flex: 1 0 100%; }
+#phone header .day { margin: 0; color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+#phone header .pill { margin-left: auto; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--raised); border: 1px solid var(--line-2); }
+#phone header .pill[data-status="waiting_at_door"] { border-color: var(--gold-2); color: var(--gold-light); }
+#phone header .pill[data-status="halted"] { border-color: var(--ember); color: var(--ember-2); }
+#phone section.purse, #phone section.oracle { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+#phone p { margin: 0; }
+#phone .purse .v { font-size: 14px; }
+#phone .purse .bar { display: block; height: 6px; margin: 6px 0 8px; background: var(--raised); border-radius: 3px; overflow: hidden; }
+#phone .purse .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold-2), var(--gold)); }
+#phone .purse.low .bar i { background: var(--ember); }
+#phone .oracle { font-size: 15px; }
+#phone .oracle .asking { color: var(--cyan-2); margin-top: 4px; font-size: 13px; }
+#phone .quiet { color: var(--ink-3); text-align: center; padding: 18px 0; }
+
+/* The composed Door card: the Door dialog's paper, on the phone's page. */
+#phone .door-card { background: var(--paper); color: var(--paper-ink); border-radius: 12px; padding: 16px 16px 14px; box-shadow: 0 14px 40px rgba(0,0,0,0.45); display: flex; flex-direction: column; gap: 6px; }
+#phone .door-card .eyebrow { font: 600 0.78rem/1.3 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-2); }
+#phone .door-card .what { font: 400 21px/1.25 var(--display); }
+#phone .door-card .calm { font-weight: 600; }
+#phone .door-card .proof, #phone .door-card .count { font-size: 12px; color: #6b5a44; }
+#phone .door-card .answers { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+#phone .door-card button { font: 600 16px var(--ui); min-height: 46px; border-radius: 9px; border: 1px solid #b9a88f; background: #fbf5e8; color: var(--paper-ink); cursor: pointer; text-align: left; padding: 10px 14px; }
+#phone .door-card button.primary { background: var(--gold); border-color: var(--gold-2); }
+#phone .door-card button.hire { background: #e7f1f2; border-color: #7cc8d3; }
+#phone .door-card button.oracle { background: transparent; border-style: dashed; border-color: var(--cyan); }
+#phone .door-card button:disabled { opacity: 0.5; cursor: default; }
+#phone .door-card .sent { font-size: 13px; color: #6b5a44; font-style: italic; }
+
+/* ── The Note's own typography (#note's), shared by the phone and the TV ── */
+.note-sheet { background: var(--paper); color: var(--paper-ink); border-radius: 8px; padding: 16px 18px; box-shadow: 0 14px 40px rgba(0,0,0,0.45); font-size: 14px; }
+.note-sheet h2 { font: 400 22px/1.2 var(--display); margin: 0 0 2px; }
+.note-sheet .who { font: 600 0.78rem/1.3 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-2); margin: 0 0 10px; }
+.note-sheet dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0 0 10px; }
+.note-sheet dt { color: #6b5a44; } .note-sheet dd { margin: 0; text-align: right; }
+.note-sheet .reason { font-weight: 600; margin: 0; }
+
+/* ── The TV: the street, the names, and on Friday the Notes side by side ── */
+body[data-view="tv"] #ladder, body[data-view="tv"] #focus, body[data-view="tv"] #gates, body[data-view="tv"] #totals,
+body[data-view="tv"] #controls, body[data-view="tv"] #drawer, body[data-view="tv"] #note, body[data-view="tv"] dialog#door { display: none !important; }
+#labels .label.nametag { position: absolute; left: 0; top: 0; font: 600 18px/1 var(--display); color: var(--ink); background: rgba(22, 17, 12, 0.72); border: 1px solid var(--line-2); border-radius: 999px; padding: 5px 12px; white-space: nowrap; pointer-events: none; }
+#notes { position: fixed; inset: auto 0 0 0; z-index: 3; padding: 20px 24px 28px; background: linear-gradient(180deg, rgba(10,8,6,0) 0%, rgba(10,8,6,0.82) 22%); }
+#notes > h2 { font: 400 26px/1.2 var(--display); color: var(--paper); margin: 0 0 14px; text-align: center; }
+#notes .sheets { display: flex; gap: 16px; justify-content: center; align-items: stretch; flex-wrap: wrap; }
+#notes .note-sheet { flex: 0 1 260px; }

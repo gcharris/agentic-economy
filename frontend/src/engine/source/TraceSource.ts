@@ -118,6 +118,7 @@ export class TraceSource implements EngineSource {
   async reject(): Promise<false> { return false; }
   async topUp(): Promise<false> { return false; }
   async zoom(): Promise<false> { return false; }
+  async sync(): Promise<false> { return false; }
 
   dispose(): void { this.frames$.clear(); this.status$.clear(); }
 }

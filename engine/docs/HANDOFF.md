@@ -86,6 +86,8 @@ cargo build --profile wasm --no-default-features --target wasm32-unknown-unknown
 
 8. **Level of detail is a knob (AUDIT-LEDGER #30).** `EngineConfig::pack_depth: u8` (default 2, the behaviour before) makes `set_active_scale` pack the children of any parent whose children sit `pack_depth` or more levels below the camera. The city scenarios (`engine_new(3)`, `engine_new_city`, `serve --scenario city`) use 3: the houses the Clearinghouse nets stay live at the City and pack from the Country up; `serve --pack-depth N` overrides.
 
+9. **A yes at the Door does not skip the kerb (doc 06, 2026-09-30).** A hire the person approves at the Door is re-queued with `door_cleared` and crosses the Letter Slot at the next tick, where the believed price is checked against the truth (`dvp_binding`); before, a Door-approved hire went straight to commit and could settle at a stale price. Everything else approved at the Door commits in the same tick as before. The demo's runs and takes are unaffected (their tests pass unchanged).
+
 ## 5. The six lane tests, adapted (done; kept for the record)
 
 Line numbers are current (after `cargo fmt`).
@@ -140,6 +142,19 @@ To render each take (from `frontend/`, after `npm install && npm run copy-assets
 Deferred (not in the demo): design-system page, bloom and dust, sound, 5,000-plate fixture, click-to-focus, contour slide, thought bubbles, goldens.
 
 Live cost: the demo and every take run the deterministic engine locally (the wasm in a Web Worker, statistical staff at the seats, no model calls), so running or re-rendering it costs CPU time only; rendering all nine takes takes about 12 minutes on the cloud container. No live model call has been made: the Vault seat is not wired to the frontend and the Director key is not in this environment (§7.2). A hosted demo (`serve` on Cloud Run plus the static build) would add hosting cost and is Controlled work behind a docket (§7.5).
+
+**A Week on Elm Street, round 1 (`game_design_docs/06_A_WEEK_ON_ELM_STREET.md` §8, 2026-09-30): done.** Engine: the person's oracle (`Engine::sync`, `EngineConfig.oracle_policy` Staff | Person, wasm `engine_sync`, `serve POST /sync/<node>`); a settled hire delivers its draft (`HireService.task_id`, `Delivered` on `Settled`; a Door-approved hire crosses the kerb next tick, §4.9); the price walk (`EngineConfig.price_walk`, 8/10/12/14 about once a day, seeded); the week (`EngineConfig.week_ticks`, `HaltReason::WeekOver`, `Note.week` with the week's numbers per house); `scenarios::elm_street` (named houses at the House); `serve --names --week --price-walk --oracle person`; views: `NodeView.oracle_price/oracle_tick`, `HeldView.kind/target/target_name/task_id/believed_price`; wasm `engine_new_game`. Frontend: the phone view (`?house=<name or n>`: one Door, the composed card "Send it (10.0 cr)" / "Hire <neighbour>'s courier at <price>" / "Ask the oracle first (15 cr)" / "Leave it on the table", purse, liquidity, the oracle's last answer, the Note; no canvas) and the TV view (`?view=tv`: the street held at band 2 without moving the engine, the cottages named, Friday's Notes side by side, no totals row). Tests: `engine/tests/elm_street.rs` (six), `serve_smoke`'s game, `frontend/tests/dom/phone.test.ts` (four), `frontend/tests/gpu/game-swiftshader.spec.ts` (the phone still `phone-door.png`, the Notes still `tv-notes.png`). Not built, per doc 06: sound, avatars, chat, timers on the card, a season, any hosted table; the demo's takes are untouched.
+
+To run it at a kitchen table (the laptop and the phones on the household wifi; no internet, no hosting):
+
+```
+cd frontend && npx vite --host                      # the page on the household wifi at :5173
+cd engine && cargo run --release --bin serve -- --scenario street --names Ada,Ben,Cal,Dee --week 40 --price-walk --oracle person --interval-ms 10000 --bind 0.0.0.0
+TV:     http://<laptop>:5173/?source=sse&view=tv
+phones: http://<laptop>:5173/?source=sse&house=Ada   (or &house=1 … n, the houses in the order of their names; the pages find serve on the same host at :8787, &engine=http://host:port overrides)
+```
+
+Without a server, `?source=wasm&run=game&houses=4&week=40` (add `&house=Ada` or `&view=tv`) runs the same game in the browser, one tab per view, each with its own engine: good for a look, not for a table.
 
 ## 10. Usage record
 
