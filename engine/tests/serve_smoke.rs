@@ -355,3 +355,84 @@ async fn game_answers_pocket_and_close_are_acknowledged_as_whole_commands() {
     assert_eq!(n["pocket_left"].as_f64(), Some(0.0));
     assert_eq!(n["note"]["week"]["top_up_credits"].as_f64(), Some(200.0));
 }
+
+#[tokio::test]
+async fn slow_walk_option_reaches_http_state_and_atomic_send_delivers_before_return() {
+    let server = start_server_with(
+        "street",
+        &[
+            "--names",
+            "Ada,Ben",
+            "--send-ticks",
+            "3",
+            "--interval-ms",
+            "300",
+            "--week",
+            "40",
+        ],
+    );
+    let port = server.1;
+    timeout(Duration::from_secs(5), async {
+        loop {
+            let s: serde_json::Value =
+                serde_json::from_str(&call(port, "GET", "/state").await.1).unwrap();
+            if !s["held"].as_array().unwrap().is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    call(port, "POST", "/pause").await;
+    let s: serde_json::Value = serde_json::from_str(&call(port, "GET", "/state").await.1).unwrap();
+    assert_eq!(s["game"]["send_ticks"], 3);
+    let answered_tick = s["tick"].as_u64().unwrap();
+    let h = s["held"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|h| h["kind"] == "dispatch")
+        .unwrap();
+    let id = h["node"].as_u64().unwrap();
+    let offer = h["envelope"].as_u64().unwrap();
+    assert!(call(port, "POST", &format!("/answer/{id}/{offer}/send"))
+        .await
+        .0
+        .starts_with("HTTP/1.1 200"));
+    call(port, "POST", "/resume").await;
+    timeout(Duration::from_secs(5), async {
+        let mut observed_out = false;
+        loop {
+            let s: serde_json::Value =
+                serde_json::from_str(&call(port, "GET", "/state").await.1).unwrap();
+            let tick = s["tick"].as_u64().unwrap();
+            let n = s["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|n| n["id"].as_u64() == Some(id))
+                .unwrap();
+            if tick == answered_tick + 1 {
+                observed_out = true;
+                assert_eq!(n["porter_back_tick"], answered_tick + 3);
+                assert_eq!(n["tasks_done"], 0);
+                assert!(n["queued_drafts"].as_u64().unwrap() >= 1);
+                assert!(!s["held"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|h| h["node"].as_u64() == Some(id)));
+            }
+            if n["tasks_done"] == 1 {
+                assert!(observed_out);
+                assert_eq!(tick, answered_tick + 2);
+                assert_eq!(n["porter_back_tick"], tick + 1);
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+}

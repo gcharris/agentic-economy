@@ -92,7 +92,9 @@ export class PhoneView implements UiLayer {
 
     const head = document.createElement('header');
     const h1 = document.createElement('h1'); h1.textContent = n.name;
-    const pill = document.createElement('span'); pill.className = 'pill'; pill.dataset.status = n.status; pill.textContent = pillText(n.status);
+    const pill = document.createElement('span'); pill.className = 'pill'; pill.dataset.status = n.status; pill.textContent = (n.porter_back_tick ?? 0) > s.tick && !n.note
+      ? `The Porter is out · back at ${dayLabel(n.porter_back_tick!, s.game?.week_ticks)}`
+      : (s.game?.send_ticks ?? 1) > 1 && n.status === 'waiting_at_door' ? 'The Porter is at the Door · staff keep drafting' : pillText(n.status);
     head.append(h1, this.p('day mono', dayLabel(s.tick, s.game?.week_ticks)), pill);
 
     const purse = document.createElement('section'); purse.className = 'purse';
@@ -134,6 +136,10 @@ export class PhoneView implements UiLayer {
     if (this.failure) { const p = this.p('command-failure', this.failure); p.setAttribute('role', 'alert'); parts.push(p); }
     const cards = composeCards(s, n.id);
     if (n.note) parts.push(noteSheet(n.note, n.note.week ? 'The week’s Note' : 'A note on the table'));
+    else if ((n.porter_back_tick ?? 0) > s.tick) {
+      const count = n.queued_drafts ?? 0;
+      parts.push(this.p('quiet', `The Porter is delivering your parcel. ${count} finished ${count === 1 ? 'draft' : 'drafts'} on the table. ${n.current_task ? 'Your staff keep drafting.' : 'Your list is drafted.'}`));
+    }
     else if (cards.length) parts.push(this.card(cards[0], n, s));
     else parts.push(this.p('quiet', n.current_task ? `Nobody at the Door. Your staff are on ${n.current_task}.` : 'Nobody at the Door.'));
     this.el.replaceChildren(...parts);
@@ -146,7 +152,7 @@ export class PhoneView implements UiLayer {
     el.append(
       this.p('eyebrow', 'The Porter is at the Door'),
       this.p('what', c.task ? `The finished draft for ${c.task}.` : c.envelopes[0].description),
-      this.p('calm', 'Nothing burns while you decide.'),
+      this.p('calm', (s.game?.send_ticks ?? 1) > 1 ? 'Your staff keep drafting while you decide.' : 'Nothing burns while you decide.'),
       this.p('proof mono', `Held ${held} ${held === 1 ? 'tick' : 'ticks'} · Φ ${fmtPhi(n.confidence)} now`),
     );
     if (c.waiting > 1) el.append(this.p('count', `1 of ${c.waiting} at the Door`));

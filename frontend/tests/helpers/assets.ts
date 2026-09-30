@@ -36,6 +36,7 @@ export interface EngineExports {
   engine_answer(node: bigint, offer: bigint, answer: number): number;
   engine_close(node: bigint): number;
   engine_game_options(cost: number, cadence: number): number;
+  engine_send_ticks(ticks: number): number;
   engine_zoom(stage: number): void;
   engine_set_truth_price(price: number): void;
   engine_state(): number;

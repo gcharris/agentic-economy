@@ -19,6 +19,7 @@ fn twenty_seed_playtest_and_deterministic_notes() {
                         cadence,
                         oracle,
                         week,
+                        send_ticks: 1,
                     };
                     let a = run(7, None, v);
                     assert_eq!(a, run(7, None, v));

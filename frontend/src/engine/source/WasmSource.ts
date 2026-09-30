@@ -14,7 +14,7 @@ import {
 
 export type ScenarioCode = 1 | 2 | 3 | 4 | 5;
 /** A Week on Elm Street (doc 06) through engine_new_game: named houses (Ada, Ben, …) at the House, every Door knocks. */
-export interface GameOptions { houses: number; week: number; priceWalk: boolean; oraclePerson: boolean; oracleCost?: number; cadence?: number }
+export interface GameOptions { houses: number; week: number; priceWalk: boolean; oraclePerson: boolean; oracleCost?: number; cadence?: number; sendTicks?: number }
 
 export type ToWorker =
   | { t: 'new'; scenario: ScenarioCode; seed: string /* decimal u64 */; budget: number; tasks: number; costVisible: boolean; wasmUrl: string; city?: { streets: number; houses: number }; world?: { countries: number; cities: number; streets: number; houses: number }; game?: GameOptions }

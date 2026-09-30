@@ -26,6 +26,7 @@ interface EngineExports {
   engine_answer(node: bigint, offer: bigint, answer: number): number;
   engine_close(node: bigint): number;
   engine_game_options(cost: number, cadence: number): number;
+  engine_send_ticks(ticks: number): number;
   engine_new_game?(houses: number, budget: number, tasks: number, weekTicks: number, priceWalk: number, oraclePerson: number, seed: bigint, costVisible: number): void;
   engine_sync?(node: bigint): number;
   engine_zoom(stage: number): void;
@@ -92,7 +93,10 @@ scope.onmessage = async (ev: MessageEvent<ToWorker>) => {
         else if (m.world && x.engine_new_world) x.engine_new_world(m.world.countries, m.world.cities, m.world.streets, m.world.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
         else if (m.city && x.engine_new_city) x.engine_new_city(m.city.streets, m.city.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
         else x.engine_new(m.scenario, BigInt(m.seed), m.budget, m.tasks, m.costVisible ? 1 : 0);
-        if (m.game) x.engine_game_options(m.game.oracleCost ?? 15, m.game.cadence ?? 8);
+        if (m.game) {
+          x.engine_game_options(m.game.oracleCost ?? 15, m.game.cadence ?? 8);
+          x.engine_send_ticks(m.game.sendTicks ?? 1);
+        }
         post({ t: 'hello', version: read(x, x.engine_version()) });
         break;
       }

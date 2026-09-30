@@ -74,6 +74,7 @@ struct Args {
     oracle_person: bool,
     oracle_cost: f64,
     price_every: u64,
+    send_ticks: u64,
 }
 
 fn parse_args() -> Args {
@@ -101,6 +102,7 @@ fn parse_args() -> Args {
         oracle_person: false,
         oracle_cost: ORACLE_COST,
         price_every: 8,
+        send_ticks: 1,
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -158,6 +160,14 @@ fn parse_args() -> Args {
                     .and_then(|v| v.parse::<f64>().ok())
                     .filter(|v| v.is_finite() && *v > 0.0)
                     .unwrap_or(a.oracle_cost)
+            }
+            "--send-ticks" => {
+                a.send_ticks = it
+                    .next()
+                    .and_then(|v| v.parse::<u32>().ok())
+                    .filter(|v| *v > 0)
+                    .map(u64::from)
+                    .unwrap_or(a.send_ticks);
             }
             "--price-every" => {
                 a.price_every = it
@@ -480,6 +490,7 @@ async fn main() {
         week_ticks: a.week,
         price_walk: a.price_walk.then(|| PriceWalk::elm_street(a.seed)),
         oracle_cost: a.oracle_cost,
+        send_ticks: a.send_ticks,
         price_period: if a.price_every == 8 {
             None
         } else {

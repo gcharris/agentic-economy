@@ -17,6 +17,30 @@ function watch(page: Page): string[] {
   return bad;
 }
 
+test('three-tick send hides the card until return while staff drafts queue', async ({ page }) => {
+  const bad = watch(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/?source=wasm&run=game&houses=4&house=Ada&send-ticks=3&oracle-cost=10&clock=manual');
+  await page.waitForFunction(() => (window as unknown as { __app?: Hook }).__app?.ready);
+  await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.stepTo(1); });
+  await page.locator('#phone .door-card button.send').click();
+  await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.stepTo(2); });
+  await expect(page.locator('#phone .pill')).toContainText('The Porter is out');
+  await expect(page.locator('#phone .pill')).toContainText('back at Monday · tick 4 of 8');
+  await expect(page.locator('#phone .door-card')).toHaveCount(0);
+  await expect(page.locator('#phone')).toContainText('1 finished draft');
+  await expect(page.locator('#phone .purse')).toContainText('Φ');
+  await page.screenshot({ path: 'tests/gpu/out/round3-phone-out.png', fullPage: true });
+  await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.stepTo(3); });
+  await expect(page.locator('#phone .purse')).toContainText('1 of 15 pieces done');
+  await expect(page.locator('#phone .door-card')).toHaveCount(0);
+  await page.evaluate(async () => { await (window as unknown as { __app: Hook }).__app.stepTo(4); });
+  await expect(page.locator('#phone .pill')).toContainText('The Porter is at the Door');
+  await expect(page.locator('#phone .door-card')).toBeVisible();
+  await page.screenshot({ path: 'tests/gpu/out/round3-phone-back.png', fullPage: true });
+  expect(bad).toEqual([]);
+});
+
 test('the phone view: Ada’s Door, the composed card after the oracle answered', async ({ page }) => {
   const bad = watch(page);
   await page.setViewportSize({ width: 390, height: 844 });

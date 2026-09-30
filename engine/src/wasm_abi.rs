@@ -205,6 +205,19 @@ pub extern "C" fn engine_close(node: u64) -> u32 {
     with_engine(|e| e.close(NodeId(node)).is_some() as u32).unwrap_or(0)
 }
 
+/// Opt-in round-three scheduling; setting one keeps round two intact.
+#[no_mangle]
+pub extern "C" fn engine_send_ticks(ticks: u32) -> u32 {
+    with_engine(|e| {
+        if !e.config.game || e.tick != 0 || ticks == 0 {
+            return 0;
+        }
+        e.config.send_ticks = ticks as u64;
+        1
+    })
+    .unwrap_or(0)
+}
+
 /// Test and experiment knobs only: defaults remain 15 cr and cadence 8.
 #[no_mangle]
 pub extern "C" fn engine_game_options(oracle_cost: f64, cadence: u32) -> u32 {

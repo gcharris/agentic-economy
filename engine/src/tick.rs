@@ -71,6 +71,13 @@ pub struct EngineConfig {
     /// Experiment: regular price changes; None keeps the original random walk.
     #[serde(default)]
     pub price_period: Option<u64>,
+    /// Opt-in slow walk; one retains round-two scheduling.
+    #[serde(default = "default_send_ticks")]
+    pub send_ticks: u64,
+}
+
+fn default_send_ticks() -> u64 {
+    1
 }
 
 fn default_retry_drafts() -> bool {
@@ -150,6 +157,7 @@ impl Default for EngineConfig {
             retry_drafts: true,
             oracle_cost: default_oracle_cost(),
             price_period: None,
+            send_ticks: 1,
         }
     }
 }
@@ -200,6 +208,7 @@ pub struct Engine {
     pub tax: CoordinationTax,
     next_id: u64,
     pub reports: Vec<TickReport>,
+    pending_staff_halts: Vec<(NodeId, String, f64)>,
 }
 
 impl fmt::Debug for Engine {
@@ -247,6 +256,7 @@ impl Engine {
             tax: CoordinationTax::default(),
             next_id: 0,
             reports: Vec::new(),
+            pending_staff_halts: Vec::new(),
         }
     }
 
@@ -357,6 +367,10 @@ impl Engine {
             .any(|n| n.held_at_door.iter().any(|e| e.id == envelope))
     }
 
+    pub fn slow_walk(&self) -> bool {
+        self.config.game && self.config.retry_drafts && self.config.send_ticks > 1
+    }
+
     /// One checked answer for one visible draft. Unknown, stale or unaffordable answers mutate nothing.
     pub fn answer(&mut self, node: NodeId, offer: EnvelopeId, answer: DoorAnswer) -> bool {
         if !self.config.game || self.week_over() {
@@ -434,9 +448,23 @@ impl Engine {
             self.decisions.approve(id);
             if let Some(d) = n.finished_drafts.iter_mut().find(|d| d.task_id == task) {
                 d.state = crate::node::DraftDisposition::InFlight;
+                if answer == DoorAnswer::Send {
+                    d.answered_tick = Some(self.tick);
+                }
             }
         } else {
-            let after = n.current_task().map(|t| t.id.clone());
+            let queued_after = if self.config.retry_drafts && self.config.send_ticks > 1 {
+                n.finished_drafts
+                    .iter()
+                    .filter(|d| {
+                        d.task_id != task && d.state == crate::node::DraftDisposition::Ready
+                    })
+                    .min_by_key(|d| d.drafted_tick)
+                    .map(|d| d.task_id.clone())
+            } else {
+                None
+            };
+            let after = queued_after.or_else(|| n.current_task().map(|t| t.id.clone()));
             if let Some(d) = n.finished_drafts.iter_mut().find(|d| d.task_id == task) {
                 d.state = crate::node::DraftDisposition::Deferred;
                 d.after_piece = after;
@@ -528,10 +556,15 @@ impl Engine {
 
     fn offer_finished_drafts(&mut self, tick: u64, report: &mut TickReport) {
         use crate::node::DraftDisposition;
+        let slow_walk = self.slow_walk();
         let ids: Vec<_> = self
             .nodes
             .values()
-            .filter(|n| n.status == NodeStatus::Active && n.held_at_door.is_empty())
+            .filter(|n| {
+                n.status == NodeStatus::Active
+                    && n.held_at_door.is_empty()
+                    && (!slow_walk || n.porter_back_tick <= tick)
+            })
             .map(|n| n.id)
             .collect();
         for id in ids {
@@ -643,6 +676,16 @@ impl Engine {
             }
             if send.is_some() || hire.is_some() {
                 n.status = NodeStatus::WaitingAtDoor;
+                if slow_walk {
+                    // Deferred assets follow the next piece's knock, not merely its drafting.
+                    for d in &mut n.finished_drafts {
+                        if d.after_piece.as_deref() == Some(&draft.task_id) {
+                            d.after_piece = None;
+                            d.ready_tick = tick + 1;
+                            d.state = DraftDisposition::Ready;
+                        }
+                    }
+                }
             }
         }
     }
@@ -895,6 +938,7 @@ impl Engine {
             self.offer_finished_drafts(tick, &mut report);
         }
         let staff_oracle = self.config.oracle_policy == OraclePolicy::Staff;
+        let slow_walk = self.slow_walk();
 
         // ── Phase 1: DRAFT. Off-chain, parallel, isolated. ──
         let mut jobs: Vec<DraftJob> = Vec::new();
@@ -906,13 +950,42 @@ impl Engine {
                 _ => continue,
             };
             let seed = self.rng.next_u64();
+            let reserved = if slow_walk {
+                let sends: f64 = self.nodes[&id]
+                    .held_at_door
+                    .iter()
+                    .filter(|e| {
+                        matches!(e.payload, Payload::Dispatch { .. })
+                            && self.decisions.get(e.id)
+                                == Some(crate::boundary::HumanDecision::Approve)
+                    })
+                    .map(|e| e.compute_weight)
+                    .sum();
+                let syncs: f64 = self
+                    .mempool
+                    .peek()
+                    .iter()
+                    .filter(|e| e.initiator == id && matches!(e.payload, Payload::StateSync))
+                    .map(|e| e.compute_weight)
+                    .sum();
+                sends + syncs
+            } else {
+                0.0
+            };
             let node = self.nodes.get_mut(&id).expect("node exists");
             node.burned_this_tick = 0.0;
-            if !node.is_draftable() {
+            if !(node.is_draftable()
+                || slow_walk
+                    && node.has_work()
+                    && matches!(node.status, NodeStatus::Active | NodeStatus::WaitingAtDoor))
+            {
                 continue; // WaitingAtDoor: zero idle burn. Halted: the note. Packed: stasis. No task: no thread.
             }
             let mut ctx = node.draft_context(tick, seed, cost_visible);
             ctx.set_staff_oracle(staff_oracle);
+            if reserved > 0.0 {
+                ctx.reserve_compute(reserved + 3.0);
+            }
             drafted.insert(id);
             jobs.push(DraftJob {
                 node: id,
@@ -937,11 +1010,28 @@ impl Engine {
             }
         }
 
+        if slow_walk {
+            self.offer_finished_drafts(tick, &mut report);
+        }
+
         // ── Phase 3: VERIFY. The gates. ──
         self.verify(tick, &mut report);
 
         // ── Phase 4: COMMIT. The one write path into the Sovereign Graph. ──
         self.commit(tick, &mut report);
+        if slow_walk {
+            self.deliver_scheduled(tick);
+            for (id, doing, shortfall) in std::mem::take(&mut self.pending_staff_halts) {
+                let n = self.nodes.get_mut(&id).expect("drafting house");
+                let note = n.halt(tick, doing, HaltReason::RunwayExhausted { shortfall });
+                self.events.push(EngineEvent::Halted {
+                    tick,
+                    node: id,
+                    note,
+                });
+                report.halted += 1;
+            }
+        }
 
         // ── Friday: at the week's last tick every house halts with the week's Note. ──
         if self.config.week_ticks == Some(tick) {
@@ -995,6 +1085,16 @@ impl Engine {
         report: &mut TickReport,
     ) {
         let active_scale = self.config.active_scale;
+        let slow_walk = self.slow_walk();
+        let reserved_command = slow_walk
+            && (self.nodes[&node_id].held_at_door.iter().any(|e| {
+                matches!(e.payload, Payload::Dispatch { .. })
+                    && self.decisions.get(e.id) == Some(crate::boundary::HumanDecision::Approve)
+            }) || self
+                .mempool
+                .peek()
+                .iter()
+                .any(|e| e.initiator == node_id && matches!(e.payload, Payload::StateSync)));
         let tax = self.tax;
         if out.claimed_node != node_id {
             self.events.push(EngineEvent::Thought {
@@ -1073,6 +1173,10 @@ impl Engine {
                 .map(|r| r.cost.credits() - node.purse.compute)
                 .unwrap_or(0.0)
                 .max(0.0);
+            if reserved_command {
+                self.pending_staff_halts.push((node_id, doing, shortfall));
+                return;
+            }
             let note = node.halt(tick, doing, HaltReason::RunwayExhausted { shortfall });
             self.events.push(EngineEvent::Halted {
                 tick,
@@ -1098,7 +1202,7 @@ impl Engine {
                     .find(|p| matches!(p.payload, Payload::HireService { .. }))
                     .cloned();
                 for draft in &mut node.finished_drafts {
-                    if draft.after_piece.as_deref() == Some(&task) {
+                    if !slow_walk && draft.after_piece.as_deref() == Some(&task) {
                         draft.after_piece = None;
                         draft.ready_tick = tick + 1;
                         draft.state = crate::node::DraftDisposition::Ready;
@@ -1114,8 +1218,9 @@ impl Engine {
                         hire: None,
                         state: crate::node::DraftDisposition::Ready,
                         drafted_tick: tick,
-                        ready_tick: tick + 1,
+                        ready_tick: if slow_walk { tick } else { tick + 1 },
                         after_piece: None,
+                        answered_tick: None,
                     });
                     if let Some(t) = node.task_mut(&task) {
                         t.state = TaskState::Finished;
@@ -1184,6 +1289,27 @@ impl Engine {
             }
             if self.config.game && self.config.retry_drafts {
                 node.remember_offer(&env);
+                if slow_walk && Self::payload_task(&env.payload).is_some() {
+                    if let Some(d) = node
+                        .finished_drafts
+                        .iter_mut()
+                        .find(|d| Self::payload_task(&env.payload) == Some(d.task_id.as_str()))
+                    {
+                        d.state = crate::node::DraftDisposition::Ready;
+                    }
+                    // Formatting is paid once; queued assets have not knocked.
+                    report.envelopes_minted += 1;
+                    self.events.push(EngineEvent::Proposed {
+                        tick,
+                        envelope: env.id,
+                        from: env.initiator,
+                        to: env.target,
+                        kind: env.payload.kind().into(),
+                        requested_liquidity: env.requested_liquidity,
+                        tax_paid: env.tax_paid,
+                    });
+                    continue;
+                }
             }
             match self.mempool.submit(env) {
                 Ok(()) => {
@@ -1773,27 +1899,23 @@ impl Engine {
                 },
                 Payload::Dispatch { message, task_id } => {
                     report.compute_burned += self.charge_send(env.initiator, fee);
-                    // The only cross-node write besides settlement: a
-                    // delivery, from an approved envelope, into the
-                    // recipient's inbox.
-                    self.graph.deliver(env.target, env.id, message.clone());
-                    if let Some(t) = self.nodes.get_mut(&env.target) {
-                        t.oak_table
-                            .put(format!("inbox/{}", env.id), message.clone());
+                    if self.slow_walk() {
+                        let n = self.nodes.get_mut(&env.initiator).expect("send initiator");
+                        let answer_tick = n
+                            .finished_drafts
+                            .iter()
+                            .find(|d| d.task_id == *task_id)
+                            .and_then(|d| d.answered_tick)
+                            .unwrap_or(tick);
+                        let due_tick = answer_tick + self.config.send_ticks - 1;
+                        n.porter_back_tick = answer_tick + self.config.send_ticks;
+                        n.own_deliveries.push(crate::node::ScheduledDelivery {
+                            envelope: env.clone(),
+                            due_tick,
+                        });
+                    } else {
+                        self.deliver_own(tick, &env, message, task_id);
                     }
-                    if let Some(t) = self
-                        .nodes
-                        .get_mut(&env.initiator)
-                        .and_then(|n| n.task_mut(task_id))
-                    {
-                        t.state = TaskState::Sent;
-                    }
-                    self.finish_game_draft(env.initiator, &env.payload);
-                    self.events.push(EngineEvent::Delivered {
-                        tick,
-                        envelope: env.id,
-                        to: env.target,
-                    });
                 }
                 Payload::StateSync => {
                     report.compute_burned += self.charge_send(env.initiator, fee);
@@ -1908,6 +2030,57 @@ impl Engine {
             .get_mut(&node)
             .and_then(|n| n.purse.burn_credits(credits).ok())
             .unwrap_or(0.0)
+    }
+
+    fn deliver_own(&mut self, tick: u64, env: &ProposalEnvelope, message: &str, task_id: &str) {
+        if self.slow_walk()
+            && self
+                .nodes
+                .get(&env.initiator)
+                .and_then(|n| n.tasks.iter().find(|t| t.id == task_id))
+                .is_some_and(|t| t.state == TaskState::Sent)
+        {
+            return;
+        }
+        self.graph.deliver(env.target, env.id, message.into());
+        if let Some(target) = self.nodes.get_mut(&env.target) {
+            target.oak_table.put(format!("inbox/{}", env.id), message);
+        }
+        if let Some(t) = self
+            .nodes
+            .get_mut(&env.initiator)
+            .and_then(|n| n.task_mut(task_id))
+        {
+            t.state = TaskState::Sent;
+        }
+        self.finish_game_draft(env.initiator, &env.payload);
+        self.events.push(EngineEvent::Delivered {
+            tick,
+            envelope: env.id,
+            to: env.target,
+        });
+    }
+
+    fn deliver_scheduled(&mut self, tick: u64) {
+        let mut due = Vec::new();
+        for n in self.nodes.values_mut() {
+            if matches!(
+                n.note.as_ref().map(|n| &n.reason),
+                Some(HaltReason::Closed | HaltReason::WeekOver)
+            ) {
+                continue;
+            }
+            let (now, later): (Vec<_>, Vec<_>) = std::mem::take(&mut n.own_deliveries)
+                .into_iter()
+                .partition(|d| d.due_tick <= tick);
+            n.own_deliveries = later;
+            due.extend(now);
+        }
+        for d in due {
+            if let Payload::Dispatch { message, task_id } = &d.envelope.payload {
+                self.deliver_own(tick, &d.envelope, message, task_id);
+            }
+        }
     }
 
     /// Stage 3 settlement. The gate verified every initiator's *net* position
@@ -2303,6 +2476,27 @@ impl Engine {
                 oracle_price: n.oracle.map(|o| o.price),
                 oracle_tick: n.oracle.map(|o| o.tick),
                 house_number: house_numbers.get(&n.id).copied(),
+                porter_back_tick: (self.config.game
+                    && self.config.retry_drafts
+                    && self.config.send_ticks > 1
+                    && n.scale_level == Stage::House)
+                    .then_some(n.porter_back_tick),
+                queued_drafts: (self.config.game
+                    && self.config.retry_drafts
+                    && self.config.send_ticks > 1
+                    && n.scale_level == Stage::House)
+                    .then_some(
+                        n.finished_drafts
+                            .iter()
+                            .filter(|d| {
+                                matches!(
+                                    d.state,
+                                    crate::node::DraftDisposition::Ready
+                                        | crate::node::DraftDisposition::Deferred
+                                )
+                            })
+                            .count(),
+                    ),
                 pocket_left: (self.config.game && n.scale_level == Stage::House)
                     .then_some((200.0 - n.tally.top_up_credits).max(0.0)),
                 receipts: n
@@ -2323,6 +2517,7 @@ impl Engine {
                 week_ticks: self.config.week_ticks.unwrap_or(40),
                 oracle_cost: self.config.oracle_cost,
                 retry_drafts: self.config.retry_drafts,
+                send_ticks: self.config.send_ticks,
             }),
             active_scale,
             root: self.graph.root(),
@@ -2415,6 +2610,10 @@ pub struct NodeView {
     pub house_number: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pocket_left: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub porter_back_tick: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub queued_drafts: Option<usize>,
     pub receipts: Vec<String>,
 }
 
@@ -2473,6 +2672,7 @@ pub struct GameView {
     pub week_ticks: u64,
     pub oracle_cost: f64,
     pub retry_drafts: bool,
+    pub send_ticks: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

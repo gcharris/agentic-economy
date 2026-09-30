@@ -177,3 +177,23 @@ test('a forty-eight tick week and ten-credit oracle are painted from game config
   expect(document.querySelector('#phone .day')!.textContent).toBe('Friday · tick 9 of 9');
   expect([...document.querySelectorAll<HTMLButtonElement>('.pocket button')].every((b) => b.disabled)).toBe(true);
 });
+
+test('a three-tick Porter walk hides the card, shows his return, and staff keep drafting', async () => {
+ const source = engineSource('street', { game: { houses:3, week:40, priceWalk:false, oraclePerson:true, sendTicks:3 } });
+ app = await App.boot({ source, renderer:new NullRenderer(), root:document.body, clock:'manual', ui:(a)=>new PhoneView(document,'Ada',a.command.bind(a),true) });
+ await untilCard(app);expect(document.querySelector('.calm')!.textContent).toBe('Your staff keep drafting while you decide.');
+ buttons()[0].click();await Promise.resolve();const f=(await app.step())!;
+ expect(document.querySelector('.door-card')).toBeNull();expect(document.querySelector('#phone .pill')!.textContent).toContain('The Porter is out');
+ expect(document.querySelector('#phone .pill')!.textContent).toContain('tick 4 of 8');
+ expect(document.querySelector('.quiet')!.textContent).toContain('1 finished draft on the table');
+ expect(f.state.nodes.find((n)=>n.name==='Ada')!.tasks_done).toBe(0);
+ await app.step();expect(app.store.frame!.state.nodes.find((n)=>n.name==='Ada')!.tasks_done).toBe(1);expect(document.querySelector('.door-card')).toBeNull();
+ await app.step();expect(document.querySelector('.door-card')).not.toBeNull();
+ expect(document.querySelector('#phone .purse')!.textContent).toContain('Φ');
+ const deferred = document.querySelector('.door-card .what')!.textContent;
+ buttons()[3].click();await Promise.resolve();await app.step();
+ expect(document.querySelector('.door-card .what')!.textContent).not.toBe(deferred);
+ buttons()[0].click();await Promise.resolve();
+ await app.step();await app.step();await app.step();
+ expect(document.querySelector('.door-card .what')!.textContent).toBe(deferred);
+});

@@ -102,7 +102,9 @@ export interface NodeView {
   oak_root: Hash32;
   papers: number;
   oracle_price: number | null; // the oracle's last answer to this house: the courier's truth price (doc 06 §5)
-  pocket_left?: number; // game only: finite 200-cr pocket
+  pocket_left?: number;
+  porter_back_tick?: number;
+  queued_drafts?: number; // game only: finite 200-cr pocket
   house_number?: number | null; // one-based --names order; absent in older recorded traces
   oracle_tick: number | null;
   receipts: string[]; // newest first; ≤ 6 live, 3 in the trace
@@ -158,7 +160,7 @@ export interface TickReport {
 }
 
 export interface StateView {
-  game?: { week_ticks: number; oracle_cost: number; retry_drafts: boolean };
+  game?: { week_ticks: number; oracle_cost: number; retry_drafts: boolean; send_ticks: number };
   tick: number;
   active_scale: Stage;
   root: Hash32;
@@ -194,7 +196,7 @@ const nodeViewKeys = [
   'compute', 'compute_allocated', 'compute_burned', 'joules_burned', 'compute_reclaimed',
   'liquidity_belief', 'liquidity_truth', 'confidence', 'fog',
   'generation', 'idle_ticks', 'calibrations', 'tasks_total', 'tasks_done', 'current_task',
-  'held', 'packed', 'note', 'burned_this_tick', 'oak_root', 'papers', 'oracle_price', 'oracle_tick', 'house_number', 'pocket_left', 'receipts',
+  'held', 'packed', 'note', 'burned_this_tick', 'oak_root', 'papers', 'oracle_price', 'oracle_tick', 'house_number', 'pocket_left', 'porter_back_tick', 'queued_drafts', 'receipts',
 ] as const;
 export const NODE_VIEW_KEYS: Exhaustive<NodeView, typeof nodeViewKeys> = nodeViewKeys;
 

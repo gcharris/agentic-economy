@@ -7,6 +7,7 @@ pub struct Variant {
     pub cadence: u64,
     pub oracle: f64,
     pub week: u64,
+    pub send_ticks: u64,
 }
 impl Default for Variant {
     fn default() -> Self {
@@ -15,6 +16,7 @@ impl Default for Variant {
             cadence: 8,
             oracle: 15.0,
             week: 40,
+            send_ticks: 1,
         }
     }
 }
@@ -35,6 +37,7 @@ pub fn run(seed: u64, homogeneous: Option<usize>, v: Variant) -> Value {
             },
             oracle_cost: v.oracle,
             week_ticks: Some(v.week),
+            send_ticks: v.send_ticks,
             ..Default::default()
         },
         &names,
@@ -171,5 +174,5 @@ pub fn run(seed: u64, homogeneous: Option<usize>, v: Variant) -> Value {
         assert_eq!(w.pieces_done,n.tasks_done());assert_eq!(w.swaps_settled+w.swaps_reverted,kerb[i]);
         json!({"strategy":STRATEGIES[homogeneous.unwrap_or((i+seed as usize%4)%4)],"early":early[i],"last_decision":last_decision[i],"finished":finished[i],"note":note})
     }).collect();
-    json!({"seed":seed,"budget":v.budget,"cadence":v.cadence,"oracle":v.oracle,"week":v.week,"moves":moved,"houses":notes,"actions":actions})
+    json!({"seed":seed,"budget":v.budget,"cadence":v.cadence,"oracle":v.oracle,"week":v.week,"send_ticks":v.send_ticks,"moves":moved,"houses":notes,"actions":actions})
 }

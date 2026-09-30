@@ -14,6 +14,7 @@ fn main() {
                         cadence,
                         oracle,
                         week,
+                        send_ticks: 1,
                     };
                     for control in [None, Some(0), Some(1), Some(2), Some(3)] {
                         let runs: Vec<_> = (0..20).map(|seed| run(seed, control, v)).collect();

@@ -37,7 +37,7 @@ function checkState(state: StateView, tick: number) {
   for (let i = 1; i < state.nodes.length; i++) expect(state.nodes[i].id).toBeGreaterThan(state.nodes[i - 1].id); // ascending id
   const ids = new Set(state.nodes.map((n) => n.id));
   for (const n of state.nodes) {
-    expect(keysOf(n)).toEqual(sorted(NODE_VIEW_KEYS.filter((k) => k !== 'pocket_left' || 'pocket_left' in n)));
+    expect(keysOf(n)).toEqual(sorted(NODE_VIEW_KEYS.filter((k) => !['pocket_left', 'porter_back_tick', 'queued_drafts'].includes(k) || k in n)));
     expect(isId(n.id)).toBe(true);
     expect(typeof n.name).toBe('string');
     expect(STAGES).toContain(n.stage);

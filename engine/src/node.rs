@@ -261,6 +261,10 @@ pub struct SovereignNode {
     pub tally: WeekTally,
     #[serde(default)]
     pub finished_drafts: Vec<FinishedDraft>,
+    #[serde(default)]
+    pub porter_back_tick: u64,
+    #[serde(default)]
+    pub own_deliveries: Vec<ScheduledDelivery>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -270,6 +274,12 @@ pub enum DraftDisposition {
     InFlight,
     Deferred,
     Delivered,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ScheduledDelivery {
+    pub envelope: ProposalEnvelope,
+    pub due_tick: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -284,6 +294,8 @@ pub struct FinishedDraft {
     pub drafted_tick: u64,
     pub ready_tick: u64,
     pub after_piece: Option<String>,
+    #[serde(default)]
+    pub answered_tick: Option<u64>,
 }
 
 /// What the oracle last told a house.
@@ -337,6 +349,8 @@ impl SovereignNode {
             oracle: None,
             tally: WeekTally::default(),
             finished_drafts: Vec::new(),
+            porter_back_tick: 0,
+            own_deliveries: Vec::new(),
         }
     }
 
@@ -638,6 +652,11 @@ impl DraftContext {
     /// The engine sets the oracle policy on each context it issues.
     pub fn set_staff_oracle(&mut self, allowed: bool) {
         self.staff_oracle = allowed;
+    }
+
+    /// Protect an accepted command from concurrent staff spending. This changes availability, not burn.
+    pub(crate) fn reserve_compute(&mut self, credits: f64) {
+        self.purse.compute = (self.purse.compute - credits).max(0.0);
     }
 
     pub fn cost_visible(&self) -> bool {
