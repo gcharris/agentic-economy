@@ -25,7 +25,22 @@ export type HaltReason =
   | { kind: 'runway_exhausted'; shortfall: number }
   | { kind: 'closed' }
   | { kind: 'slashed'; amount: number }
-  | { kind: 'partitioned' };
+  | { kind: 'partitioned' }
+  | { kind: 'week_over' }; // doc 06: Friday's last tick (EngineConfig::week_ticks)
+
+/** Friday's numbers for one house (doc 06 §3): the essay's own currency, never compared by the engine. */
+export interface WeekNote {
+  pieces_done: number;
+  pieces_total: number;
+  compute_burned: number;
+  purse_left: number;
+  liquidity_left: number;
+  swaps_settled: number;
+  swaps_reverted: number;
+  oracle_queries: number;
+  top_ups: number;
+  top_up_credits: number;
+}
 
 export interface Note {
   tick: number;
@@ -38,6 +53,7 @@ export interface Note {
   papers_on_table: number;
   reason: HaltReason;
   saved_state: string; // "oak_table@7e70f463"
+  week: WeekNote | null; // on the Note a house leaves when the week ends; null otherwise
 }
 
 export interface PackedStatisticalState {
@@ -85,6 +101,8 @@ export interface NodeView {
   burned_this_tick: number; // may arrive as -0: normalise with (+x || 0)
   oak_root: Hash32;
   papers: number;
+  oracle_price: number | null; // the oracle's last answer to this house: the courier's truth price (doc 06 §5)
+  oracle_tick: number | null;
   receipts: string[]; // newest first; ≤ 6 live, 3 in the trace
 }
 
@@ -97,6 +115,11 @@ export interface HeldView {
   gate: Stage; // 'House' once the person was asked, whatever the camera does
   reason: HeldReason; // 'awaiting_finality' iff gate === 'World'
   created_tick: number;
+  kind: PayloadKind; // the phone composes the send and the hire for one draft into one card (doc 06 §8.6)
+  target: NodeId;
+  target_name: string;
+  task_id: string | null;
+  believed_price: number | null; // a hire's price as the house believes it
 }
 
 export interface Totals {
@@ -161,14 +184,14 @@ type Exhaustive<T, K extends readonly (keyof T)[]> = Exclude<keyof T, K[number]>
 export const STAGES = ['House', 'Street', 'City', 'Country', 'World'] as const satisfies readonly Stage[];
 export const NODE_STATUSES = ['active', 'waiting_at_door', 'halted', 'packed', 'partitioned'] as const satisfies readonly NodeStatus[];
 export const HELD_REASONS = ['awaiting_human_signature', 'awaiting_finality'] as const satisfies readonly HeldReason[];
-export const HALT_KINDS = ['runway_exhausted', 'closed', 'slashed', 'partitioned'] as const satisfies readonly HaltReason['kind'][];
+export const HALT_KINDS = ['runway_exhausted', 'closed', 'slashed', 'partitioned', 'week_over'] as const satisfies readonly HaltReason['kind'][];
 
 const nodeViewKeys = [
   'id', 'name', 'stage', 'gate', 'parent', 'children', 'status',
   'compute', 'compute_allocated', 'compute_burned', 'joules_burned', 'compute_reclaimed',
   'liquidity_belief', 'liquidity_truth', 'confidence', 'fog',
   'generation', 'idle_ticks', 'calibrations', 'tasks_total', 'tasks_done', 'current_task',
-  'held', 'packed', 'note', 'burned_this_tick', 'oak_root', 'papers', 'receipts',
+  'held', 'packed', 'note', 'burned_this_tick', 'oak_root', 'papers', 'oracle_price', 'oracle_tick', 'receipts',
 ] as const;
 export const NODE_VIEW_KEYS: Exhaustive<NodeView, typeof nodeViewKeys> = nodeViewKeys;
 
@@ -177,7 +200,7 @@ const stateViewKeys = [
 ] as const;
 export const STATE_VIEW_KEYS: Exhaustive<StateView, typeof stateViewKeys> = stateViewKeys;
 
-const heldViewKeys = ['envelope', 'node', 'node_name', 'description', 'cost', 'gate', 'reason', 'created_tick'] as const;
+const heldViewKeys = ['envelope', 'node', 'node_name', 'description', 'cost', 'gate', 'reason', 'created_tick', 'kind', 'target', 'target_name', 'task_id', 'believed_price'] as const;
 export const HELD_VIEW_KEYS: Exhaustive<HeldView, typeof heldViewKeys> = heldViewKeys;
 
 const totalsKeys = ['compute_burned', 'tax_paid', 'settled', 'slashed', 'approved', 'rejected', 'waiting', 'halted'] as const;
@@ -196,7 +219,7 @@ const packedKeys = [
 export const PACKED_KEYS: Exhaustive<PackedStatisticalState, typeof packedKeys> = packedKeys;
 
 const noteKeys = [
-  'tick', 'node', 'node_name', 'doing', 'compute_burned_total', 'compute_remaining', 'joules_burned_total', 'papers_on_table', 'reason', 'saved_state',
+  'tick', 'node', 'node_name', 'doing', 'compute_burned_total', 'compute_remaining', 'joules_burned_total', 'papers_on_table', 'reason', 'saved_state', 'week',
 ] as const;
 export const NOTE_KEYS: Exhaustive<Note, typeof noteKeys> = noteKeys;
 

@@ -23,6 +23,10 @@ pub enum Payload {
         service: String,
         believed_price: f64,
         believed_price_hash: Hash32,
+        /// The draft the neighbour's courier carries (doc 06 §8.2): when the swap settles, that task is done and
+        /// `Delivered` fires for it, as an approved `Dispatch` would. `None`: a plain service hire.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        task_id: Option<String>,
     },
     /// Pay the oracle: copy the Sovereign Graph's truth onto the Oak Table.
     /// Costs compute, not liquidity. Looking is not sending.
@@ -78,6 +82,12 @@ impl Payload {
             Payload::HireService {
                 service,
                 believed_price,
+                task_id: Some(task),
+                ..
+            } => format!("hire a neighbour's {service} at {believed_price:.1} to carry the finished draft for {task}"),
+            Payload::HireService {
+                service,
+                believed_price,
                 ..
             } => format!("hire {service} at {believed_price:.1}"),
             Payload::StateSync => "sync with the Sovereign Graph".to_string(),
@@ -121,6 +131,10 @@ pub struct ProposalEnvelope {
     /// Once asked, only the person can answer: no camera move re-routes it.
     #[serde(default)]
     pub asked_human: bool,
+    /// The person said yes at the Door to an envelope that must still cross the kerb (a hire): it goes to the
+    /// Letter Slot at the next tick, where the swap settles or reverts (doc 06 §3, "Hiring").
+    #[serde(default)]
+    pub door_cleared: bool,
 }
 
 impl ProposalEnvelope {

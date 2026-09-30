@@ -41,7 +41,10 @@ impl Agent for Scout {
             return done(ctx);
         };
 
-        if ctx.epistemics().overdue_for_oracle() || ctx.epistemics().is_hallucinating() {
+        // Under `OraclePolicy::Person` only the person asks the oracle (doc 06 §8.1).
+        if ctx.staff_oracle()
+            && (ctx.epistemics().overdue_for_oracle() || ctx.epistemics().is_hallucinating())
+        {
             let (gen, phi) = (ctx.epistemics().generation, ctx.epistemics().confidence);
             ctx.think("Scout", format!("My notes are {gen} handovers old (Φ {:.0}%). Asking the oracle before I look anything up.", phi * 100.0));
             let me = ctx.node_id();
@@ -332,6 +335,7 @@ impl Agent for Porter {
                         service: "courier".into(),
                         believed_price: believed,
                         believed_price_hash: SovereignGraph::hash_price("courier", believed),
+                        task_id: Some(task.id.clone()),
                     },
                     requested_liquidity: believed,
                     compute_weight: 2.0,

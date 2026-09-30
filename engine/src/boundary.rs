@@ -200,6 +200,7 @@ pub fn dvp_binding(env: &ProposalEnvelope, view: &BoundaryView<'_>) -> Option<Ve
         service,
         believed_price,
         believed_price_hash,
+        ..
     } = &env.payload
     else {
         return None;

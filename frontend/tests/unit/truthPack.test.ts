@@ -10,7 +10,7 @@ function node(partial: Partial<NodeView> & { id: number }): NodeView {
     compute: 400, compute_allocated: 800, compute_burned: 400, joules_burned: 1, compute_reclaimed: 0,
     liquidity_belief: 100, liquidity_truth: 100, confidence: 0.5, fog: 0.5, generation: 1, idle_ticks: 0, calibrations: 0,
     tasks_total: 1, tasks_done: 0, current_task: null, held: 0, packed: null, note: null, burned_this_tick: 0,
-    oak_root: '0'.repeat(64), papers: 0, receipts: [], ...partial,
+    oak_root: '0'.repeat(64), papers: 0, oracle_price: null, oracle_tick: null, receipts: [], ...partial,
   };
 }
 

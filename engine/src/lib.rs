@@ -104,7 +104,7 @@ pub use oak_table::OakTable;
 pub use receipt::{Note, SeatReceipt};
 pub use resources::{ModelTier, Purse, ResourceUnit};
 pub use rng::Rng;
-pub use tick::{Engine, EngineConfig, TickReport};
+pub use tick::{Engine, EngineConfig, OraclePolicy, PriceWalk, TickReport};
 
 /// Everything a scenario or a host needs, in one import.
 pub mod prelude {

@@ -60,6 +60,24 @@ pub enum HaltReason {
     Slashed { amount: f64 },
     /// The country's root did not match the planetary proof.
     Partitioned,
+    /// The week is over (`EngineConfig::week_ticks`): Friday's last tick.
+    WeekOver,
+}
+
+/// The week's numbers for one house (doc 06 §3, "Friday"): what got done, what it cost, what was left. The essay's
+/// own currency, per house; the engine never compares one house's with another's.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct WeekNote {
+    pub pieces_done: usize,
+    pub pieces_total: usize,
+    pub compute_burned: f64,
+    pub purse_left: f64,
+    pub liquidity_left: f64,
+    pub swaps_settled: u32,
+    pub swaps_reverted: u32,
+    pub oracle_queries: u32,
+    pub top_ups: u32,
+    pub top_up_credits: f64,
 }
 
 /// The Note left on the table when a node halts. Nothing is deleted.
@@ -75,6 +93,9 @@ pub struct Note {
     pub papers_on_table: usize,
     pub reason: HaltReason,
     pub saved_state: String,
+    /// Friday's numbers, on the Note a house leaves when the week ends; `null` on every other Note.
+    #[serde(default)]
+    pub week: Option<WeekNote>,
 }
 
 impl Note {
@@ -86,6 +107,7 @@ impl Note {
             HaltReason::Closed => "Closed by the person. The week is over.",
             HaltReason::Slashed { .. } => "Slashed by the High Court. Reserves seized.",
             HaltReason::Partitioned => "Partitioned from the global rails until the root resolves.",
+            HaltReason::WeekOver => "The week is over. The Note is on the table.",
         };
         format!(
             "[HALTED] What it was doing: {} | Total cost burned: {:.1} credits ({:.2} J) | Papers left on the table: {} | Local state saved: {} | Status: {}",

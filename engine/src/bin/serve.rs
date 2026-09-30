@@ -7,6 +7,8 @@
 //! cargo run --release --bin serve -- --scenario city --pack-depth 2           # pack the houses at the City (default 3 for the city)
 //! cargo run --release --bin serve -- --scenario world-full --countries 1 --cities 3 --streets 6 --houses 8   # Stage 4, the whole tree
 //! cargo run --release --bin serve -- --scenario country|world   # Stages 4, 5 (fixed shapes; see wasm_abi.rs)
+//! cargo run --release --bin serve -- --scenario street --names Ada,Ben,Cal,Dee --week 40 --price-walk --oracle person --interval-ms 10000 --bind 0.0.0.0
+//!                                                                       # A Week on Elm Street (doc 06): the game on the household LAN
 //! PORT=8080 serve --bind 0.0.0.0                                       # a hosted run: the port from the environment, all interfaces (no TLS, no auth: put a front door in front)
 //! ```
 //!
@@ -24,6 +26,7 @@
 //! | `GET` | `/events` | `text/event-stream`: `event: hello` (engine version text) on connect, then one `event: tick` per engine tick with `data: {"report": TickReport, "events": [EngineEvent…]}` |
 //! | `POST` | `/authorize/<envelope_id>` | `{"ok":true}` — the click at the Door (`envelope_id` is the decimal `u64` from `state.held[].envelope`); `404` if no Door holds that envelope |
 //! | `POST` | `/reject/<envelope_id>` | `{"ok":true}` — the envelope is destroyed, its compute sunk; `404` if no Door holds that envelope |
+//! | `POST` | `/sync/<node_id>` | `{"ok":true}` — the person asks the oracle (doc 06 §8.1): the house proposes the sync at the next Draft (15 cr, Φ → 1.0); `404` for an unknown or halted house |
 //! | `POST` | `/top-up/<node_id>/<credits>` | `{"ok":true}` — money in the purse (`node_id` decimal `u64`, credits `f64`) |
 //! | `POST` | `/zoom/<1-5>` | `{"ok":true}` — the camera: House=1 … World=5; packs/unpacks accordingly |
 //! | `POST` | `/pause`, `/resume` | `{"ok":true}` — stop/restart the tick interval (state and commands still answer) |
@@ -59,6 +62,14 @@ struct Args {
     /// `--scenario world-full` only: countries and cities per country (default 1 × 3).
     countries: usize,
     cities: usize,
+    /// Whether `--houses` was given (the plain street keeps its six houses otherwise).
+    houses_set: bool,
+    /// A Week on Elm Street (doc 06 §8.5): the houses' names, the week's length, the courier's price walk and who
+    /// asks the oracle. Any of them makes `--scenario street` the game: named houses at the House, every Door knocks.
+    names: Option<Vec<String>>,
+    week: Option<u64>,
+    price_walk: bool,
+    oracle_person: bool,
 }
 
 fn parse_args() -> Args {
@@ -79,6 +90,11 @@ fn parse_args() -> Args {
         pack_depth: None,
         countries: 1,
         cities: 3,
+        houses_set: false,
+        names: None,
+        week: None,
+        price_walk: false,
+        oracle_person: false,
     };
     let mut it = std::env::args().skip(1);
     while let Some(k) = it.next() {
@@ -119,7 +135,19 @@ fn parse_args() -> Args {
                     .unwrap_or(a.cities)
                     .max(1)
             }
+            "--names" => {
+                a.names = it.next().map(|v| {
+                    v.split(',')
+                        .map(|n| n.trim().to_string())
+                        .filter(|n| !n.is_empty())
+                        .collect()
+                })
+            }
+            "--week" => a.week = it.next().and_then(|v| v.parse().ok()).filter(|w| *w > 0),
+            "--price-walk" => a.price_walk = true,
+            "--oracle" => a.oracle_person = it.next().as_deref() == Some("person"),
             "--houses" => {
+                a.houses_set = true;
                 a.houses = it
                     .next()
                     .and_then(|v| v.parse().ok())
@@ -143,6 +171,7 @@ enum Cmd {
     Authorize(EnvelopeId),
     Reject(EnvelopeId),
     TopUp(NodeId, f64),
+    Sync(NodeId),
     Zoom(Stage),
     Pause,
     Resume,
@@ -188,6 +217,16 @@ fn apply(engine: &mut Engine, cmd: Cmd, paused: &mut bool) -> String {
             }
             engine.top_up(node, credits);
             OK.into()
+        }
+        Cmd::Sync(node) => {
+            if engine.sync(node) {
+                OK.into()
+            } else {
+                format!(
+                    r#"{{"ok":false,"error":"no house {} that can ask the oracle"}}"#,
+                    node.0
+                )
+            }
         }
         Cmd::Zoom(stage) => {
             engine.set_active_scale(stage);
@@ -292,6 +331,10 @@ fn route_post(path: &str) -> Result<Cmd, Vec<u8>> {
             }
             Ok(Cmd::TopUp(node, credits))
         }
+        ["sync", id] => id
+            .parse()
+            .map(|v| Cmd::Sync(NodeId(v)))
+            .map_err(|_| bad("node id")),
         ["zoom", level] => level
             .parse::<u8>()
             .ok()
@@ -376,10 +419,35 @@ async fn main() {
         pack_depth: a
             .pack_depth
             .unwrap_or(if a.scenario == "city" { 3 } else { 2 }),
+        week_ticks: a.week,
+        price_walk: a.price_walk.then(|| PriceWalk::elm_street(a.seed)),
+        oracle_policy: if a.oracle_person {
+            OraclePolicy::Person
+        } else {
+            OraclePolicy::Staff
+        },
         ..Default::default()
     };
+    let game = a.names.is_some() || a.week.is_some() || a.price_walk || a.oracle_person;
     let mut engine = match a.scenario.as_str() {
-        "street" => street(config, 6, a.budget, a.tasks),
+        "street" if game => {
+            let names = a.names.clone().unwrap_or_else(|| {
+                let n = if a.houses_set { a.houses } else { 4 };
+                ELM_NAMES
+                    .iter()
+                    .cycle()
+                    .take(n)
+                    .map(|s| s.to_string())
+                    .collect()
+            });
+            elm_street(config, &names, a.budget, a.tasks)
+        }
+        "street" => street(
+            config,
+            if a.houses_set { a.houses } else { 6 },
+            a.budget,
+            a.tasks,
+        ),
         "city" => city(config, a.streets, a.houses, a.budget, a.tasks),
         "world-full" => world_full(
             config,
@@ -413,7 +481,7 @@ async fn main() {
     let addr = listener.local_addr().expect("bound socket has an address");
     // First line of stdout is machine-readable: tests and launchers read the port here.
     println!("listening on http://{addr}");
-    println!("{hello} · tick every {} ms · GET /state · GET /events · POST /authorize|/reject|/top-up|/zoom|/pause|/resume", a.interval_ms);
+    println!("{hello} · tick every {} ms · GET /state · GET /events · POST /authorize|/reject|/sync|/top-up|/zoom|/pause|/resume", a.interval_ms);
 
     let (cmd_tx, cmd_rx) = mpsc::channel::<Request>(256);
     let (tick_tx, _) = broadcast::channel::<Arc<str>>(64);

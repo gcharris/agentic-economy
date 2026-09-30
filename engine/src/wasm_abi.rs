@@ -122,6 +122,46 @@ pub extern "C" fn engine_new_world(
 /// not complete on this single-threaded host (a seat that waits on a
 /// network wake has no reactor here; the tab is not frozen, the tick is
 /// simply reported as not run).
+/// A Week on Elm Street (doc 06): `houses` named houses (Ada, Ben, … in order) at the House, so every Door knocks;
+/// `week_ticks` 0 for no week's end; `price_walk` 1 for the courier's walk among 8/10/12/14 about once a day
+/// (seeded by `seed`); `oracle_person` 1 so only the person asks the oracle (`engine_sync`).
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn engine_new_game(
+    houses: u32,
+    budget: f64,
+    tasks: u32,
+    week_ticks: u32,
+    price_walk: u32,
+    oracle_person: u32,
+    seed: u64,
+    cost_visible: u32,
+) {
+    let config = EngineConfig {
+        seed,
+        cost_visible: cost_visible != 0,
+        week_ticks: (week_ticks > 0).then_some(week_ticks as u64),
+        price_walk: (price_walk != 0).then(|| crate::tick::PriceWalk::elm_street(seed)),
+        oracle_policy: if oracle_person != 0 {
+            crate::tick::OraclePolicy::Person
+        } else {
+            crate::tick::OraclePolicy::Staff
+        },
+        ..Default::default()
+    };
+    let names: Vec<String> = (0..houses.clamp(1, 6) as usize)
+        .map(|i| scenarios::ELM_NAMES[i].to_string())
+        .collect();
+    let engine = scenarios::elm_street(config, &names, budget, tasks as usize);
+    ENGINE.with(|e| *e.borrow_mut() = Some(engine));
+}
+
+/// The person asks the oracle for `node` (doc 06 §8.1): 1 if the house will propose the sync at the next Draft.
+#[no_mangle]
+pub extern "C" fn engine_sync(node: u64) -> u32 {
+    with_engine(|e| e.sync(NodeId(node)) as u32).unwrap_or(0)
+}
+
 #[no_mangle]
 pub extern "C" fn engine_tick() -> u64 {
     with_engine(|e| {

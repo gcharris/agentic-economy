@@ -7,7 +7,7 @@ import { loadTrace } from '../helpers/assets.ts';
 
 const H = 3781345924436676, S = 3155115984088982, E = 3930624385311261;
 const root = 'a'.repeat(64);
-const note = { tick: 9, node: H, node_name: 'The House', doing: 'lookup (Scout, 280 tok on fast_quantized)', compute_burned_total: 283.8, compute_remaining: 16.2, joules_burned_total: 42.87, papers_on_table: 12, reason: { kind: 'runway_exhausted' as const, shortfall: 11.8 }, saved_state: 'oak_table@7e70f463' };
+const note = { tick: 9, node: H, node_name: 'The House', doing: 'lookup (Scout, 280 tok on fast_quantized)', compute_burned_total: 283.8, compute_remaining: 16.2, joules_burned_total: 42.87, papers_on_table: 12, reason: { kind: 'runway_exhausted' as const, shortfall: 11.8 }, saved_state: 'oak_table@7e70f463', week: null };
 
 /** One sample event per type. */
 const SAMPLE: { [K in EventType]: Extract<EngineEvent, { type: K }> } = {
