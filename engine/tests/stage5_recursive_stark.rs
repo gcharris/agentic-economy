@@ -62,6 +62,7 @@ fn inject(e: &mut Engine, from: NodeId, to: NodeId, amount: f64, id: u64) -> Env
         gate: Stage::World,
         crossing: Crossing::CrossParent,
         asked_human: false,
+        door_cleared: false,
         payload,
     };
     e.mempool
@@ -482,6 +483,7 @@ fn preflight_refuses_a_partitioned_initiator() {
         gate: Stage::World,
         crossing: Crossing::CrossParent,
         asked_human: false,
+        door_cleared: false,
         payload,
     };
     let secrets: BTreeMap<NodeId, u64> = e.nodes.values().map(|n| (n.id, n.secret)).collect();

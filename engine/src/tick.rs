@@ -51,10 +51,69 @@ pub struct EngineConfig {
     /// live at the City and packs them from the Country up (AUDIT-LEDGER #30).
     #[serde(default = "default_pack_depth")]
     pub pack_depth: u8,
+    /// Who asks the oracle (doc 06 §8.1): the staff on their own (Scout, when his notes are old), or only the person.
+    #[serde(default)]
+    pub oracle_policy: OraclePolicy,
+    /// The courier's truth price walks among fixed steps (doc 06 §8.3). `None`: it moves only by hand
+    /// (`engine_set_truth_price`, `scenarios::move_truth`).
+    #[serde(default)]
+    pub price_walk: Option<PriceWalk>,
+    /// The week's length in ticks (doc 06 §8.4): at the last tick every house halts with the week's Note.
+    #[serde(default)]
+    pub week_ticks: Option<u64>,
 }
 
 fn default_pack_depth() -> u8 {
     2
+}
+
+/// Who may ask the oracle.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OraclePolicy {
+    /// Scout asks when his notes are overdue or he is hallucinating (the demo's behaviour).
+    #[default]
+    Staff,
+    /// Only the person asks, through `Engine::sync`.
+    Person,
+}
+
+/// The courier's price moving under everyone's feet: at each tick, with probability `1 / every`, the truth moves
+/// to a different one of `steps`. Seeded by `seed` and the tick alone, so a run replays exactly.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PriceWalk {
+    pub every: u64,
+    pub steps: Vec<f64>,
+    pub seed: u64,
+}
+
+impl PriceWalk {
+    /// Doc 06's walk: 8, 10, 12 or 14, about once a day (a day is eight ticks).
+    pub fn elm_street(seed: u64) -> PriceWalk {
+        PriceWalk {
+            every: 8,
+            steps: vec![8.0, 10.0, 12.0, 14.0],
+            seed,
+        }
+    }
+
+    /// The price at `tick` given the price before it: a pure function of (seed, tick, current).
+    pub fn step(&self, tick: u64, current: f64) -> f64 {
+        if self.steps.len() < 2 || self.every == 0 {
+            return current;
+        }
+        let mut rng = Rng::seed_from_u64(self.seed ^ tick.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        if !rng.chance(1.0 / self.every as f64) {
+            return current;
+        }
+        let others: Vec<f64> = self
+            .steps
+            .iter()
+            .copied()
+            .filter(|p| (p - current).abs() > 1e-9)
+            .collect();
+        others[rng.below(others.len() as u64) as usize]
+    }
 }
 
 impl Default for EngineConfig {
@@ -67,6 +126,9 @@ impl Default for EngineConfig {
             stark_period: 16,
             max_events_retained: 4096,
             pack_depth: default_pack_depth(),
+            oracle_policy: OraclePolicy::Staff,
+            price_walk: None,
+            week_ticks: None,
         }
     }
 }
@@ -268,6 +330,19 @@ impl Engine {
             .any(|n| n.held_at_door.iter().any(|e| e.id == envelope))
     }
 
+    /// The person asks the oracle (doc 06 §3, "Ask the oracle first"). At the next Draft the house proposes a
+    /// `StateSync` (15 cr, Φ → 1.0, the Oak Table's `price/courier` set to the truth), even while its Porter waits at
+    /// the Door: looking is not sending. Returns whether the node exists and is not halted.
+    pub fn sync(&mut self, node: NodeId) -> bool {
+        match self.nodes.get_mut(&node) {
+            Some(n) if n.status != NodeStatus::Halted && n.status != NodeStatus::Packed => {
+                n.sync_requested = true;
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// Put money in the purse. A halted house continues.
     pub fn top_up(&mut self, node: NodeId, credits: f64) {
         let tick = self.tick;
@@ -389,6 +464,39 @@ impl Engine {
         };
         let cost_visible = self.config.cost_visible;
 
+        // The courier's truth moves without warning, and without an event: only the oracle knows.
+        if let Some(walk) = &self.config.price_walk {
+            if let Some(p) = self.graph.service_prices.get("courier").copied() {
+                let next = walk.step(tick, p);
+                self.graph.service_prices.insert("courier".into(), next);
+            }
+        }
+
+        // The person's oracle: a house whose person asked proposes the sync at this Draft.
+        let asked: Vec<NodeId> = self
+            .nodes
+            .values()
+            .filter(|n| n.sync_requested)
+            .map(|n| n.id)
+            .collect();
+        for id in asked {
+            if let Some(n) = self.nodes.get_mut(&id) {
+                n.sync_requested = false;
+            }
+            self.mint_own(
+                id,
+                crate::node::ProposalDraft {
+                    target: id,
+                    payload: Payload::StateSync,
+                    requested_liquidity: 0.0,
+                    compute_weight: crate::epistemics::ORACLE_COST,
+                },
+                tick,
+                &mut report,
+            );
+        }
+        let staff_oracle = self.config.oracle_policy == OraclePolicy::Staff;
+
         // ── Phase 1: DRAFT. Off-chain, parallel, isolated. ──
         let mut jobs: Vec<DraftJob> = Vec::new();
         let mut drafted: BTreeSet<NodeId> = BTreeSet::new();
@@ -404,7 +512,8 @@ impl Engine {
             if !node.is_draftable() {
                 continue; // WaitingAtDoor: zero idle burn. Halted: the note. Packed: stasis. No task: no thread.
             }
-            let ctx = node.draft_context(tick, seed, cost_visible);
+            let mut ctx = node.draft_context(tick, seed, cost_visible);
+            ctx.set_staff_oracle(staff_oracle);
             drafted.insert(id);
             jobs.push(DraftJob {
                 node: id,
@@ -434,6 +543,11 @@ impl Engine {
 
         // ── Phase 4: COMMIT. The one write path into the Sovereign Graph. ──
         self.commit(tick, &mut report);
+
+        // ── Friday: at the week's last tick every house halts with the week's Note. ──
+        if self.config.week_ticks == Some(tick) {
+            self.end_week(tick, &mut report);
+        }
 
         // ── Housekeeping: decay, stasis, snapshot, heartbeat. ──
         self.decay_idle(&drafted);
@@ -617,6 +731,7 @@ impl Engine {
                 gate: node.boundary_rules.gate.max(active_scale),
                 crossing,
                 asked_human: false,
+                door_cleared: false,
                 payload: p.payload,
             };
             if let Payload::Dispatch { task_id, .. } = &env.payload {
@@ -652,6 +767,129 @@ impl Engine {
         }
     }
 
+    /// Mint an envelope a house proposes outside its staff's draft (the person's oracle): the same tax, signature,
+    /// courier rule and `Proposed` event as `collect`, for a proposal to the house itself.
+    fn mint_own(
+        &mut self,
+        node_id: NodeId,
+        p: crate::node::ProposalDraft,
+        tick: u64,
+        report: &mut TickReport,
+    ) {
+        let crossing = self.crossing(node_id, p.target);
+        let id = EnvelopeId(self.mint_id());
+        let active_scale = self.config.active_scale;
+        let tax_due = self.tax.tax_only(crossing, p.compute_weight);
+        let Some(node) = self.nodes.get_mut(&node_id) else {
+            return;
+        };
+        if !node.allowed_target(p.target) || !node.purse.can_burn(tax_due) {
+            self.events.push(EngineEvent::DroppedByCourier {
+                tick,
+                from: node_id,
+                to: p.target,
+                reason: format!("cannot afford the crossing tax of {tax_due:.1} cr"),
+            });
+            report.dropped_by_courier += 1;
+            return;
+        }
+        let _ = node.purse.burn_credits(tax_due);
+        report.tax_paid += tax_due;
+        report.compute_burned += tax_due;
+        let payload_hash = p.payload.hash();
+        let env = ProposalEnvelope {
+            id,
+            initiator: node_id,
+            target: p.target,
+            payload_hash,
+            requested_liquidity: p.requested_liquidity,
+            compute_weight: p.compute_weight,
+            tax_paid: tax_due,
+            auth_signature: node.sign(&payload_hash, tick),
+            created_tick: tick,
+            origin_stage: node.scale_level,
+            gate: node.boundary_rules.gate.max(active_scale),
+            crossing,
+            asked_human: false,
+            door_cleared: false,
+            payload: p.payload,
+        };
+        let (from, to, kind, liq, tax) = (
+            env.initiator,
+            env.target,
+            env.payload.kind(),
+            env.requested_liquidity,
+            env.tax_paid,
+        );
+        match self.mempool.submit(env) {
+            Ok(()) => {
+                report.envelopes_minted += 1;
+                self.events.push(EngineEvent::Proposed {
+                    tick,
+                    envelope: id,
+                    from,
+                    to,
+                    kind: kind.into(),
+                    requested_liquidity: liq,
+                    tax_paid: tax,
+                });
+            }
+            Err(boxed) => {
+                let (env, reason) = *boxed;
+                report.dropped_by_courier += 1;
+                self.events.push(EngineEvent::DroppedByCourier {
+                    tick,
+                    from: env.initiator,
+                    to: env.target,
+                    reason,
+                });
+            }
+        }
+    }
+
+    /// Friday (doc 06 §3): every house halts and leaves the week's Note on the table. A house already halted (its
+    /// purse ran out) leaves the week's Note in place of its old one.
+    fn end_week(&mut self, tick: u64, report: &mut TickReport) {
+        let houses: Vec<NodeId> = self
+            .nodes
+            .values()
+            .filter(|n| n.scale_level == Stage::House && !n.tasks.is_empty())
+            .map(|n| n.id)
+            .collect();
+        for id in houses {
+            let liquidity = self.graph.liquidity_of(id);
+            let Some(n) = self.nodes.get_mut(&id) else {
+                continue;
+            };
+            let week = crate::receipt::WeekNote {
+                pieces_done: n.tasks_done(),
+                pieces_total: n.tasks.len(),
+                compute_burned: n.purse.compute_burned,
+                purse_left: n.purse.compute,
+                liquidity_left: liquidity,
+                swaps_settled: n.tally.swaps_settled,
+                swaps_reverted: n.tally.swaps_reverted,
+                oracle_queries: n.tally.oracle_queries,
+                top_ups: n.tally.top_ups,
+                top_up_credits: n.tally.top_up_credits,
+            };
+            let doing = n
+                .current_task()
+                .map(|t| t.id.clone())
+                .unwrap_or_else(|| "the week's work".into());
+            let mut note = n.halt(tick, doing, HaltReason::WeekOver);
+            note.week = Some(week);
+            n.note = Some(note.clone());
+            n.oak_table.put("note", note.to_plain_line());
+            self.events.push(EngineEvent::Halted {
+                tick,
+                node: id,
+                note,
+            });
+            report.halted += 1;
+        }
+    }
+
     fn verify(&mut self, tick: u64, report: &mut TickReport) {
         let active_scale = self.config.active_scale;
         let node_status: BTreeMap<NodeId, NodeStatus> =
@@ -681,7 +919,10 @@ impl Engine {
                 .get(&e.initiator)
                 .copied()
                 .unwrap_or(e.origin_stage);
-            e.gate = if e.asked_human {
+            e.gate = if e.door_cleared {
+                // Said yes at the Door; the swap still crosses the kerb.
+                Stage::Street.max(own.max(active_scale))
+            } else if e.asked_human {
                 Stage::House
             } else {
                 own.max(active_scale)
@@ -755,6 +996,16 @@ impl Engine {
             }
         }
         report.approved += approved.len();
+        // A hire the person said yes to at the Door goes to the kerb at the next tick: the Letter Slot checks the
+        // believed price against the truth there (doc 06 §3). Everything else approved commits now.
+        let (to_kerb, approved): (Vec<ProposalEnvelope>, Vec<ProposalEnvelope>) =
+            approved.into_iter().partition(|e| {
+                e.gate == Stage::House && matches!(e.payload, Payload::HireService { .. })
+            });
+        for mut env in to_kerb {
+            env.door_cleared = true;
+            self.mempool.submit(env).ok();
+        }
         self.approved.extend(approved);
 
         for (mut env, reason) in held {
@@ -812,6 +1063,12 @@ impl Engine {
                 if verdict.is_liquidity_failure() {
                     stats.rejected += 1;
                     stats.offenders.push(env.initiator);
+                }
+            }
+            // A hire turned back past the Door (at the kerb or above) is a reverted swap; a no at the Door is not.
+            if env.gate != Stage::House && matches!(env.payload, Payload::HireService { .. }) {
+                if let Some(n) = self.nodes.get_mut(&env.initiator) {
+                    n.tally.swaps_reverted += 1;
                 }
             }
             self.events.push(EngineEvent::Rejected {
@@ -994,10 +1251,16 @@ impl Engine {
                             amount: env.requested_liquidity,
                         });
                         report.settled_liquidity += env.requested_liquidity;
+                        self.deliver_hired(tick, &env);
                     }
                     Err(have) => {
                         if env.gate == Stage::World {
                             self.stark.note_rejection(env.initiator);
+                        }
+                        if matches!(env.payload, Payload::HireService { .. }) {
+                            if let Some(n) = self.nodes.get_mut(&env.initiator) {
+                                n.tally.swaps_reverted += 1;
+                            }
                         }
                         self.events.push(EngineEvent::Rejected {
                             tick,
@@ -1043,6 +1306,10 @@ impl Engine {
                             n.oak_table.put("price/courier", format!("{p}"));
                         }
                         n.epistemics.calibrate(tick);
+                        if let Some(p) = truth_price {
+                            n.oracle = Some(crate::node::OracleAnswer { price: p, tick });
+                        }
+                        n.tally.oracle_queries += 1;
                         self.events.push(EngineEvent::StateSync {
                             tick,
                             node: env.initiator,
@@ -1065,6 +1332,39 @@ impl Engine {
                 }
             }
         }
+    }
+
+    /// A settled hire (doc 06 §8.2): the swap is counted, and when the hire carries a draft the neighbour's courier
+    /// delivers it to where the send would have gone (the house's parent), the task is done and `Delivered` fires,
+    /// as for an approved `Dispatch`. The send fee is not charged: the courier was paid in liquidity.
+    fn deliver_hired(&mut self, tick: u64, env: &ProposalEnvelope) {
+        let Payload::HireService { task_id, .. } = &env.payload else {
+            return;
+        };
+        let Some(n) = self.nodes.get_mut(&env.initiator) else {
+            return;
+        };
+        n.tally.swaps_settled += 1;
+        let Some(task_id) = task_id else {
+            return;
+        };
+        let to = n.parent.unwrap_or(env.initiator);
+        if let Some(t) = n.task_mut(task_id) {
+            t.state = TaskState::Sent;
+        }
+        let message = format!(
+            "Finished draft for {task_id} (carried by {}'s courier)",
+            env.target
+        );
+        self.graph.deliver(to, env.id, message.clone());
+        if let Some(t) = self.nodes.get_mut(&to) {
+            t.oak_table.put(format!("inbox/{}", env.id), message);
+        }
+        self.events.push(EngineEvent::Delivered {
+            tick,
+            envelope: env.id,
+            to,
+        });
     }
 
     /// The send fee, flat-priced (no tier physics: it is a door fee, not a
@@ -1184,6 +1484,7 @@ impl Engine {
                 to: env.target,
                 amount: env.requested_liquidity,
             });
+            self.deliver_hired(tick, &env);
         }
         report.settled_liquidity += net;
     }
@@ -1191,9 +1492,12 @@ impl Engine {
     /// Nodes that did not draft still watch the world move. A node in
     /// stasis or halted does not: its clock is stopped with it.
     fn decay_idle(&mut self, drafted: &BTreeSet<NodeId>) {
+        let tick = self.tick;
         for n in self.nodes.values_mut() {
+            // A house that read the truth this tick (the person's oracle, asked while it waits at the Door) is not idle.
             if !drafted.contains(&n.id)
                 && !matches!(n.status, NodeStatus::Halted | NodeStatus::Packed)
+                && n.epistemics.last_sync_tick != tick
             {
                 n.epistemics.record_idle_tick();
             }
@@ -1382,6 +1686,11 @@ impl Engine {
         let mut waiting = 0;
         let mut halted = 0;
         let ids: Vec<NodeId> = self.nodes.keys().copied().collect();
+        let names: BTreeMap<NodeId, String> = self
+            .nodes
+            .values()
+            .map(|n| (n.id, n.name.clone()))
+            .collect();
         for id in ids {
             let truth = self.graph.liquidity_of(id);
             let n = self.nodes.get_mut(&id).expect("node");
@@ -1407,6 +1716,18 @@ impl Engine {
                     gate: e.gate,
                     reason: reason.into(),
                     created_tick: e.created_tick,
+                    kind: e.payload.kind().into(),
+                    target: e.target,
+                    target_name: names.get(&e.target).cloned().unwrap_or_default(),
+                    task_id: match &e.payload {
+                        Payload::Dispatch { task_id, .. } => Some(task_id.clone()),
+                        Payload::HireService { task_id, .. } => task_id.clone(),
+                        _ => None,
+                    },
+                    believed_price: match &e.payload {
+                        Payload::HireService { believed_price, .. } => Some(*believed_price),
+                        _ => None,
+                    },
                 });
             }
             let oak_root = n.oak_table.root();
@@ -1439,6 +1760,8 @@ impl Engine {
                 burned_this_tick: n.burned_this_tick,
                 oak_root,
                 papers: n.oak_table.papers.len(),
+                oracle_price: n.oracle.map(|o| o.price),
+                oracle_tick: n.oracle.map(|o| o.tick),
                 receipts: n
                     .receipts
                     .iter()
@@ -1537,6 +1860,9 @@ pub struct NodeView {
     pub burned_this_tick: f64,
     pub oak_root: Hash32,
     pub papers: usize,
+    /// The oracle's last answer to this house (doc 06 §5, the phone): the courier's truth price and when.
+    pub oracle_price: Option<f64>,
+    pub oracle_tick: Option<u64>,
     pub receipts: Vec<String>,
 }
 
@@ -1550,6 +1876,15 @@ pub struct HeldView {
     pub gate: Stage,
     pub reason: String,
     pub created_tick: u64,
+    /// The payload's kind (`dispatch`, `hire_service`, …), its target and the target's name: the phone composes the
+    /// send and the hire for one draft into one card (doc 06 §8.6).
+    pub kind: String,
+    pub target: NodeId,
+    pub target_name: String,
+    /// The draft the envelope is for (a send, or a hire that carries it).
+    pub task_id: Option<String>,
+    /// A hire's price, as the house believes it (its Oak Table's, which may be old).
+    pub believed_price: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]

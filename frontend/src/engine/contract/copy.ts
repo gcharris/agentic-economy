@@ -21,6 +21,7 @@ export function haltReasonLine(reason: HaltReason): string {
     case 'closed': return 'Closed by the person. The week is over.';
     case 'slashed': return `Slashed by the High Court. Reserves seized. (${fmtCr(reason.amount)} cr)`;
     case 'partitioned': return 'Partitioned from the rails.';
+    case 'week_over': return 'The week is over. The Note is on the table.';
   }
 }
 

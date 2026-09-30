@@ -8,10 +8,11 @@ import { freshEngine } from './assets.ts';
 
 const CODE: Record<ScenarioName, number> = { house: 1, street: 2, city: 3, country: 4, world: 5 };
 
-export function engineSource(scenario: ScenarioName, opts: { seed?: bigint; budget?: number; tasks?: number; city?: { streets: number; houses: number }; world?: { countries: number; cities: number; streets: number; houses: number } } = {}): EngineSource {
+export function engineSource(scenario: ScenarioName, opts: { seed?: bigint; budget?: number; tasks?: number; city?: { streets: number; houses: number }; world?: { countries: number; cities: number; streets: number; houses: number }; game?: { houses: number; week: number; priceWalk: boolean; oraclePerson: boolean } } = {}): EngineSource {
   const e = freshEngine();
-  const x = e.x as typeof e.x & { engine_new_city(s: number, h: number, b: number, t: number, seed: bigint, c: number): void; engine_new_world(co: number, ci: number, s: number, h: number, b: number, t: number, seed: bigint, c: number): void };
-  if (opts.world) { const w = opts.world; x.engine_new_world(w.countries, w.cities, w.streets, w.houses, opts.budget ?? 800, opts.tasks ?? 15, opts.seed ?? 7n, 1); }
+  const x = e.x as typeof e.x & { engine_new_city(s: number, h: number, b: number, t: number, seed: bigint, c: number): void; engine_new_world(co: number, ci: number, s: number, h: number, b: number, t: number, seed: bigint, c: number): void; engine_new_game(h: number, b: number, t: number, w: number, walk: number, person: number, seed: bigint, c: number): void; engine_sync(node: bigint): number };
+  if (opts.game) { const g = opts.game; x.engine_new_game(g.houses, opts.budget ?? 800, opts.tasks ?? 15, g.week, g.priceWalk ? 1 : 0, g.oraclePerson ? 1 : 0, opts.seed ?? 7n, 1); }
+  else if (opts.world) { const w = opts.world; x.engine_new_world(w.countries, w.cities, w.streets, w.houses, opts.budget ?? 800, opts.tasks ?? 15, opts.seed ?? 7n, 1); }
   else if (opts.city) x.engine_new_city(opts.city.streets, opts.city.houses, opts.budget ?? 800, opts.tasks ?? 15, opts.seed ?? 7n, 1);
   else e.x.engine_new(CODE[scenario], opts.seed ?? 7n, opts.budget ?? 800, opts.tasks ?? 15, 1);
   const frames = new Listeners<Frame>(), status = new Listeners<SourceStatus>();
@@ -32,6 +33,7 @@ export function engineSource(scenario: ScenarioName, opts: { seed?: bigint; budg
     async reject(env) { return e.x.engine_reject(BigInt(env)) === 1; },
     async topUp(node, credits) { e.x.engine_top_up(BigInt(node), credits); return true; },
     async zoom(stage) { e.x.engine_zoom(stage); return true; },
+    async sync(node) { return x.engine_sync(BigInt(node)) === 1; },
     dispose() { frames.clear(); status.clear(); },
   };
 }

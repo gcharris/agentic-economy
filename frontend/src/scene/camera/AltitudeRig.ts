@@ -152,6 +152,15 @@ export class AltitudeRig {
     if (jump) { this.a = this.aTarget; this.band = b; this.pending = null; this.snap = true; }
   }
 
+  /** Hold the camera at a band without ever asking the engine to zoom (the game's TV looks at the street while the
+   *  engine runs at the House, so every Door knocks for its person): no zoom calls, and a run's first frame does not
+   *  move it to the engine's scale. */
+  hold(b: Band): void {
+    this.opened = true;
+    this.onZoom = null;
+    this.setBand(b, true);
+  }
+
   setTarget(a: number): void { this.aTarget = Math.min(5, Math.max(1, a)); }
   nudge(d: number): void { this.setTarget(this.aTarget + d); }
 

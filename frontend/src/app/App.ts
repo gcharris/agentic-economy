@@ -60,6 +60,7 @@ export interface SceneContext {
 export type Command =
   | { decision: 'approve' | 'reject'; envelope: EnvelopeId; description?: string }
   | { decision: 'top_up'; node: NodeId; credits: number }
+  | { decision: 'sync'; node: NodeId }
   | { decision: 'zoom'; stage: Band };
 
 export interface AppOptions {
@@ -175,6 +176,7 @@ export class App {
       case 'approve': ok = await s.authorize(c.envelope); break;
       case 'reject': ok = await s.reject(c.envelope); break;
       case 'top_up': ok = await s.topUp(c.node, c.credits); break;
+      case 'sync': ok = await s.sync(c.node); break;
       case 'zoom': ok = await s.zoom(c.stage); break;
     }
     if (ok) this.store.pendingDecisions.push({ tick, ...c } as Decision);

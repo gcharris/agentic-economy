@@ -13,10 +13,13 @@ import {
 } from './EngineSource.ts';
 
 export type ScenarioCode = 1 | 2 | 3 | 4 | 5;
+/** A Week on Elm Street (doc 06) through engine_new_game: named houses (Ada, Ben, …) at the House, every Door knocks. */
+export interface GameOptions { houses: number; week: number; priceWalk: boolean; oraclePerson: boolean }
 
 export type ToWorker =
-  | { t: 'new'; scenario: ScenarioCode; seed: string /* decimal u64 */; budget: number; tasks: number; costVisible: boolean; wasmUrl: string; city?: { streets: number; houses: number }; world?: { countries: number; cities: number; streets: number; houses: number } }
+  | { t: 'new'; scenario: ScenarioCode; seed: string /* decimal u64 */; budget: number; tasks: number; costVisible: boolean; wasmUrl: string; city?: { streets: number; houses: number }; world?: { countries: number; cities: number; streets: number; houses: number }; game?: GameOptions }
   | { t: 'tick' }
+  | { t: 'sync'; id: number; node: string }
   | { t: 'authorize'; id: number; envelope: string /* decimal */ }
   | { t: 'reject'; id: number; envelope: string }
   | { t: 'topUp'; id: number; node: string; credits: number }
@@ -40,6 +43,8 @@ export interface WasmSourceOptions {
   city?: { streets: number; houses: number };
   /** The whole tree through engine_new_world (Stage 4): countries × cities × streets × houses. */
   world?: { countries: number; cities: number; streets: number; houses: number };
+  /** The street as a game (doc 06 §8): engine_new_game. */
+  game?: GameOptions;
   /** Defaults to `${BASE_URL}engine/context_engine.wasm` (public/engine, copied by scripts/copy-assets.ts). */
   wasmUrl?: string;
   /** Injectable for tests; defaults to a module Worker over ./wasm.worker.ts. */
@@ -94,6 +99,7 @@ export class WasmSource implements EngineSource {
       costVisible: this.opts.costVisible ?? WASM_DEFAULTS.costVisible, wasmUrl: this.opts.wasmUrl ?? defaultWasmUrl(),
       ...(this.opts.city && this.scenario === 3 ? { city: this.opts.city } : {}),
       ...(this.opts.world ? { world: this.opts.world } : {}),
+      ...(this.opts.game ? { game: this.opts.game } : {}),
     };
     worker.postMessage(msg);
     return promise;
@@ -121,6 +127,7 @@ export class WasmSource implements EngineSource {
   reject(envelope: EnvelopeId): Promise<boolean> { return this.command((id) => ({ t: 'reject', id, envelope: idToString(envelope) })); }
   topUp(node: NodeId, credits: number): Promise<boolean> { return this.command((id) => ({ t: 'topUp', id, node: idToString(node), credits })); }
   zoom(stage: ScenarioCode): Promise<boolean> { return this.command((id) => ({ t: 'zoom', id, stage })); }
+  sync(node: NodeId): Promise<boolean> { return this.command((id) => ({ t: 'sync', id, node: idToString(node) })); }
   setTruthPrice(price: number): Promise<boolean> { return this.command((id) => ({ t: 'setTruthPrice', id, price })); }
 
   dispose(): void {

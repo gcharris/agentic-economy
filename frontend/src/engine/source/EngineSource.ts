@@ -51,6 +51,7 @@ export interface EngineSource {
   authorize(envelope: EnvelopeId): Promise<boolean>; // false: no Door holds that envelope (wasm 0 / serve 404)
   reject(envelope: EnvelopeId): Promise<boolean>;
   topUp(node: NodeId, credits: number): Promise<boolean>;
+  sync(node: NodeId): Promise<boolean>; // the person asks the oracle (doc 06 §8.1): wasm engine_sync, serve POST /sync; trace false
   zoom(stage: 1 | 2 | 3 | 4 | 5): Promise<boolean>;
   setTruthPrice?(price: number): Promise<boolean>; // wasm only: engine_set_truth_price
   dispose(): void;

@@ -18,6 +18,10 @@ impl Drop for Server {
 }
 
 fn start_server(scenario: &str) -> Server {
+    start_server_with(scenario, &[])
+}
+
+fn start_server_with(scenario: &str, extra: &[&str]) -> Server {
     let mut child = Command::new(env!("CARGO_BIN_EXE_serve"))
         .args([
             "--scenario",
@@ -33,6 +37,7 @@ fn start_server(scenario: &str) -> Server {
             "--seed",
             "11",
         ])
+        .args(extra)
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
@@ -187,4 +192,76 @@ async fn serve_speaks_state_events_and_commands() {
     );
     let (head, _) = call(port, "POST", "/resume").await;
     assert!(head.starts_with("HTTP/1.1 200 OK"), "{head}");
+}
+
+/// A Week on Elm Street (doc 06 §8.5): `--names` makes the street the game (named houses at the House, every Door
+/// knocks), and `POST /sync/<node>` is the person's oracle.
+#[tokio::test]
+async fn serve_runs_elm_street_and_the_persons_oracle() {
+    let server = start_server_with(
+        "street",
+        &[
+            "--names",
+            "Ada,Ben,Cal",
+            "--week",
+            "40",
+            "--price-walk",
+            "--oracle",
+            "person",
+        ],
+    );
+    let port = server.1;
+    let (_, body) = call(port, "POST", "/pause").await;
+    assert!(body.contains("true"));
+    let state: serde_json::Value =
+        serde_json::from_str(&call(port, "GET", "/state").await.1).unwrap();
+    assert_eq!(
+        state["active_scale"], "House",
+        "every Door knocks for its person"
+    );
+    let houses: Vec<&serde_json::Value> = state["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|n| n["stage"] == "House")
+        .collect();
+    let names: Vec<&str> = houses.iter().map(|n| n["name"].as_str().unwrap()).collect();
+    assert_eq!(names.len(), 3);
+    for n in ["Ada", "Ben", "Cal"] {
+        assert!(names.contains(&n), "{names:?}");
+    }
+    let ada = houses.iter().find(|n| n["name"] == "Ada").unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let (head, body) = call(port, "POST", &format!("/sync/{ada}")).await;
+    assert!(head.starts_with("HTTP/1.1 200 OK"), "{head} {body}");
+    let (head, _) = call(port, "POST", "/sync/12345").await;
+    assert!(head.starts_with("HTTP/1.1 404"), "{head}");
+    let (head, _) = call(port, "POST", "/sync/ada").await;
+    assert!(head.starts_with("HTTP/1.1 400"), "{head}");
+    call(port, "POST", "/resume").await;
+    let answered = timeout(Duration::from_secs(10), async {
+        loop {
+            let s: serde_json::Value =
+                serde_json::from_str(&call(port, "GET", "/state").await.1).unwrap();
+            let n = s["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|n| n["id"].as_u64() == Some(ada))
+                .unwrap()
+                .clone();
+            if n["oracle_price"].is_number() {
+                break n;
+            }
+            tokio::time::sleep(Duration::from_millis(30)).await;
+        }
+    })
+    .await
+    .expect("the oracle answers within 10 s");
+    assert!(answered["oracle_tick"].as_u64().unwrap() >= 1);
+    assert!(
+        answered["calibrations"].as_u64().unwrap() >= 1,
+        "the sync calibrated the house"
+    );
 }

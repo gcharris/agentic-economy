@@ -6,6 +6,7 @@ import './styles/tokens.css';
 import './styles/hud.css';
 import './styles/door.css';
 import './styles/note.css';
+import './styles/game.css';
 import { Vector3 } from 'three';
 import { App } from './app/App.ts';
 import { ThreeRenderer } from './app/ThreeRenderer.ts';
@@ -15,12 +16,18 @@ import { SseSource } from './engine/source/SseSource.ts';
 import { RUN_NAMES, TraceSource, type RunName, type Trace } from './engine/source/TraceSource.ts';
 import { WasmSource } from './engine/source/WasmSource.ts';
 import type { LightingPreset, QualityPreset } from './engine/store/bus.ts';
+import type { UiLayer } from './engine/store/Store.ts';
 import { bindAltitudeInput } from './scene/camera/input.ts';
 import { RoomBand } from './scene/room/RoomBand.ts';
 import { StreetBand } from './scene/street/StreetBand.ts';
 import { CityBand } from './scene/city/CityBand.ts';
 import { CountryBand } from './scene/atlas/CountryBand.ts';
 import { WorldBand } from './scene/atlas/WorldBand.ts';
+import { NameTags } from './scene/street/NameTags.ts';
+import { NullRenderer } from './app/Renderer.ts';
+import { PhoneView } from './ui/phone.ts';
+import { NotesTable } from './ui/notes.ts';
+import { Hud } from './ui/hud.ts';
 
 const TAKES = {
   /** DESIGN §11: H = 7 m at 1080 rows (154 px/m), framing the Oak Table's east end to the step. */
@@ -35,8 +42,18 @@ const TAKES = {
 async function makeSource(q: URLSearchParams): Promise<EngineSource> {
   const run = (q.get('run') ?? 'house') as RunName;
   const kind = q.get('source') ?? 'trace';
-  if (kind === 'sse') return new SseSource();
+  // The engine is `serve` on the machine that served this page, port 8787 (a phone on the household wifi reaches the
+  // laptop, not itself); &engine=http://host:port overrides.
+  if (kind === 'sse') return new SseSource({ baseUrl: q.get('engine') ?? `${location.protocol}//${location.hostname}:8787` });
   if (kind === 'wasm') {
+    // &run=game: A Week on Elm Street (doc 06) through engine_new_game: &houses=4&week=40, the price walk (&walk=0 off),
+    // only the person asks the oracle (&oracle=staff for the demo's Scout).
+    if (run === ('game' as RunName)) {
+      return new WasmSource({
+        scenario: 'street', seed: q.get('seed') ?? 7, budget: Number(q.get('budget') ?? 800), tasks: Number(q.get('tasks') ?? 15), costVisible: true,
+        game: { houses: Number(q.get('houses') ?? 4), week: Number(q.get('week') ?? 40), priceWalk: q.get('walk') !== '0', oraclePerson: q.get('oracle') !== 'staff' },
+      });
+    }
     const scenario = run.startsWith('house') ? 'house' : run === 'street_doors' ? 'street' : run === ('world_full' as RunName) || run === ('country' as RunName) ? 'country' : (run as 'street' | 'city' | 'world');
     return new WasmSource({
       scenario, seed: q.get('seed') ?? 7, budget: Number(q.get('budget') ?? 800), tasks: Number(q.get('tasks') ?? 15),
@@ -51,6 +68,13 @@ async function makeSource(q: URLSearchParams): Promise<EngineSource> {
   return TraceSource.fromTrace(trace, RUN_NAMES.includes(run) ? run : 'house');
 }
 
+/** The TV's DOM: the block line and the ticker from the HUD (the Doors are on the phones), and Friday's Notes. */
+function tvUi(source: EngineSource): UiLayer {
+  const hud = new Hud({ root: document, source, zoom: () => undefined });
+  const notes = new NotesTable(document);
+  return { apply(frame, store) { hud.apply(frame, store); notes.apply(frame.state); } };
+}
+
 async function main(): Promise<void> {
   const q = new URLSearchParams(location.search);
   const quality = (['low', 'balanced', 'high'].includes(q.get('quality') ?? '') ? q.get('quality') : 'balanced') as QualityPreset;
@@ -60,15 +84,25 @@ async function main(): Promise<void> {
   const manual = q.get('clock') === 'manual';
   document.body.dataset.quality = quality;
   const source = await makeSource(q);
-  const renderer = new ThreeRenderer(document.querySelector<HTMLCanvasElement>('#stage')!, quality, q.get('stats') === '1');
+  // A Week on Elm Street (doc 06 §5): ?house=<name or n> is a phone (one Door, no canvas); ?view=tv is the street on
+  // the TV, the cottages named, the Notes on the table on Friday.
+  const house = q.get('house');
+  const tv = q.get('view') === 'tv';
+  if (house) document.body.dataset.view = 'phone';
+  else if (tv) document.body.dataset.view = 'tv';
+  const renderer = house ? new NullRenderer() : new ThreeRenderer(document.querySelector<HTMLCanvasElement>('#stage')!, quality, q.get('stats') === '1');
   // Manual clock: a virtual app clock that render(at) advances, so a take drawn at 1/24 s per frame (however long each
   // frame takes to draw) keeps frames, clips and folds on one timeline.
   let clockT = performance.now() / 1000;
   const app = await App.boot({
     source, renderer, root: document, clock: manual ? 'manual' : 'auto', quality, reducedMotion, now: manual ? () => clockT : undefined,
-    lighting: preset ? { preset, blend: 0, cycle: false } : undefined, bands: [new RoomBand(), new StreetBand(), new CityBand(), new CountryBand(), new WorldBand()],
+    lighting: preset ? { preset, blend: 0, cycle: false } : undefined,
+    bands: house ? [] : tv ? [new StreetBand(), new NameTags()] : [new RoomBand(), new StreetBand(), new CityBand(), new CountryBand(), new WorldBand()],
+    ...(house ? { ui: (a: App) => new PhoneView(document, house, a.command.bind(a), source.live) } : {}),
+    ...(tv ? { ui: () => tvUi(source) } : {}),
   });
-  if (source.live) bindAltitudeInput(renderer.gl.domElement, app.rig);
+  if (tv) app.rig.hold(2);
+  if (source.live && renderer.gl && !house && !tv) bindAltitudeInput(renderer.gl.domElement, app.rig);
   const take = q.get('take');
   if (take && take in TAKES) {
     app.rig.setTake(TAKES[take as keyof typeof TAKES]);
@@ -110,7 +144,7 @@ async function main(): Promise<void> {
     };
     render();
   } else {
-    await app.step();
+    if (source.drive === 'pull') await app.step(); // a push source (serve over SSE) ticks on its own
     app.clock?.start();
   }
 }

@@ -248,6 +248,32 @@ pub struct SovereignNode {
     pub burn_history: VecDeque<f64>,
     pub receipts: Vec<SeatReceipt>,
     pub liquidity_locked: f64,
+    /// The person asked the oracle (`Engine::sync`): at the next Draft the house proposes a `StateSync`.
+    #[serde(default)]
+    pub sync_requested: bool,
+    /// The oracle's last answer to this house: the courier's truth price and the tick it was given.
+    #[serde(default)]
+    pub oracle: Option<OracleAnswer>,
+    /// The week's running numbers, written on Friday's Note (doc 06 §3).
+    #[serde(default)]
+    pub tally: WeekTally,
+}
+
+/// What the oracle last told a house.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct OracleAnswer {
+    pub price: f64,
+    pub tick: u64,
+}
+
+/// A house's own counts for the week. Never compared across houses by the engine.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct WeekTally {
+    pub swaps_settled: u32,
+    pub swaps_reverted: u32,
+    pub oracle_queries: u32,
+    pub top_ups: u32,
+    pub top_up_credits: f64,
 }
 
 impl SovereignNode {
@@ -280,6 +306,9 @@ impl SovereignNode {
             burn_history: VecDeque::with_capacity(32),
             receipts: Vec::new(),
             liquidity_locked: 0.0,
+            sync_requested: false,
+            oracle: None,
+            tally: WeekTally::default(),
         }
     }
 
@@ -351,6 +380,7 @@ impl SovereignNode {
             handovers: Vec::new(),
             cushion: 0.0,
             halted_doing: None,
+            staff_oracle: true,
         }
     }
 
@@ -381,6 +411,7 @@ impl SovereignNode {
             papers_on_table: self.oak_table.papers.len(),
             reason,
             saved_state: format!("oak_table@{}", self.oak_table.root().short()),
+            week: None,
         };
         self.status = NodeStatus::Halted;
         self.oak_table.put("note", note.to_plain_line());
@@ -392,6 +423,8 @@ impl SovereignNode {
     /// exhaustion, the week continues.
     pub fn top_up(&mut self, credits: f64) {
         self.purse.top_up(credits);
+        self.tally.top_ups += 1;
+        self.tally.top_up_credits += credits;
         if self.status == NodeStatus::Halted
             && matches!(
                 self.note.as_ref().map(|n| &n.reason),
@@ -489,6 +522,8 @@ pub struct DraftContext {
     handovers: Vec<Handover>,
     cushion: f64,
     halted_doing: Option<String>,
+    /// `OraclePolicy::Staff`: Scout may ask the oracle on his own. Under `Person` only the person asks.
+    staff_oracle: bool,
 }
 
 fn assert_send_static<T: Send + 'static>() {}
@@ -547,6 +582,16 @@ impl DraftContext {
 
     /// The live-cost-visibility finding: when the price is on the table the
     /// seat buys the cheap call and finishes the list.
+    /// Whether the staff may ask the oracle on their own (`OraclePolicy::Staff`).
+    pub fn staff_oracle(&self) -> bool {
+        self.staff_oracle
+    }
+
+    /// The engine sets the oracle policy on each context it issues.
+    pub fn set_staff_oracle(&mut self, allowed: bool) {
+        self.staff_oracle = allowed;
+    }
+
     pub fn cost_visible(&self) -> bool {
         self.cost_visible
     }

@@ -23,6 +23,8 @@ interface EngineExports {
   engine_authorize(envelope: bigint): number;
   engine_reject(envelope: bigint): number;
   engine_top_up(node: bigint, credits: number): void;
+  engine_new_game?(houses: number, budget: number, tasks: number, weekTicks: number, priceWalk: number, oraclePerson: number, seed: bigint, costVisible: number): void;
+  engine_sync?(node: bigint): number;
   engine_zoom(stage: number): void;
   engine_set_truth_price(price: number): void;
   engine_state(): number;
@@ -83,7 +85,8 @@ scope.onmessage = async (ev: MessageEvent<ToWorker>) => {
     switch (m.t) {
       case 'new': {
         x = await instantiate(m.wasmUrl);
-        if (m.world && x.engine_new_world) x.engine_new_world(m.world.countries, m.world.cities, m.world.streets, m.world.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
+        if (m.game && x.engine_new_game) x.engine_new_game(m.game.houses, m.budget, m.tasks, m.game.week, m.game.priceWalk ? 1 : 0, m.game.oraclePerson ? 1 : 0, BigInt(m.seed), m.costVisible ? 1 : 0);
+        else if (m.world && x.engine_new_world) x.engine_new_world(m.world.countries, m.world.cities, m.world.streets, m.world.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
         else if (m.city && x.engine_new_city) x.engine_new_city(m.city.streets, m.city.houses, m.budget, m.tasks, BigInt(m.seed), m.costVisible ? 1 : 0);
         else x.engine_new(m.scenario, BigInt(m.seed), m.budget, m.tasks, m.costVisible ? 1 : 0);
         post({ t: 'hello', version: read(x, x.engine_version()) });
@@ -93,6 +96,7 @@ scope.onmessage = async (ev: MessageEvent<ToWorker>) => {
       case 'authorize': post({ t: 'ack', id: m.id, ok: engine().engine_authorize(BigInt(m.envelope)) === 1 }); break;
       case 'reject': post({ t: 'ack', id: m.id, ok: engine().engine_reject(BigInt(m.envelope)) === 1 }); break;
       case 'topUp': engine().engine_top_up(BigInt(m.node), m.credits); post({ t: 'ack', id: m.id, ok: true }); break;
+      case 'sync': post({ t: 'ack', id: m.id, ok: (engine().engine_sync?.(BigInt(m.node)) ?? 0) === 1 }); break;
       case 'zoom': engine().engine_zoom(m.stage); post({ t: 'ack', id: m.id, ok: true }); break;
       case 'setTruthPrice': engine().engine_set_truth_price(m.price); post({ t: 'ack', id: m.id, ok: true }); break;
     }

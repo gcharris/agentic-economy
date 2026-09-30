@@ -98,6 +98,7 @@ export class SseSource implements EngineSource {
   reject(envelope: EnvelopeId): Promise<boolean> { return this.post(`/reject/${idToString(envelope)}`); }
   topUp(node: NodeId, credits: number): Promise<boolean> { return this.post(`/top-up/${idToString(node)}/${String(credits)}`); }
   zoom(stage: 1 | 2 | 3 | 4 | 5): Promise<boolean> { return this.post(`/zoom/${stage}`); }
+  sync(node: NodeId): Promise<boolean> { return this.post(`/sync/${idToString(node)}`); }
 
   dispose(): void {
     this.es?.close();
