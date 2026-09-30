@@ -60,6 +60,39 @@ pub const ELM_NAMES: [&str; 6] = ["Ada", "Ben", "Cal", "Dee", "Eve", "Fin"];
 /// street's purse, 200 liquidity and its list of work. The engine runs at the House, so every Door knocks for
 /// its person (the TV looks at the street without moving the engine); a hire the person says yes to crosses the
 /// kerb at the next tick. The week, the price walk and who asks the oracle come from `config`.
+/// The week's pieces of work, named as a person writes them on the list (doc 06 §3): the game's houses draft
+/// "the council letter", not "h1_task_01". Only the game's street (built at the House, so every Door knocks) uses
+/// them; the demo's street keeps its ids, so its recorded trace and its takes still read.
+pub const PIECES: [&str; 15] = [
+    "the council letter",
+    "the insurance claim",
+    "the week's accounts",
+    "the tenancy renewal",
+    "the school forms",
+    "the garden quote",
+    "the dentist's paperwork",
+    "the car's registration",
+    "the wedding reply",
+    "the grant application",
+    "the reading list",
+    "the photo album",
+    "the parcel note",
+    "the holiday booking",
+    "the Friday summary",
+];
+
+fn piece_name(scale: Stage, house: usize, t: usize) -> String {
+    if scale != Stage::House {
+        return format!("h{house}_task_{t:02}");
+    }
+    let name = PIECES[(t - 1) % PIECES.len()];
+    if t <= PIECES.len() {
+        name.to_string()
+    } else {
+        format!("{name} ({})", (t - 1) / PIECES.len() + 1)
+    }
+}
+
 pub fn elm_street(
     config: EngineConfig,
     names: &[String],
@@ -98,7 +131,7 @@ fn street_of(
             e.node_mut(h)
                 .unwrap()
                 .tasks
-                .push(Task::synthesis(format!("h{i}_task_{t:02}")));
+                .push(Task::synthesis(piece_name(scale, i, t)));
         }
         e.node_mut(h).unwrap().oak_table.put("price/courier", "10");
         for seat in staff() {
